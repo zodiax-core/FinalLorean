@@ -28,6 +28,7 @@ Ensure you have run the scripts in the `deploys/REQUIRED_SQL_MIGRATIONS` folder 
 1. `01_notification_system.sql`: Setup the notification engine.
 2. `02_tax_system.sql`: Setup the tax calculation system.
 3. `03_product_permissions.sql`: Grants `zodiaxcore@gmail.com` permission to add/edit/delete products.
+4. `04_order_tracking.sql`: Enables the short ID system for order tracking and scanning.
 
 ## ✨ Why this works
 - **No White Screen**: Included a `_redirects` file that tells Netlify to handle React routing correctly.
