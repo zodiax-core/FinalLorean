@@ -104,11 +104,11 @@ serve(async (req) => {
                             },
                             webpush: {
                                 notification: {
-                                    icon: "https://lorean-shop.netlify.app/logo.png",
-                                    click_action: payload.url || "https://lorean-shop.netlify.app/admin"
+                                    icon: "https://lorean.online/logo.png",
+                                    click_action: payload.url || "https://lorean.online/admin"
                                 },
                                 fcm_options: {
-                                    link: payload.url || "https://lorean-shop.netlify.app/admin"
+                                    link: payload.url || "https://lorean.online/admin"
                                 }
                             },
                             data: payload.data || {}
