@@ -1,1 +1,7 @@
+# Domain Redirections
+https://lorean-shop.netlify.app/* https://lorean.online/:splat 301!
+http://lorean.online/* https://lorean.online/:splat 301!
+https://www.lorean.online/* https://lorean.online/:splat 301!
+
+# SPA Routing
 /* /index.html 200
