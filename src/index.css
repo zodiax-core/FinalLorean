@@ -1,0 +1,191 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&family=Jost:wght@300;400;500;600&display=swap');
+
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 10%;
+
+    --card: 0 0% 98%;
+    --card-foreground: 0 0% 10%;
+
+    --popover: 0 0% 98%;
+    --popover-foreground: 0 0% 10%;
+
+    --primary: 40 40% 50%;
+    /* Soft Gold */
+    --primary-foreground: 0 0% 98%;
+
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 0 0% 10%;
+
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 45%;
+
+    --accent: 40 30% 96%;
+    --accent-foreground: 40 40% 40%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 0 0% 90%;
+    --input: 0 0% 90%;
+    --ring: 40 40% 50%;
+
+    --radius: 0.75rem;
+
+    --cream: 40 30% 98%;
+    --rose: 40 40% 50%;
+    /* Replaced rose with gold roughly */
+    --rose-light: 40 40% 90%;
+    --blush: 40 20% 95%;
+    --nude: 35 20% 90%;
+    --champagne: 45 40% 90%;
+    --soft-brown: 30 15% 30%;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 0 0% 10%;
+    --sidebar-primary: 40 40% 50%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 0 0% 94%;
+    --sidebar-accent-foreground: 0 0% 10%;
+    --sidebar-border: 0 0% 90%;
+    --sidebar-ring: 40 40% 50%;
+  }
+
+  .dark {
+    --background: 150 20% 4%;
+    --foreground: 45 30% 94%;
+
+    --card: 150 15% 8%;
+    --card-foreground: 45 20% 90%;
+
+    --popover: 150 15% 8%;
+    --popover-foreground: 45 20% 90%;
+
+    --primary: 45 70% 65%;
+    /* Rich Herbal Gold */
+    --primary-foreground: 150 20% 4%;
+
+    --secondary: 150 10% 12%;
+    --secondary-foreground: 45 20% 90%;
+
+    --muted: 150 10% 12%;
+    --muted-foreground: 150 5% 65%;
+
+    --accent: 150 15% 15%;
+    --accent-foreground: 45 70% 65%;
+
+    --destructive: 0 62.8% 40%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 150 10% 18%;
+    --input: 150 10% 18%;
+    --ring: 45 70% 65%;
+
+    --cream: 150 15% 7%;
+    --rose: 45 70% 65%;
+    --rose-light: 150 20% 15%;
+    --blush: 150 15% 12%;
+    --nude: 150 10% 18%;
+    --champagne: 45 30% 25%;
+    --soft-brown: 35 20% 70%;
+
+    --sidebar-background: 150 20% 6%;
+    --sidebar-foreground: 45 20% 90%;
+    --sidebar-primary: 45 70% 65%;
+    --sidebar-primary-foreground: 150 20% 4%;
+    --sidebar-accent: 150 15% 12%;
+    --sidebar-accent-foreground: 45 70% 65%;
+    --sidebar-border: 150 10% 18%;
+    --sidebar-ring: 45 70% 65%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: initial;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Jost', sans-serif;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-semibold;
+    font-family: 'Cormorant Garamond', serif;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .glass {
+    @apply backdrop-blur-md bg-background/80 border border-border/50;
+  }
+
+  .gradient-rose {
+    background: linear-gradient(135deg, hsl(var(--champagne)) 0%, hsl(var(--background)) 50%, hsl(var(--accent)) 100%);
+  }
+
+  .gradient-soft {
+    background: linear-gradient(180deg, hsl(var(--secondary)) 0%, hsl(var(--background)) 100%);
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: hsl(var(--primary) / 0.15);
+    border-radius: 20px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+
+  .custom-scrollbar:hover::-webkit-scrollbar-thumb {
+    background: hsl(var(--primary) / 0.3);
+    background-clip: content-box;
+  }
+}
+
+/* Lenis Smooth Scroll */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+.lenis.lenis-scrolling iframe {
+  pointer-events: none;
+}

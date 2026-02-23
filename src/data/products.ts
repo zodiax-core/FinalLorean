@@ -1,0 +1,98 @@
+export const products = [
+    {
+        id: 1,
+        name: "Rosemary & Amla Strengthening Oil",
+        price: 45,
+        oldPrice: 60,
+        rating: 4.9,
+        reviews: 234,
+        image: "https://images.unsplash.com/photo-1615485290382-441e4d019cb5?w=800&q=80",
+        category: "Hair Growth",
+        tag: "Best Seller",
+        stock: 3,
+        sku: "LRN-ROS-001",
+        status: "active",
+        min_stock_level: 5,
+        description: "A potent blend of organic rosemary and amla designed to stimulate hair follicles, prevent hair fall, and promote thick, healthy growth. Infused with 15 rare Ayurvedic herbs.",
+        highlights: ["Promotes 2x faster growth", "Reduces hair breakage", "100% Organic & Cold-pressed"],
+        specs: { "Volume": "100ml / 3.4 fl.oz", "Hair Type": "All hair types", "Origin": "Himalayan Roots" },
+        variants: { sizes: ["100ml", "200ml"], colors: ["Standard"] }
+    },
+    {
+        id: 2,
+        name: "Sweet Almond Nourishing Oil",
+        price: 35,
+        rating: 4.8,
+        reviews: 189,
+        image: "https://images.unsplash.com/photo-1548438290-08ab7a4ea23c?w=800&q=80",
+        category: "Nourishment",
+        tag: "New",
+        description: "Pure cold-pressed sweet almond oil enriched with Vitamin E. Perfect for deep conditioning and adding a natural, healthy shine to dull hair."
+    },
+    {
+        id: 3,
+        name: "Brahmi & Ashwagandha Stress-Relief",
+        price: 42,
+        rating: 4.9,
+        reviews: 312,
+        image: "https://images.unsplash.com/photo-1602910350005-25d33a77685a?w=800&q=80",
+        category: "Scalp Care",
+        tag: null,
+        description: "A calming traditional Ayurvedic oil that soothes the scalp, reduces stress-related hair fall, and improves sleep quality when used for head massage."
+    },
+    {
+        id: 4,
+        name: "Hibiscus & Bhringraj Growth Elixir",
+        price: 48,
+        rating: 4.7,
+        reviews: 156,
+        image: "https://images.unsplash.com/photo-1589714392275-bcd730a9aac5?w=800&q=80",
+        category: "Hair Growth",
+        tag: "Popular",
+        description: "Revitalize your roots with our Hibiscus infused Bhringraj oil. Known as the 'King of Hair' in Ayurveda, it prevents premature graying and boosts density."
+    },
+    {
+        id: 5,
+        name: "Tea Tree & Neem Anti-Dandruff Oil",
+        price: 28,
+        rating: 4.8,
+        reviews: 421,
+        image: "https://images.unsplash.com/photo-1631451095765-2c91616fc9e6?w=800&q=80",
+        category: "Scalp Care",
+        tag: null,
+        description: "Say goodbye to flakes. Our potent blend of Tea Tree and Neem effectively targets dandruff-causing fungi while soothing itchy, irritated scalps."
+    },
+    {
+        id: 6,
+        name: "Golden Argan Shine Serum",
+        price: 55,
+        rating: 4.9,
+        reviews: 278,
+        image: "https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?w=800&q=80",
+        category: "Styling",
+        tag: "Trending",
+        description: "Ultra-light Argan oil serum that tames frizz and adds instant luminosity without weighing your hair down. The ultimate finishing touch."
+    },
+    {
+        id: 7,
+        name: "Organic Coconut Deep Treatment",
+        price: 25,
+        rating: 4.6,
+        reviews: 198,
+        image: "https://images.unsplash.com/photo-1624454002302-36b824d7bd0a?w=800&q=80",
+        category: "Nourishment",
+        tag: null,
+        description: "Virgin cold-pressed coconut oil that penetrates deep into the hair shaft to restore protein loss and repair damaged, chemically treated hair."
+    },
+    {
+        id: 8,
+        name: "Black Seed Rejuvenating Oil",
+        price: 52,
+        rating: 4.8,
+        reviews: 356,
+        image: "https://images.unsplash.com/photo-1506459225024-1428097a7e18?w=800&q=80",
+        category: "Hair Growth",
+        tag: "Essential",
+        description: "Kalonji (Black Seed) oil is rich in antioxidants and fatty acids. It strengthens hair from the roots, promoting thickness and preventing thinning."
+    },
+];
