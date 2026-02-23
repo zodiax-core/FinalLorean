@@ -6,10 +6,12 @@ import ParallaxSection from "@/components/home/ParallaxSection";
 import TestimonialsSection from "@/components/home/TestimonialsSection";
 import NewsletterSection from "@/components/home/NewsletterSection";
 import Footer from "@/components/layout/Footer";
+import SEO from "@/components/SEO";
 
 const Index = () => {
   return (
     <div className="min-h-screen bg-background">
+      <SEO />
       <Navbar />
       <HeroSection />
       <CategorySection />

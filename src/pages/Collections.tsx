@@ -3,6 +3,7 @@ import { ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import SEO from "@/components/SEO";
 
 const collections = [
   {
@@ -65,6 +66,10 @@ const featuredCollection = {
 const Collections = () => {
   return (
     <div className="min-h-screen bg-background">
+      <SEO
+        title="Our Collections"
+        description="Curated herbal oil sets designed for your unique hair wellness journey. Discover the power of ancient Ayurvedic wisdom."
+      />
       <Navbar />
 
       {/* Hero */}

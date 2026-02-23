@@ -26,6 +26,7 @@ import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
 import { Product, reviewsService, productsService } from "@/services/supabase";
 import { useToast } from "@/components/ui/use-toast";
+import SEO from "@/components/SEO";
 
 const RecentlyViewedProducts = ({ currentId, products }: { currentId: number, products: Product[] }) => {
     const viewed = useMemo(() => {
@@ -192,6 +193,11 @@ const ProductDetail = () => {
 
     return (
         <div className="min-h-screen bg-background">
+            <SEO
+                title={product.name}
+                description={product.description}
+                image={product.image}
+            />
             <Navbar />
 
             {/* Sticky Buy Bar */}

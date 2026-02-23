@@ -9,6 +9,7 @@ import Footer from "@/components/layout/Footer";
 import { useProducts } from "@/context/ProductsContext";
 import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
+import SEO from "@/components/SEO";
 
 const Shop = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -44,6 +45,10 @@ const Shop = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEO
+        title="Shop Luxury Collection"
+        description="Discover our curated selection of luxury herbal hair oils. Premium Ayurvedic formulas for healthy, radiant hair."
+      />
       <Navbar />
 
       {/* Hero */}

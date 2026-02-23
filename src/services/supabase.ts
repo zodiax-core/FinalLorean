@@ -307,17 +307,19 @@ export const returnsService = {
         return data;
     },
 
-    async update(id: string, updates: any) {
-        const { error } = await supabase
+    async update(id: string | number, updates: any) {
+        const { data, error } = await supabase
             .from('returns')
             .update(updates)
-            .eq('id', id);
+            .eq('id', id)
+            .select()
+            .maybeSingle();
 
         if (error) throw error;
-        return null;
+        return data;
     },
 
-    async updateStatus(id: string, status: string) {
+    async updateStatus(id: string | number, status: string) {
         return this.update(id, { status });
     },
 
@@ -1163,22 +1165,26 @@ export const supportService = {
     },
 
     async create(ticket: Partial<SupportTicket>) {
-        const { error } = await supabase
+        const { data, error } = await supabase
             .from('support_tickets')
-            .insert(ticket);
+            .insert(ticket)
+            .select()
+            .single();
 
         if (error) throw error;
-        return true;
+        return data as SupportTicket;
     },
 
     async update(id: string, updates: Partial<SupportTicket>) {
-        const { error } = await supabase
+        const { data, error } = await supabase
             .from('support_tickets')
             .update(updates)
-            .eq('id', id);
+            .eq('id', id)
+            .select()
+            .single();
 
         if (error) throw error;
-        return true;
+        return data as SupportTicket;
     },
 
     async addMessage(message: Partial<TicketMessage>) {
