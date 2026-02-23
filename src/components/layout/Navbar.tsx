@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Link, useLocation } from "react-router-dom";
 import {
   ShoppingBag, Heart, Search, Menu, X, User,
-  ChevronRight, LayoutDashboard, ShieldCheck
+  ChevronRight, LayoutDashboard, ShieldCheck, Truck
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -109,7 +109,7 @@ const Navbar = () => {
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => setIsWishlistOpen(true)}
-                className="p-2 text-foreground/70 hover:text-primary transition-colors hidden sm:block relative"
+                className="p-2 text-foreground/70 hover:text-primary transition-colors relative"
               >
                 <Heart className="w-5 h-5" />
                 <AnimatePresence>
@@ -125,6 +125,16 @@ const Navbar = () => {
                   )}
                 </AnimatePresence>
               </motion.button>
+
+              <Link to="/track">
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="p-2 text-foreground/70 hover:text-primary transition-colors"
+                >
+                  <Truck className="w-5 h-5" />
+                </motion.button>
+              </Link>
 
               <motion.button
                 whileHover={{ scale: 1.1 }}

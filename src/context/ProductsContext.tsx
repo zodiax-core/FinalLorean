@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { productsService, categoriesService, Product, Category } from "@/services/supabase";
-import { products as fallbackProducts } from "@/data/products";
 
 interface ProductsContextType {
     products: Product[];
@@ -22,36 +21,28 @@ export const ProductsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const loadData = useCallback(async () => {
         setLoading(true);
         try {
-            // Fetch products first
+            // Fetch products first — only show active products on storefront
             let productsData: Product[] = [];
             try {
-                productsData = await productsService.getAll();
-                setProducts(productsData || []);
+                const allProducts = await productsService.getAll();
+                // Strictly filter out archived, draft, or truly deleted products.
+                productsData = (allProducts || []).filter(p => {
+                    const s = p.status?.toLowerCase() || 'active';
+                    return s !== 'archived' && s !== 'draft' && s !== 'deleted';
+                });
+                setProducts(productsData);
             } catch (err) {
                 console.error("Failed to fetch products:", err);
-                setProducts(fallbackProducts as any);
-                productsData = fallbackProducts as any;
+                setProducts([]);
+                productsData = [];
             }
 
-            // Fetch categories independently
+            // Fetch categories independently — ONLY use official categories from the database
             try {
                 const categoriesData = await categoriesService.getAll();
-                const officialNames = (categoriesData || []).map(c => c.name);
-                const productNames = Array.from(new Set((productsData || []).map(p => p.category))).filter(Boolean);
-
-                // Merge everything into a consistent unique list
-                const allUniqueNames = Array.from(new Set([...officialNames, ...productNames]));
-
-                setCategories(allUniqueNames.map((name, i) => {
-                    const official = (categoriesData || []).find(c => c.name === name);
-                    return {
-                        id: official?.id || -(i + 1),
-                        name,
-                        created_at: official?.created_at || new Date().toISOString()
-                    };
-                }));
+                setCategories(categoriesData || []);
             } catch (err) {
-                console.error("Failed to fetch categories, deriving from products:", err);
+                console.error("Failed to fetch categories, deriving from active products:", err);
                 const uniqueCats = Array.from(new Set((productsData || []).map(p => p.category))).filter(Boolean);
                 setCategories(uniqueCats.map((name, i) => ({ id: i, name })));
             }

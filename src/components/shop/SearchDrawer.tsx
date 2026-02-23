@@ -70,7 +70,6 @@ const SearchDrawer = ({ isOpen, onClose }: SearchDrawerProps) => {
                     placeholder="Search for botanical magic..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    autoFocus
                     className="h-16 pl-14 pr-6 rounded-[2rem] bg-muted/50 border-0 text-xl focus-visible:ring-primary font-serif italic"
                   />
                 </div>

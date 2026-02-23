@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { Product } from "@/services/supabase";
 import { useToast } from "@/components/ui/use-toast";
+import { useProducts } from "@/context/ProductsContext";
 
 interface WishlistContextType {
     wishlistItems: Product[];
@@ -24,10 +25,22 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     });
 
     const { toast } = useToast();
+    const { products, loading } = useProducts();
 
     useEffect(() => {
         localStorage.setItem("lorean-wishlist", JSON.stringify(wishlistItems));
     }, [wishlistItems]);
+
+    // Clean up wishlist items that no longer exist in the products database
+    useEffect(() => {
+        if (!loading && products.length > 0 && wishlistItems.length > 0) {
+            const productIds = new Set(products.map(p => p.id));
+            const validItems = wishlistItems.filter(item => productIds.has(item.id));
+            if (validItems.length !== wishlistItems.length) {
+                setWishlistItems(validItems);
+            }
+        }
+    }, [loading, products]);
 
     const addToWishlist = (product: Product) => {
         if (wishlistItems.find((item) => item.id === product.id)) {

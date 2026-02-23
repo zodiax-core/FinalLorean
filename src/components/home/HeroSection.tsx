@@ -97,8 +97,9 @@ const HeroSection = () => {
                 variant="outline"
                 size="lg"
                 className="px-8 py-6 rounded-full text-base border-foreground/20 hover:bg-foreground/5"
+                asChild
               >
-                Our Story
+                <Link to="/story">Our Story</Link>
               </Button>
             </motion.div>
           </div>

@@ -49,12 +49,18 @@ export default function AdminOrders() {
     const filteredOrders = useMemo(() => {
         return orders.filter(o => {
             if (!o) return false;
+            const q = searchQuery.toLowerCase().trim();
+            const shortId = o.short_id?.toLowerCase() || "";
+            const formattedId = ("#ord-" + o.id.toString().slice(0, 8)).toLowerCase();
+
             const matchesSearch =
-                (o.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                    o.id?.toString().includes(searchQuery) ||
-                    o.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                    o.address?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                    o.city?.toLowerCase().includes(searchQuery.toLowerCase()));
+                (o.full_name?.toLowerCase().includes(q) ||
+                    o.id?.toString().toLowerCase().includes(q) ||
+                    shortId.includes(q) ||
+                    formattedId.includes(q) ||
+                    o.email?.toLowerCase().includes(q) ||
+                    o.address?.toLowerCase().includes(q) ||
+                    o.city?.toLowerCase().includes(q));
 
             const matchesStatus = statusFilter === "All" || o.status === statusFilter;
             const matchesPayment = paymentFilter === "All" || (o.payment_method?.toLowerCase() === paymentFilter.toLowerCase());

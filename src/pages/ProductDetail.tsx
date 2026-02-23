@@ -24,7 +24,7 @@ import { Badge } from "@/components/ui/badge";
 import { useProducts } from "@/context/ProductsContext";
 import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
-import { Product, reviewsService } from "@/services/supabase";
+import { Product, reviewsService, productsService } from "@/services/supabase";
 import { useToast } from "@/components/ui/use-toast";
 
 const RecentlyViewedProducts = ({ currentId, products }: { currentId: number, products: Product[] }) => {
@@ -41,17 +41,17 @@ const RecentlyViewedProducts = ({ currentId, products }: { currentId: number, pr
     if (viewed.length === 0) return null;
 
     return (
-        <div className="mb-24 animate-in fade-in slide-in-from-bottom-6 duration-1000">
-            <h2 className="text-4xl font-serif mb-12">Your <span className="text-primary italic">Stalker List</span> </h2>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="mt-12 animate-in fade-in slide-in-from-bottom-6 duration-1000">
+            <h2 className="text-2xl sm:text-4xl font-serif mb-6 sm:mb-12">Your <span className="text-primary italic">Stalker List</span> </h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-8">
                 {viewed.map(p => (
-                    <Link to={`/product/${p.id}`} key={p.id} className="group glass p-4 rounded-[2rem] hover:shadow-2xl transition-all border-border/30">
-                        <div className="aspect-[4/5] rounded-[1.5rem] overflow-hidden bg-muted mb-4 relative">
+                    <Link to={`/product/${p.id}`} key={p.id} className="group glass p-2 sm:p-4 rounded-[1.5rem] sm:rounded-[2rem] hover:shadow-2xl transition-all border-border/30">
+                        <div className="aspect-[4/5] rounded-[1.2rem] sm:rounded-[1.5rem] overflow-hidden bg-muted mb-2 sm:mb-4 relative">
                             <img src={p.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" alt="" />
                             <div className="absolute inset-0 bg-primary/5 group-hover:bg-transparent transition-colors" />
                         </div>
-                        <h4 className="font-medium text-sm mb-1 line-clamp-1">{p.name}</h4>
-                        <p className="text-primary font-bold tracking-tight">Rs. {p.price}</p>
+                        <h4 className="font-medium text-[10px] sm:text-sm mb-0.5 sm:mb-1 line-clamp-1 px-1">{p.name}</h4>
+                        <p className="text-primary font-bold tracking-tight text-xs sm:text-base px-1">Rs. {p.price}</p>
                     </Link>
                 ))}
             </div>
@@ -67,8 +67,32 @@ const ProductDetail = () => {
     const { addToCart } = useCart();
     const { addToWishlist, isInWishlist } = useWishlist();
 
-    const productId = useMemo(() => Number(id), [id]);
-    const product = useMemo(() => getProductById(productId), [productId, getProductById]);
+    const productId = useMemo(() => {
+        const num = Number(id);
+        return isNaN(num) ? null : num;
+    }, [id]);
+
+    const contextProduct = useMemo(() => productId ? getProductById(productId) : null, [productId, products]);
+    const [directProduct, setDirectProduct] = useState<Product | null>(null);
+    const [directLoading, setDirectLoading] = useState(false);
+
+    // Fallback: fetch directly from Supabase if not found in context
+    useEffect(() => {
+        if (!loading && !contextProduct && productId) {
+            setDirectLoading(true);
+            productsService.getById(productId).then(data => {
+                setDirectProduct(data);
+            }).catch(err => {
+                console.error("Direct fetch failed:", err);
+            }).finally(() => {
+                setDirectLoading(false);
+            });
+        }
+    }, [loading, contextProduct, productId]);
+
+    const product = contextProduct || directProduct;
+    // Show loading if we are still fetching from context OR if we've decided to fetch direct but haven't finished
+    const isActuallyLoading = loading || (directLoading && !product);
 
     const [activeImage, setActiveImage] = useState("");
     const [quantity, setQuantity] = useState(1);
@@ -141,7 +165,7 @@ const ProductDetail = () => {
         setTimeout(() => setIsCopied(false), 2000);
     };
 
-    if (loading) {
+    if (isActuallyLoading) {
         return (
             <div className="min-h-screen bg-background flex flex-col items-center justify-center space-y-4">
                 <Loader2 className="w-12 h-12 text-primary animate-spin" />
@@ -150,7 +174,7 @@ const ProductDetail = () => {
         );
     }
 
-    if (!product) {
+    if (!isActuallyLoading && !product) {
         return (
             <div className="min-h-screen bg-background text-center py-40">
                 <Navbar />
@@ -340,25 +364,26 @@ const ProductDetail = () => {
                                     </div>
                                 )}
 
-                                <div className="flex flex-col sm:flex-row gap-3 md:gap-4 mt-6">
-                                    <div className="flex items-center border-2 border-border/20 rounded-full p-1 bg-muted/10 h-14 md:h-16 w-full sm:w-auto justify-between sm:justify-start">
-                                        <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="w-10 md:w-12 h-10 md:h-12 flex items-center justify-center hover:bg-primary hover:text-white rounded-full transition-all duration-300"><Minus className="w-4 h-4" /></button>
-                                        <span className="w-12 md:w-10 text-center font-black text-lg md:text-xl font-serif italic">{quantity}</span>
-                                        <button onClick={() => setQuantity(quantity + 1)} className="w-10 md:w-12 h-10 md:h-12 flex items-center justify-center hover:bg-primary hover:text-white rounded-full transition-all duration-300"><Plus className="w-4 h-4" /></button>
+                                <div className="mt-6 flex items-center gap-2 sm:gap-4 h-14">
+                                    {/* All-in-one row for both mobile and desktop */}
+                                    <div className="flex items-center border-2 border-border/20 rounded-full p-0.5 sm:p-1 bg-muted/10 h-full shrink-0">
+                                        <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center hover:bg-primary hover:text-white rounded-full transition-all duration-300"><Minus className="w-3 h-3 sm:w-4 sm:h-4" /></button>
+                                        <span className="w-8 sm:w-10 text-center font-black text-base sm:text-lg font-serif italic">{quantity}</span>
+                                        <button onClick={() => setQuantity(quantity + 1)} className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center hover:bg-primary hover:text-white rounded-full transition-all duration-300"><Plus className="w-3 h-3 sm:w-4 sm:h-4" /></button>
                                     </div>
                                     <Button
                                         onClick={() => addToCart(product, quantity)}
-                                        className="flex-1 h-14 md:h-16 rounded-full text-[10px] md:text-sm font-black uppercase tracking-[0.2em] shadow-xl shadow-primary/20 bg-primary group hover:bg-primary/90 transition-all duration-500"
+                                        className="flex-1 h-full rounded-full text-[9px] sm:text-sm font-black uppercase tracking-widest sm:tracking-[0.2em] shadow-xl shadow-primary/20 bg-primary group hover:bg-primary/90 transition-all duration-500 min-w-0"
                                     >
-                                        Manifest Into Bag
-                                        <ShoppingBag className="ml-2 md:ml-3 w-4 md:w-5 h-4 md:h-5 group-hover:-translate-y-1 transition-transform" />
+                                        <span className="truncate">Manifest Into Bag</span>
+                                        <ShoppingBag className="hidden sm:block ml-3 w-5 h-5 group-hover:-translate-y-1 transition-transform" />
                                     </Button>
                                     <Button
                                         onClick={() => addToWishlist(product)}
                                         variant="outline"
-                                        className={`h-14 md:h-16 w-14 md:w-16 rounded-full border-2 transition-all duration-500 shrink-0 ${isInWishlist(product.id) ? "bg-rose-50 border-rose-100 text-rose-500 shadow-lg" : "border-border hover:border-rose-100 hover:text-rose-500"}`}
+                                        className={`h-full w-14 rounded-full border-2 transition-all duration-500 shrink-0 flex items-center justify-center ${isInWishlist(product.id) ? "bg-rose-50 border-rose-100 text-rose-500 shadow-lg" : "border-border hover:border-rose-100 hover:text-rose-500"}`}
                                     >
-                                        <Heart className={`w-5 md:w-6 h-5 md:h-6 ${isInWishlist(product.id) ? "fill-rose-500" : ""}`} />
+                                        <Heart className={`w-5 h-5 ${isInWishlist(product.id) ? "fill-rose-500" : ""}`} />
                                     </Button>
                                 </div>
                             </div>

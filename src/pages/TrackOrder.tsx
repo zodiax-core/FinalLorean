@@ -69,11 +69,31 @@ const TrackOrder = () => {
     const startScanner = async () => {
         setIsScanning(true);
         try {
+            // Step 1: Explicitly request camera permission first
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                // Stop the stream immediately — we just needed permission
+                stream.getTracks().forEach(track => track.stop());
+            } catch (permErr) {
+                console.warn("Could not get camera with facingMode, trying any camera:", permErr);
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    stream.getTracks().forEach(track => track.stop());
+                } catch (finalErr) {
+                    console.error("Camera permission denied:", finalErr);
+                    toast.error("Camera access denied", {
+                        description: "Please allow camera access in your browser settings and try again."
+                    });
+                    setIsScanning(false);
+                    return;
+                }
+            }
+
+            // Step 2: Now start html5-qrcode
             const html5QrCode = new Html5Qrcode(scannerContainerId);
             scannerRef.current = html5QrCode;
 
             const qrCodeSuccessCallback = (decodedText: string) => {
-                // Handle different URL formats or just the ID
                 const idMatch = decodedText.match(/\/track\/([^/]+)/);
                 const finalId = idMatch ? idMatch[1] : decodedText;
 
@@ -86,16 +106,33 @@ const TrackOrder = () => {
 
             const config = { fps: 10, qrbox: { width: 250, height: 250 } };
 
-            // Prefer back camera
-            await html5QrCode.start(
-                { facingMode: "environment" },
-                config,
-                qrCodeSuccessCallback,
-                () => { } // silent on errors
-            );
+            // Try back camera first, fall back to any available camera
+            try {
+                await html5QrCode.start(
+                    { facingMode: "environment" },
+                    config,
+                    qrCodeSuccessCallback,
+                    () => { }
+                );
+            } catch {
+                // Fallback: enumerate devices and pick the first camera
+                const cameras = await Html5Qrcode.getCameras();
+                if (cameras && cameras.length > 0) {
+                    await html5QrCode.start(
+                        cameras[cameras.length > 1 ? 1 : 0].id,
+                        config,
+                        qrCodeSuccessCallback,
+                        () => { }
+                    );
+                } else {
+                    throw new Error("No cameras found on this device");
+                }
+            }
         } catch (err) {
             console.error("Scanner start error:", err);
-            toast.error("Camera access denied or unavailable");
+            toast.error("Camera unavailable", {
+                description: "No camera found or browser does not support camera access."
+            });
             setIsScanning(false);
         }
     };
