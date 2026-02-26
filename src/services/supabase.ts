@@ -25,6 +25,8 @@ export interface Product {
     created_at?: string;
     updated_at?: string;
     vendor_id?: string;
+    vessel_volume?: string;
+    fake_sold_count?: number;
 }
 
 export interface Category {
@@ -112,6 +114,9 @@ export interface Order {
     vendor_id?: string;
     short_id?: string;
     country?: string;
+    receiver_phone?: string;
+    receiver_name?: string;
+    nearest_famous_place?: string;
 }
 
 export const productsService = {
@@ -1319,5 +1324,34 @@ export const categoriesService = {
 
         if (error) throw error;
         return true;
+    }
+};
+
+export const marketingService = {
+    async getMarketingConfig() {
+        const { data, error } = await supabase
+            .from('store_config')
+            .select('settings')
+            .eq('category', 'marketing')
+            .maybeSingle();
+
+        if (error) throw error;
+        return data?.settings || {
+            popup_product_id: null,
+            hero_bar: { enabled: false, text: "SALE SALE SALE", bg_color: "#000000", text_color: "#ffffff" }
+        };
+    },
+
+    async updateMarketingConfig(settings: any) {
+        const { error } = await supabase
+            .from('store_config')
+            .upsert({
+                category: 'marketing',
+                settings,
+                updated_at: new Date().toISOString()
+            }, { onConflict: 'category' });
+
+        if (error) throw error;
+        return settings;
     }
 };

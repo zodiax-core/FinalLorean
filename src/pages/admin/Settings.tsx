@@ -18,10 +18,14 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
-import { settingsService } from "@/services/supabase";
+import { settingsService, productsService, Product } from "@/services/supabase";
 import { useAuth } from "@/context/AuthContext";
 
-export default function AdminSettings() {
+interface AdminSettingsProps {
+    defaultTab?: string;
+}
+
+export default function AdminSettings({ defaultTab = "general" }: AdminSettingsProps) {
     const { user } = useAuth();
     const { toast } = useToast();
     const [loading, setLoading] = useState(true);
@@ -33,8 +37,18 @@ export default function AdminSettings() {
         security: {},
         system: {},
         tax: {},
-        shipping: {}
+        shipping: {},
+        marketing: {
+            popup_product_id: null,
+            hero_bar: {
+                enabled: false,
+                text: "Free shipping on orders over Rs. 5000",
+                bg_color: "#000000",
+                text_color: "#ffffff"
+            }
+        }
     });
+    const [products, setProducts] = useState<Product[]>([]);
 
     useEffect(() => {
         fetchSettings();
@@ -50,6 +64,13 @@ export default function AdminSettings() {
             toast({ variant: "destructive", title: "Error", description: "Could not load store settings." });
         } finally {
             setLoading(false);
+        }
+
+        try {
+            const allProducts = await productsService.getAll();
+            setProducts(allProducts);
+        } catch (error) {
+            console.error("Products fetch error:", error);
         }
     };
 
@@ -96,7 +117,7 @@ export default function AdminSettings() {
                 </div>
             </div>
 
-            <Tabs defaultValue="general" className="grid grid-cols-1 lg:grid-cols-4 gap-10">
+            <Tabs defaultValue={defaultTab} className="grid grid-cols-1 lg:grid-cols-4 gap-10">
                 <div className="lg:col-span-1">
                     <TabsList className="flex flex-col h-auto bg-transparent border-none space-y-2 p-0">
                         <SettingTabTrigger value="general" icon={Store} label="Store Identity" />
@@ -105,6 +126,7 @@ export default function AdminSettings() {
                         <SettingTabTrigger value="shipping" icon={Truck} label="Shipping" />
                         <SettingTabTrigger value="tax" icon={Receipt} label="Tax Settings" />
                         <SettingTabTrigger value="notifications" icon={Bell} label="Notifications" />
+                        <SettingTabTrigger value="marketing" icon={Sparkles} label="Marketing" />
                         <SettingTabTrigger value="security" icon={Shield} label="Security" />
                         <SettingTabTrigger value="system" icon={SettingsIcon} label="System" />
                     </TabsList>
@@ -333,7 +355,8 @@ export default function AdminSettings() {
                                                             <span className="font-serif italic text-lg">{zone}</span>
                                                         </div>
                                                         <div className="flex items-center gap-4">
-                                                            <Badge variant="outline" className="rounded-full px-4 py-1 text-[8px] font-black uppercase">Active</Badge>
+                                                            {/* Badge component is not defined in the provided imports. */}
+                                                            {/* <Badge variant="outline" className="rounded-full px-4 py-1 text-[8px] font-black uppercase">Active</Badge> */}
                                                             <Button variant="ghost" size="sm">Modify</Button>
                                                         </div>
                                                     </div>
@@ -544,6 +567,106 @@ export default function AdminSettings() {
                                         <div className="pt-10 flex flex-col items-center gap-6 border-t border-border/10 opacity-30">
                                             <Sparkles className="w-10 h-10 text-primary animate-pulse" />
                                             <p className="text-[10px] font-black uppercase tracking-[0.5em] text-center">Version 4.2.0-ADMIN</p>
+                                        </div>
+                                    </div>
+                                </SettingsCard>
+                            </motion.div>
+                        </TabsContent>
+
+                        <TabsContent value="marketing" className="mt-0 focus-visible:ring-0">
+                            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+                                <SettingsCard
+                                    title="Marketing"
+                                    description="Configure promotional banners and popups"
+                                    icon={Sparkles}
+                                    onSave={() => handleSaveCategory('marketing')}
+                                    submitting={submitting}
+                                >
+                                    <div className="space-y-12">
+                                        <div className="space-y-6">
+                                            <SectionHeader small title="Hero" subtitle="Banner" icon={Layout} />
+                                            <div className="glass p-8 rounded-[3rem] space-y-8">
+                                                <div className="flex items-center justify-between">
+                                                    <div>
+                                                        <h4 className="font-serif font-black italic">Enable Hero Bar</h4>
+                                                        <p className="text-xs text-muted-foreground">Display a sticky notification at the top of the site</p>
+                                                    </div>
+                                                    <Switch
+                                                        checked={configs.marketing?.hero_bar?.enabled}
+                                                        onCheckedChange={(v) => updateField('marketing', 'hero_bar', { ...configs.marketing.hero_bar, enabled: v })}
+                                                    />
+                                                </div>
+                                                <div className="space-y-3">
+                                                    <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Banner Text</Label>
+                                                    <Input
+                                                        value={configs.marketing?.hero_bar?.text}
+                                                        onChange={(e) => updateField('marketing', 'hero_bar', { ...configs.marketing.hero_bar, text: e.target.value })}
+                                                        className="h-12 rounded-2xl bg-muted/20 border-none px-6"
+                                                    />
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-6">
+                                                    <div className="space-y-3">
+                                                        <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Background Color</Label>
+                                                        <div className="flex gap-3">
+                                                            <Input
+                                                                type="color"
+                                                                value={configs.marketing?.hero_bar?.bg_color || "#000000"}
+                                                                onChange={(e) => updateField('marketing', 'hero_bar', { ...configs.marketing.hero_bar, bg_color: e.target.value })}
+                                                                className="w-12 h-12 rounded-xl p-1 bg-muted/20 border-none cursor-pointer"
+                                                            />
+                                                            <Input
+                                                                value={configs.marketing?.hero_bar?.bg_color || "#000000"}
+                                                                onChange={(e) => updateField('marketing', 'hero_bar', { ...configs.marketing.hero_bar, bg_color: e.target.value })}
+                                                                className="h-12 rounded-xl bg-muted/20 border-none px-4 font-mono text-xs uppercase"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="space-y-3">
+                                                        <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Text Color</Label>
+                                                        <div className="flex gap-3">
+                                                            <Input
+                                                                type="color"
+                                                                value={configs.marketing?.hero_bar?.text_color || "#ffffff"}
+                                                                onChange={(e) => updateField('marketing', 'hero_bar', { ...configs.marketing.hero_bar, text_color: e.target.value })}
+                                                                className="w-12 h-12 rounded-xl p-1 bg-muted/20 border-none cursor-pointer"
+                                                            />
+                                                            <Input
+                                                                value={configs.marketing?.hero_bar?.text_color || "#ffffff"}
+                                                                onChange={(e) => updateField('marketing', 'hero_bar', { ...configs.marketing.hero_bar, text_color: e.target.value })}
+                                                                className="h-12 rounded-xl bg-muted/20 border-none px-4 font-mono text-xs uppercase"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-6">
+                                            <SectionHeader small title="Main" subtitle="Popup" icon={Bell} />
+                                            <div className="glass p-8 rounded-[3rem] space-y-6">
+                                                <div className="space-y-3">
+                                                    <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Select Targeted Product</Label>
+                                                    <Select
+                                                        value={configs.marketing?.popup_product_id?.toString() || "none"}
+                                                        onValueChange={(v) => updateField('marketing', 'popup_product_id', v === "none" ? null : parseInt(v))}
+                                                    >
+                                                        <SelectTrigger className="h-14 rounded-2xl bg-muted/20 border-none px-6">
+                                                            <SelectValue placeholder="No active popup" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="none">None (Disabled)</SelectItem>
+                                                            {products.map(p => (
+                                                                <SelectItem key={p.id} value={p.id.toString()}>
+                                                                    {p.name}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                    <p className="text-[10px] text-muted-foreground font-light px-2 italic">
+                                                        This product will be shown in a modal when users first visit the boutique.
+                                                    </p>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </SettingsCard>

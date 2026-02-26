@@ -43,7 +43,10 @@ const Checkout = () => {
         address: "",
         city: "",
         state: "",
-        postalCode: ""
+        postalCode: "",
+        receiverName: "",
+        receiverPhone: "",
+        nearestFamousPlace: ""
     });
 
     useEffect(() => {
@@ -141,6 +144,9 @@ const Checkout = () => {
                 city: formData.city,
                 state: formData.state,
                 postal_code: formData.postalCode,
+                receiver_name: formData.receiverName,
+                receiver_phone: formData.receiverPhone,
+                nearest_famous_place: formData.nearestFamousPlace,
                 subtotal_amount: subtotal,
                 shipping_amount: shipping,
                 tax_amount: tax,
@@ -304,6 +310,35 @@ const Checkout = () => {
                                                 placeholder="123 Luxury Avenue"
                                                 className="rounded-2xl h-14 bg-muted/30 border-none px-6 focus-visible:bg-background transition-all"
                                             />
+                                        </div>
+                                        <div className="space-y-2 mb-6">
+                                            <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Nearest Famous Place (Landmark)</Label>
+                                            <Input
+                                                value={formData.nearestFamousPlace}
+                                                onChange={e => setFormData({ ...formData, nearestFamousPlace: e.target.value })}
+                                                placeholder="Near Eiffel Tower"
+                                                className="rounded-2xl h-14 bg-muted/30 border-none px-6 focus-visible:bg-background transition-all"
+                                            />
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-6 mb-6">
+                                            <div className="space-y-2">
+                                                <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Receiver's Name</Label>
+                                                <Input
+                                                    value={formData.receiverName}
+                                                    onChange={e => setFormData({ ...formData, receiverName: e.target.value })}
+                                                    placeholder="Receiver Name"
+                                                    className="rounded-2xl h-14 bg-muted/30 border-none px-6 focus-visible:bg-background transition-all"
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Phone Number</Label>
+                                                <Input
+                                                    value={formData.receiverPhone}
+                                                    onChange={e => setFormData({ ...formData, receiverPhone: e.target.value })}
+                                                    placeholder="+1 234 567 890"
+                                                    className="rounded-2xl h-14 bg-muted/30 border-none px-6 focus-visible:bg-background transition-all"
+                                                />
+                                            </div>
                                         </div>
                                         <div className="grid grid-cols-3 gap-6">
                                             <div className="space-y-2">

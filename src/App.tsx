@@ -15,6 +15,7 @@ import { WishlistProvider } from "./context/WishlistContext";
 
 // Components
 import ProtectedRoute from "./components/ProtectedRoute";
+import GlobalMarketing from "./components/GlobalMarketing";
 
 // Pages
 import Index from "./pages/Index";
@@ -79,6 +80,7 @@ const App = () => (
               <WishlistProvider>
                 <CartProvider>
                   <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+                    <GlobalMarketing />
                     <SmoothScroll>
                       <Routes>
                         <Route path="/" element={<Index />} />
@@ -129,6 +131,7 @@ const App = () => (
                           <Route path="notifications" element={<AdminNotifications />} />
                           <Route path="orders" element={<AdminOrders />} />
                           <Route path="settings" element={<AdminSettings />} />
+                          <Route path="marketing" element={<AdminSettings defaultTab="marketing" />} />
                           <Route path="support" element={<AdminSupport />} />
                           <Route path="support/:id" element={<AdminSupportDetail />} />
                           <Route path="*" element={<div className="flex items-center justify-center p-20 text-muted-foreground font-serif">Admin Page Under Construction</div>} />

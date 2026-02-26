@@ -26,6 +26,7 @@ import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
 import { Product, reviewsService, productsService } from "@/services/supabase";
 import { useToast } from "@/components/ui/use-toast";
+import { useAuth } from "@/context/AuthContext";
 import SEO from "@/components/SEO";
 
 const RecentlyViewedProducts = ({ currentId, products }: { currentId: number, products: Product[] }) => {
@@ -102,7 +103,24 @@ const ProductDetail = () => {
     const [isCopied, setIsCopied] = useState(false);
     const [realReviews, setRealReviews] = useState<any[]>([]);
     const [fetchingReviews, setFetchingReviews] = useState(false);
+    const { user } = useAuth();
     const buySectionRef = useRef<HTMLDivElement>(null);
+
+    const mergedReviews = useMemo(() => {
+        const fakeOnes = product?.reviews_list || [];
+        const formattedFake = fakeOnes.map((f: any, idx: number) => ({
+            id: `fake-${idx}`,
+            user_name: f.author,
+            rating: f.rating,
+            comment: f.comment,
+            is_fake: true,
+            created_at: new Date(Date.now() - (idx + 1) * 86400000).toISOString(),
+            verified: true
+        }));
+
+        const all = [...formattedFake, ...realReviews];
+        return all.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    }, [product?.reviews_list, realReviews]);
 
     useEffect(() => {
         if (product) {
@@ -311,7 +329,10 @@ const ProductDetail = () => {
                                             <Star key={i} className={`w-3 h-3 ${i < Math.floor(product.rating) ? "fill-primary text-primary" : "fill-muted text-muted"}`} />
                                         ))}
                                     </div>
-                                    <span className="text-[10px] font-black text-foreground">{product.rating} <span className="text-muted-foreground/60">({product.reviews})</span></span>
+                                    <span className="text-[10px] font-black text-foreground">
+                                        {product.rating} <span className="text-muted-foreground/60">({product.reviews})</span>
+                                        {product.fake_sold_count ? <span className="ml-2 text-primary">| {product.fake_sold_count}+ sold already</span> : null}
+                                    </span>
                                 </div>
                             </div>
 
@@ -339,7 +360,46 @@ const ProductDetail = () => {
                                 </div>
                             </div>
 
-                            {/* Scan Highlights */}
+                            {/* Combined Actions Section - BEFORE Highlights */}
+                            <div className="glass p-8 rounded-[3rem] border-border/10 space-y-8 mb-8">
+                                <div className="flex items-center justify-between gap-4">
+                                    <div className="space-y-1">
+                                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Vessel Volume</Label>
+                                        <p className="font-serif italic text-xl text-primary">{product.vessel_volume || (product.variants?.sizes?.[0] || "200ml")}</p>
+                                    </div>
+                                    <div className="text-right">
+                                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block mb-1">Inventory</Label>
+                                        <div className="flex items-center gap-2 text-emerald-500 font-black uppercase tracking-widest text-[10px]">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                            {product.stock > 0 ? "Essence Manifested" : "Ether Transcending"}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center gap-4 h-16">
+                                    <div className="flex items-center border-2 border-border/20 rounded-full p-1 bg-muted/10 h-full shrink-0">
+                                        <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="w-10 h-10 flex items-center justify-center hover:bg-primary hover:text-white rounded-full transition-all duration-300"><Minus className="w-4 h-4" /></button>
+                                        <span className="w-10 text-center font-black text-lg font-serif italic">{quantity}</span>
+                                        <button onClick={() => setQuantity(quantity + 1)} className="w-10 h-10 flex items-center justify-center hover:bg-primary hover:text-white rounded-full transition-all duration-300"><Plus className="w-4 h-4" /></button>
+                                    </div>
+                                    <Button
+                                        onClick={() => addToCart(product, quantity)}
+                                        className="flex-1 h-full rounded-full text-sm font-black uppercase tracking-[0.2em] shadow-xl shadow-primary/20 bg-primary group hover:bg-primary/90 transition-all duration-500"
+                                    >
+                                        Manifest Into Bag
+                                        <ShoppingBag className="ml-3 w-5 h-5 group-hover:-translate-y-1 transition-transform" />
+                                    </Button>
+                                    <Button
+                                        onClick={() => addToWishlist(product)}
+                                        variant="outline"
+                                        className={`h-full w-16 rounded-full border-2 transition-all duration-500 shrink-0 flex items-center justify-center ${isInWishlist(product.id) ? "bg-rose-50 border-rose-100 text-rose-500 shadow-lg" : "border-border hover:border-rose-100 hover:text-rose-500"}`}
+                                    >
+                                        <Heart className={`w-6 h-6 ${isInWishlist(product.id) ? "fill-rose-500" : ""}`} />
+                                    </Button>
+                                </div>
+                            </div>
+
+                            {/* Scan Highlights & Trust Protocols Aligned */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 {(product.highlights || []).slice(0, 4).map((h: string) => (
                                     <div key={h} className="flex items-center gap-4 bg-muted/20 p-5 rounded-[2rem] border border-border/10 group hover:border-primary/30 transition-all">
@@ -349,63 +409,18 @@ const ProductDetail = () => {
                                         <span className="text-xs font-bold uppercase tracking-widest">{h}</span>
                                     </div>
                                 ))}
-                            </div>
 
-                            {/* Options Synthesis */}
-                            <div className="space-y-8 mt-4">
-                                {product.variants?.sizes?.length > 0 && (
-                                    <div className="space-y-4">
-                                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Vessel Volume</Label>
-                                        <div className="flex flex-wrap gap-3">
-                                            {product.variants.sizes.map((size: string) => (
-                                                <button
-                                                    key={size}
-                                                    onClick={() => setSelectedSize(size)}
-                                                    className={`px-6 md:px-10 py-3 md:py-5 rounded-[1.5rem] md:rounded-[2rem] border-2 text-[10px] md:text-xs font-black uppercase tracking-widest transition-all duration-500 ${selectedSize === size ? "bg-primary border-primary text-white shadow-xl scale-105" : "border-border hover:border-primary/20 text-muted-foreground"}`}
-                                                >
-                                                    {size}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-
-                                <div className="mt-6 flex items-center gap-2 sm:gap-4 h-14">
-                                    {/* All-in-one row for both mobile and desktop */}
-                                    <div className="flex items-center border-2 border-border/20 rounded-full p-0.5 sm:p-1 bg-muted/10 h-full shrink-0">
-                                        <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center hover:bg-primary hover:text-white rounded-full transition-all duration-300"><Minus className="w-3 h-3 sm:w-4 sm:h-4" /></button>
-                                        <span className="w-8 sm:w-10 text-center font-black text-base sm:text-lg font-serif italic">{quantity}</span>
-                                        <button onClick={() => setQuantity(quantity + 1)} className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center hover:bg-primary hover:text-white rounded-full transition-all duration-300"><Plus className="w-3 h-3 sm:w-4 sm:h-4" /></button>
-                                    </div>
-                                    <Button
-                                        onClick={() => addToCart(product, quantity)}
-                                        className="flex-1 h-full rounded-full text-[9px] sm:text-sm font-black uppercase tracking-widest sm:tracking-[0.2em] shadow-xl shadow-primary/20 bg-primary group hover:bg-primary/90 transition-all duration-500 min-w-0"
-                                    >
-                                        <span className="truncate">Manifest Into Bag</span>
-                                        <ShoppingBag className="hidden sm:block ml-3 w-5 h-5 group-hover:-translate-y-1 transition-transform" />
-                                    </Button>
-                                    <Button
-                                        onClick={() => addToWishlist(product)}
-                                        variant="outline"
-                                        className={`h-full w-14 rounded-full border-2 transition-all duration-500 shrink-0 flex items-center justify-center ${isInWishlist(product.id) ? "bg-rose-50 border-rose-100 text-rose-500 shadow-lg" : "border-border hover:border-rose-100 hover:text-rose-500"}`}
-                                    >
-                                        <Heart className={`w-5 h-5 ${isInWishlist(product.id) ? "fill-rose-500" : ""}`} />
-                                    </Button>
-                                </div>
-                            </div>
-
-                            {/* Secure Trust Protocol */}
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-6 pt-12 border-t border-border/30">
+                                {/* Aligned Trust Icons */}
                                 {[
                                     { icon: ShieldCheck, label: "Vault Secured" },
                                     { icon: Truck, label: "Ethereal Shipping" },
                                     { icon: RotateCcw, label: "Ritual Returns" }
                                 ].map((trust, i) => (
-                                    <div key={i} className="flex flex-col items-center gap-3 text-center">
-                                        <div className="w-12 h-12 rounded-2xl bg-muted/50 flex items-center justify-center text-primary/60">
-                                            <trust.icon className="w-6 h-6" />
+                                    <div key={i} className="flex items-center gap-4 bg-primary/5 p-5 rounded-[2rem] border border-primary/10 group hover:border-primary/30 transition-all">
+                                        <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shrink-0 text-primary group-hover:bg-primary group-hover:text-white transition-all shadow-sm">
+                                            <trust.icon className="w-5 h-5" />
                                         </div>
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">{trust.label}</span>
+                                        <span className="text-xs font-bold uppercase tracking-widest text-primary/80">{trust.label}</span>
                                     </div>
                                 ))}
                             </div>
@@ -413,106 +428,191 @@ const ProductDetail = () => {
                     </div>
                 </div>
 
-                {/* Extended Manifest */}
-                <section className="mb-32">
-                    <Tabs defaultValue="narrative" className="space-y-16">
-                        <div className="flex justify-start sm:justify-center overflow-x-auto pb-4 scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
-                            <TabsList className="bg-muted/10 p-1 rounded-full h-auto border border-border/10 flex-nowrap shrink-0">
-                                <TabsTrigger value="narrative" className="rounded-full px-6 md:px-8 py-2 md:py-3 text-[9px] md:text-[10px] font-black uppercase tracking-widest data-[state=active]:bg-primary data-[state=active]:text-white shadow-lg transition-all duration-500">Narrative</TabsTrigger>
-                                <TabsTrigger value="specs" className="rounded-full px-6 md:px-8 py-2 md:py-3 text-[9px] md:text-[10px] font-black uppercase tracking-widest data-[state=active]:bg-primary data-[state=active]:text-white shadow-lg transition-all duration-500">Specs</TabsTrigger>
-                                <TabsTrigger value="reviews" className="rounded-full px-6 md:px-8 py-2 md:py-3 text-[9px] md:text-[10px] font-black uppercase tracking-widest data-[state=active]:bg-primary data-[state=active]:text-white shadow-lg transition-all duration-500 whitespace-nowrap">Patron Proof ({product.reviews})</TabsTrigger>
-                                <TabsTrigger value="faq" className="rounded-full px-6 md:px-8 py-2 md:py-3 text-[9px] md:text-[10px] font-black uppercase tracking-widest data-[state=active]:bg-primary data-[state=active]:text-white shadow-lg transition-all duration-500">FAQ</TabsTrigger>
-                            </TabsList>
+                {/* Continuous Sections Implementation */}
+                <div className="space-y-32">
+                    {/* Narrative Section */}
+                    <div id="narrative" className="animate-in fade-in slide-in-from-bottom-8 duration-700">
+                        <div className="max-w-4xl mx-auto glass p-12 md:p-20 rounded-[4rem] text-center space-y-8 border-border/10 shadow-sm relative overflow-hidden">
+                            <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -mr-32 -mt-32" />
+                            <Sparkles className="w-12 h-12 text-primary mx-auto opacity-20" />
+                            <h3 className="text-4xl md:text-5xl font-serif italic text-balance leading-tight uppercase tracking-tighter">{product.name}: The Ritual Synthesis</h3>
+                            <p className="text-xl text-muted-foreground font-light leading-relaxed text-balance max-w-2xl mx-auto">
+                                {product.detailed_description || product.description}
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Specs Section */}
+                    <div id="specs" className="animate-in fade-in slide-in-from-bottom-8 duration-700">
+                        <div className="text-center mb-16">
+                            <h2 className="text-4xl font-serif mb-4 uppercase">Technical <span className="text-primary italic">Synthesis</span></h2>
+                            <p className="text-muted-foreground text-sm uppercase tracking-widest">Botanical Composition & Molecular Alignments</p>
+                        </div>
+                        <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                            {Object.entries(product.specs || { "Texture": "Silky Elixir", "Absorption": "Instant", "Fragrance": "Celestial Bloom", "Hair Type": "All Alignments" }).map(([key, val]) => (
+                                <div key={key} className="flex flex-col gap-2 p-8 rounded-[3rem] bg-muted/20 border border-border/10 hover:border-primary/20 transition-all group">
+                                    <span className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/50 group-hover:text-primary transition-colors">{key}</span>
+                                    <span className="font-serif italic text-2xl text-foreground">{val as string}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Patron Proof (Reviews) Section */}
+                    <div id="reviews" className="animate-in fade-in slide-in-from-bottom-8 duration-700 space-y-16">
+                        <div className="text-center">
+                            <h2 className="text-4xl md:text-5xl font-serif mb-4 uppercase tracking-tighter">Patron <span className="text-primary italic">Proof</span></h2>
+                            <div className="flex items-center justify-center gap-2">
+                                <div className="flex gap-1">
+                                    {[...Array(5)].map((_, i) => <Star key={i} className="w-4 h-4 fill-primary text-primary" />)}
+                                </div>
+                                <span className="text-sm font-black uppercase tracking-widest">Trusted by {product.reviews + (product.fake_sold_count || 0)} Patrons</span>
+                            </div>
                         </div>
 
-                        <TabsContent value="narrative" className="animate-in fade-in slide-in-from-bottom-8 duration-700">
-                            <div className="max-w-3xl mx-auto glass p-12 rounded-[3rem] text-center space-y-8 border-border/10 shadow-sm">
-                                <Sparkles className="w-10 h-10 text-primary mx-auto opacity-20" />
-                                <h3 className="text-3xl font-serif italic text-balance leading-tight">{product.name}: The Ritual Synthesis</h3>
-                                <p className="text-lg text-muted-foreground font-light leading-relaxed text-balance">
-                                    {product.detailed_description || product.description}
-                                </p>
-                            </div>
-                        </TabsContent>
+                        {/* Review Submission Form */}
+                        <div className="max-w-4xl mx-auto glass p-10 rounded-[3rem] border-border/10 space-y-6">
+                            <h3 className="font-serif italic text-2xl text-center">Share your Botanical Experience</h3>
+                            {user ? (
+                                <form className="space-y-6" onSubmit={async (e) => {
+                                    e.preventDefault();
+                                    const formData = new FormData(e.currentTarget);
+                                    const comment = formData.get('comment') as string;
+                                    const rating = Number(formData.get('rating'));
 
-                        <TabsContent value="specs" className="animate-in fade-in slide-in-from-bottom-8 duration-700">
-                            <div className="max-w-3xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                {Object.entries(product.specs || { "Texture": "Silky Elixir", "Absorption": "Instant", "Fragrance": "Celestial Bloom", "Hair Type": "All Alignments" }).map(([key, val]) => (
-                                    <div key={key} className="flex flex-col gap-1 p-6 rounded-[2rem] bg-muted/5 border border-border/10 hover:bg-muted/10 transition-colors">
-                                        <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">{key}</span>
-                                        <span className="font-serif italic text-lg text-primary">{val as string}</span>
+                                    if (!comment || !rating) {
+                                        toast({ title: "Ritual Incomplete", description: "Please provide both rating and insight.", variant: "destructive" });
+                                        return;
+                                    }
+
+                                    try {
+                                        await reviewsService.create({
+                                            product_id: product.id,
+                                            user_id: user.id,
+                                            user_name: user.user_metadata?.full_name || user.email?.split('@')[0],
+                                            rating,
+                                            comment,
+                                            status: 'approved' // Auto-approve for now or pending?
+                                        });
+                                        toast({ title: "Insight Manifested", description: "Your Patron Proof has been added to the collective." });
+                                        // Refresh reviews
+                                        const data = await reviewsService.getByProductId(product.id);
+                                        setRealReviews(data);
+                                        (e.target as HTMLFormElement).reset();
+                                    } catch (err) {
+                                        toast({ title: "Manifestation Failed", description: "Could not post review.", variant: "destructive" });
+                                    }
+                                }}>
+                                    <div className="flex flex-col items-center gap-4">
+                                        <div className="flex gap-2">
+                                            {[1, 2, 3, 4, 5].map((s) => (
+                                                <div key={s} className="relative group">
+                                                    <input type="radio" name="rating" value={s} id={`star-${s}`} className="peer absolute opacity-0 cursor-pointer" required />
+                                                    <label htmlFor={`star-${s}`} className="cursor-pointer text-muted-foreground peer-checked:text-primary hover:text-primary transition-colors">
+                                                        <Star className="w-10 h-10 fill-current" />
+                                                    </label>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Select Alignment Rating</p>
                                     </div>
-                                ))}
-                            </div>
-                        </TabsContent>
+                                    <div className="space-y-4">
+                                        <textarea
+                                            name="comment"
+                                            placeholder="Describe your ritual experience with this essence..."
+                                            className="w-full h-40 bg-muted/20 rounded-[2rem] p-8 border border-border/10 focus:border-primary/30 focus:ring-0 outline-none font-light italic text-lg transition-all"
+                                            required
+                                        />
+                                        <Button type="submit" className="w-full h-16 rounded-full bg-primary font-black uppercase tracking-widest shadow-xl shadow-primary/10">Submit Insight</Button>
+                                    </div>
+                                </form>
+                            ) : (
+                                <div className="text-center py-10 space-y-6">
+                                    <Info className="w-12 h-12 mx-auto text-primary/40" />
+                                    <p className="text-muted-foreground font-light text-lg">You must be logged in to share your botanical experience.</p>
+                                    <Button onClick={() => navigate('/auth')} variant="outline" className="rounded-full px-10 h-12 border-primary/20 text-primary hover:bg-primary hover:text-white transition-all">Sign In to Manifest</Button>
+                                </div>
+                            )}
+                        </div>
 
-                        <TabsContent value="reviews" className="animate-in fade-in slide-in-from-bottom-8 duration-700 space-y-10">
-                            <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
-                                {realReviews.length > 0 ? (
-                                    realReviews.map((rev: any, i: number) => (
-                                        <div key={rev.id || i} className="glass p-10 rounded-[3rem] space-y-6 flex flex-col justify-between border-border/10">
-                                            <div className="space-y-4">
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex gap-1 text-primary">
-                                                        {[...Array(5)].map((_, j) => <Star key={j} className={`w-3 h-3 ${j < rev.rating ? "fill-primary" : "opacity-20"}`} />)}
-                                                    </div>
-                                                    <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">
-                                                        {new Date(rev.created_at).toLocaleDateString()}
-                                                    </span>
+                        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
+                            {mergedReviews.length > 0 ? (
+                                mergedReviews.map((rev: any, i: number) => (
+                                    <div key={rev.id || i} className="glass p-12 rounded-[3.5rem] space-y-8 flex flex-col justify-between border-border/10 hover:shadow-2xl transition-all duration-500 relative group">
+                                        {rev.is_fake && (
+                                            <div className="absolute top-8 right-8 text-[8px] font-black uppercase tracking-[0.3em] text-primary/30">Curated Essence</div>
+                                        )}
+                                        <div className="space-y-6">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex gap-1 text-primary">
+                                                    {[...Array(5)].map((_, j) => <Star key={j} className={`w-4 h-4 ${j < rev.rating ? "fill-primary" : "opacity-20"}`} />)}
                                                 </div>
-                                                <p className="text-lg font-light leading-relaxed italic">"{rev.comment}"</p>
-
-                                                {rev.admin_reply && (
-                                                    <div className="p-5 rounded-3xl bg-primary/5 border border-primary/10 relative mt-4">
-                                                        <div className="absolute -left-2 top-4 bottom-4 w-1 bg-primary rounded-full" />
-                                                        <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-primary/60 mb-2">
-                                                            <ShieldCheck className="w-3 h-3" /> Guardian Response
-                                                        </div>
-                                                        <p className="text-sm font-medium italic text-primary/80">"{rev.admin_reply}"</p>
-                                                    </div>
-                                                )}
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">
+                                                    {new Date(rev.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                                                </span>
                                             </div>
-                                            <div className="flex items-center gap-4 pt-6 border-t border-border/20">
-                                                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-black text-primary uppercase">
-                                                    {(rev.user_name || "P").slice(0, 2)}
+                                            <p className="text-xl font-light leading-relaxed italic text-foreground/90">"{rev.comment}"</p>
+
+                                            {rev.admin_reply && (
+                                                <div className="p-6 rounded-[2rem] bg-primary/5 border border-primary/10 relative mt-6">
+                                                    <div className="absolute -left-1 top-6 bottom-6 w-1 bg-primary rounded-full" />
+                                                    <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-primary/60 mb-2">
+                                                        <ShieldCheck className="w-4 h-4" /> Guardian Response
+                                                    </div>
+                                                    <p className="text-base font-medium italic text-primary/80">"{rev.admin_reply}"</p>
                                                 </div>
-                                                <div>
-                                                    <p className="font-serif font-bold text-sm tracking-tight">{rev.user_name || "Anonymous Patron"}</p>
-                                                    <p className="text-[10px] text-emerald-500 font-black uppercase tracking-widest flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Verified Patron</p>
-                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="flex items-center gap-5 pt-8 border-t border-border/10">
+                                            <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-primary/20 to-primary/5 flex items-center justify-center text-sm font-black text-primary uppercase shadow-inner">
+                                                <span className="relative z-10">{(rev.user_name || "P").slice(0, 2)}</span>
+                                            </div>
+                                            <div>
+                                                <p className="font-serif font-bold text-lg tracking-tight group-hover:text-primary transition-colors">{rev.user_name || "Anonymous Patron"}</p>
+                                                <p className="text-[10px] text-emerald-500 font-black uppercase tracking-widest flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5" /> Verified Patron</p>
                                             </div>
                                         </div>
-                                    ))
-                                ) : (
-                                    <div className="col-span-2 py-20 text-center space-y-4 opacity-50">
-                                        <MessageSquare className="w-12 h-12 mx-auto" />
-                                        <p className="font-serif italic text-lg text-muted-foreground">No botanical insights have been shared for this essence yet.</p>
                                     </div>
-                                )}
-                            </div>
-                        </TabsContent>
+                                ))
+                            ) : (
+                                <div className="col-span-2 py-32 text-center space-y-6 glass rounded-[4rem] border-dashed border-2">
+                                    <div className="w-20 h-20 bg-muted/30 rounded-full flex items-center justify-center mx-auto">
+                                        <MessageSquare className="w-10 h-10 opacity-30" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <p className="font-serif italic text-2xl text-foreground">Awaiting the first Patron's voice...</p>
+                                        <p className="text-muted-foreground text-sm uppercase tracking-widest">Share your botanical experience with the collective.</p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
 
-                        <TabsContent value="faq" className="animate-in fade-in slide-in-from-bottom-8 duration-700">
-                            <div className="max-w-3xl mx-auto">
-                                <Accordion type="single" collapsible className="space-y-4">
-                                    {(product.faqs || [
-                                        { q: "When is the optimal cycle for use?", a: "Manifest this essence during your evening ritual. Apply to the scalp, massage gently, and leave overnight for maximum absorption." },
-                                        { q: "Is it compatible with all hair alignments?", a: "Yes, our botanical formulation is clinically synthesized to harmonize with all hair alignments, including color-treated and chemically processed hair." }
-                                    ]).map((faq: any, i: number) => (
-                                        <AccordionItem key={i} value={`item-${i}`} className="border-none">
-                                            <AccordionTrigger className="glass px-10 py-8 rounded-[2rem] hover:no-underline text-lg font-serif italic focus:bg-primary/5 transition-colors">
-                                                {faq.q}
-                                            </AccordionTrigger>
-                                            <AccordionContent className="px-12 py-8 text-muted-foreground font-light text-lg leading-relaxed border-t border-border/10">
-                                                {faq.a}
-                                            </AccordionContent>
-                                        </AccordionItem>
-                                    ))}
-                                </Accordion>
-                            </div>
-                        </TabsContent>
-                    </Tabs>
-                </section>
+                    {/* FAQ Section */}
+                    <div id="faq" className="animate-in fade-in slide-in-from-bottom-8 duration-700">
+                        <div className="text-center mb-16">
+                            <h2 className="text-4xl md:text-5xl font-serif mb-4 uppercase tracking-tighter">Ritual <span className="text-primary italic">Inquiries</span></h2>
+                            <HelpCircle className="w-8 h-8 mx-auto text-primary/20" />
+                        </div>
+                        <div className="max-w-4xl mx-auto">
+                            <Accordion type="single" collapsible className="space-y-6">
+                                {(product.faqs || [
+                                    { q: "When is the optimal cycle for use?", a: "Manifest this essence during your evening ritual. Apply to the scalp, massage gently, and leave overnight for maximum absorption." },
+                                    { q: "Is it compatible with all hair alignments?", a: "Yes, our botanical formulation is clinically synthesized to harmonize with all hair alignments, including color-treated and chemically processed hair." }
+                                ]).map((faq: any, i: number) => (
+                                    <AccordionItem key={i} value={`item-${i}`} className="border-none">
+                                        <AccordionTrigger className="glass px-10 py-10 rounded-[2.5rem] hover:no-underline text-xl font-serif italic focus:bg-primary/5 transition-all duration-500 border-border/10 data-[state=open]:rounded-b-none data-[state=open]:border-primary/20">
+                                            {faq.q}
+                                        </AccordionTrigger>
+                                        <AccordionContent className="glass px-12 py-10 text-muted-foreground font-light text-xl leading-relaxed border-t-0 rounded-b-[2.5rem] border-border/10 bg-muted/5 animate-in slide-in-from-top-4 duration-500">
+                                            {faq.a}
+                                        </AccordionContent>
+                                    </AccordionItem>
+                                ))}
+                            </Accordion>
+                        </div>
+                    </div>
+                </div>
 
                 <RecentlyViewedProducts currentId={product.id} products={products} />
 

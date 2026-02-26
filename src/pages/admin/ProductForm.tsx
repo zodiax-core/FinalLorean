@@ -19,6 +19,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { productsService, categoriesService, Product } from "@/services/supabase";
 import { useProducts } from "@/context/ProductsContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
 
 const BADGES = [
     "Best Seller", "New Arrival", "Limited Edition", "Staff Pick", "Customer Favorite", "Organic"
@@ -58,6 +59,8 @@ export default function ProductForm() {
         specs: {},
         faqs: [],
         reviews_list: [],
+        vessel_volume: "",
+        fake_sold_count: 0,
         variants: { sizes: ["30ml", "50ml", "100ml"], colors: [] }
     });
 
@@ -283,6 +286,15 @@ export default function ProductForm() {
                                             className="h-14 rounded-2xl bg-muted/20 border-none px-6 text-muted-foreground line-through"
                                         />
                                     </div>
+                                </div>
+                                <div className="space-y-4 pt-4">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Vessel Volume (e.g. 200ml)</Label>
+                                    <Input
+                                        value={formData.vessel_volume}
+                                        onChange={(e) => setFormData({ ...formData, vessel_volume: e.target.value })}
+                                        placeholder="200ml"
+                                        className="h-14 rounded-2xl bg-muted/20 border-none px-6 text-xl font-serif italic"
+                                    />
                                 </div>
                             </div>
                         </div>
@@ -527,14 +539,24 @@ export default function ProductForm() {
                                                 placeholder="Reviewer Name"
                                                 className="h-10 rounded-xl bg-background border-none text-xs font-bold"
                                             />
-                                            <Input
-                                                type="number"
-                                                max="5"
-                                                min="1"
-                                                value={rev.rating}
-                                                onChange={(e) => updateNestedField('reviews_list', i, 'rating', Number(e.target.value))}
-                                                className="h-10 rounded-xl bg-background border-none text-xs font-black"
-                                            />
+                                            <div className="flex gap-2">
+                                                <Input
+                                                    type="number"
+                                                    max="5"
+                                                    min="1"
+                                                    value={rev.rating}
+                                                    onChange={(e) => updateNestedField('reviews_list', i, 'rating', Number(e.target.value))}
+                                                    className="h-10 rounded-xl bg-background border-none text-xs font-black flex-1"
+                                                />
+                                                <div className="flex flex-col items-center justify-center px-3 rounded-xl bg-background border-none group/fake">
+                                                    <Label className="text-[8px] font-black uppercase opacity-40 mb-1">Fake</Label>
+                                                    <Switch
+                                                        checked={!!rev.is_fake}
+                                                        onCheckedChange={(v) => updateNestedField('reviews_list', i, 'is_fake', v)}
+                                                        className="scale-75"
+                                                    />
+                                                </div>
+                                            </div>
                                         </div>
                                         <Textarea
                                             value={rev.comment}
@@ -598,6 +620,15 @@ export default function ProductForm() {
                                         value={formData.min_stock_level}
                                         onChange={(e) => setFormData({ ...formData, min_stock_level: Number(e.target.value) })}
                                         className="h-12 rounded-2xl bg-muted/20 border-none px-6 font-black text-xl"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Fake Sold Count (Display Only)</Label>
+                                    <Input
+                                        type="number"
+                                        value={formData.fake_sold_count}
+                                        onChange={(e) => setFormData({ ...formData, fake_sold_count: Number(e.target.value) })}
+                                        className="h-12 rounded-2xl bg-muted/20 border-primary/20 border-2 px-6 font-black text-xl text-primary"
                                     />
                                 </div>
                                 <div className="space-y-2">

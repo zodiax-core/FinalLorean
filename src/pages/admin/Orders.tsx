@@ -338,6 +338,22 @@ export default function AdminOrders() {
             doc.text(o.email, 20, yPos);
             doc.text(`${o.city}, ${o.state} ${o.postal_code}`, 90, yPos);
 
+            if (o.nearest_famous_place || o.receiver_name || o.receiver_phone) {
+                yPos += 8;
+                doc.setTextColor(120, 120, 120);
+                doc.setFontSize(7);
+                doc.text("DELIVERY NOTES / RECEIVER", 20, yPos);
+                yPos += 5;
+                doc.setTextColor(26, 26, 26);
+                doc.setFontSize(8);
+                const notes = [
+                    o.receiver_name ? `Receiver: ${o.receiver_name}` : "",
+                    o.receiver_phone ? `Phone: ${o.receiver_phone}` : "",
+                    o.nearest_famous_place ? `Landmark: ${o.nearest_famous_place}` : ""
+                ].filter(Boolean).join(" | ");
+                doc.text(notes, 20, yPos);
+            }
+
             yPos += 12;
 
             const items = o.items || [];
@@ -859,8 +875,22 @@ export default function AdminOrders() {
                                         <div className="glass p-6 rounded-3xl space-y-3">
                                             <p className="text-xl font-serif">{selectedOrder?.full_name || 'No Name Provided'}</p>
                                             <p className="text-sm flex items-center gap-2 text-muted-foreground"><Mail className="w-4 h-4" /> {selectedOrder?.email || 'No Email'}</p>
+                                            {selectedOrder?.receiver_phone && (
+                                                <p className="text-sm flex items-center gap-2 text-muted-foreground"><Truck className="w-4 h-4" /> Phone: {selectedOrder.receiver_phone}</p>
+                                            )}
                                         </div>
                                     </div>
+                                    {(selectedOrder?.receiver_name || selectedOrder?.nearest_famous_place) && (
+                                        <div className="space-y-4">
+                                            <h4 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                                                <Truck className="w-3 h-3" /> Delivery Details
+                                            </h4>
+                                            <div className="glass p-6 rounded-3xl space-y-2 text-sm">
+                                                {selectedOrder.receiver_name && <p><span className="font-bold opacity-60">Receiver:</span> {selectedOrder.receiver_name}</p>}
+                                                {selectedOrder.nearest_famous_place && <p><span className="font-bold opacity-60">Landmark:</span> {selectedOrder.nearest_famous_place}</p>}
+                                            </div>
+                                        </div>
+                                    )}
                                     <div className="space-y-4">
                                         <h4 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
                                             <MapPin className="w-3 h-3" /> Shipping Address
