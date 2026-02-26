@@ -190,3 +190,14 @@ html.lenis body {
 .lenis.lenis-scrolling iframe {
   pointer-events: none;
 }
+
+/* Hero Bar Positioning Logic */
+.has-hero-bar .fixed.top-0,
+.has-hero-bar .sticky.top-0 {
+  transform: translateY(var(--hero-bar-height));
+  transition: transform 0.3s ease;
+}
+
+body.has-hero-bar {
+  padding-top: var(--hero-bar-height);
+}
