@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Outlet, useNavigate } from "react-router-dom";
+import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { Menu, Moon, Sun, Bell, Search, User, Clock, LogOut } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { AdminSidebar } from "./AdminSidebar";
@@ -26,7 +26,31 @@ import {
     TooltipTrigger,
 } from "@/components/ui/tooltip";
 
+const getPageTitle = (path: string) => {
+    if (path.includes("/admin/orders")) return "Orders";
+    if (path.includes("/admin/products")) return "Products";
+    if (path.includes("/admin/categories")) return "Categories";
+    if (path.includes("/admin/inventory")) return "Inventory";
+    if (path.includes("/admin/customers")) return "Customers";
+    if (path.includes("/admin/shipping")) return "Shipping";
+    if (path.includes("/admin/discounts")) return "Discounts";
+    if (path.includes("/admin/marketing")) return "Marketing";
+    if (path.includes("/admin/reviews")) return "Reviews";
+    if (path.includes("/admin/settings")) return "Settings";
+    if (path.includes("/admin/notifications")) return "Notifications";
+    if (path.includes("/admin/support")) return "Support";
+    return "Dashboard";
+};
+
+const getPageSubtitle = (path: string) => {
+    if (path.includes("/admin/marketing")) return "Manage your campaigns and botanical manifestos.";
+    if (path.includes("/admin/reviews")) return "What the patrons are saying about your essences.";
+    if (path.includes("/admin/settings")) return "Global botanical configurations.";
+    return "Welcome back, Administrator. Here is the overview of your store.";
+};
+
 export const AdminLayout = () => {
+    const location = useLocation();
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const { theme, setTheme, isAutoSchedule, setIsAutoSchedule } = useTheme();
     const { user, signOut } = useAuth();
@@ -196,8 +220,8 @@ export const AdminLayout = () => {
                 <main className="flex-1 overflow-y-auto p-4 md:p-8">
                     <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <div className="flex flex-col gap-1">
-                            <h2 className="text-4xl font-serif tracking-tight">Admin <span className="text-primary italic">Dashboard</span></h2>
-                            <p className="text-muted-foreground font-light">Welcome back, Administrator. Here is the overview of your store.</p>
+                            <h2 className="text-4xl font-serif tracking-tight">Admin <span className="text-primary italic">{getPageTitle(location.pathname)}</span></h2>
+                            <p className="text-muted-foreground font-light">{getPageSubtitle(location.pathname)}</p>
                         </div>
                         <Outlet />
                     </div>

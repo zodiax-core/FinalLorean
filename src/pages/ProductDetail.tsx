@@ -128,7 +128,10 @@ const ProductDetail = () => {
                 setFetchingReviews(true);
                 try {
                     const data = await reviewsService.getByProductId(product.id);
-                    setRealReviews(data);
+                    setRealReviews(data || []);
+                    console.log("Product Manifested:", product);
+                    console.log("Real Reviews Loaded:", data);
+                    console.log("Merged Reviews:", mergedReviews);
                 } catch (error) {
                     console.error("Reviews fetch error:", error);
                 } finally {
@@ -330,7 +333,7 @@ const ProductDetail = () => {
                                         ))}
                                     </div>
                                     <span className="text-[10px] font-black text-foreground">
-                                        {product.rating} <span className="text-muted-foreground/60">({product.reviews})</span>
+                                        {product.rating} <span className="text-muted-foreground/60">({mergedReviews.length})</span>
                                         {product.fake_sold_count ? <span className="ml-2 text-primary">| {product.fake_sold_count}+ sold already</span> : null}
                                     </span>
                                 </div>
@@ -466,7 +469,7 @@ const ProductDetail = () => {
                                 <div className="flex gap-1">
                                     {[...Array(5)].map((_, i) => <Star key={i} className="w-4 h-4 fill-primary text-primary" />)}
                                 </div>
-                                <span className="text-sm font-black uppercase tracking-widest">Trusted by {product.reviews + (product.fake_sold_count || 0)} Patrons</span>
+                                <span className="text-sm font-black uppercase tracking-widest">Trusted by {mergedReviews.length + (product.fake_sold_count || 0)} Patrons</span>
                             </div>
                         </div>
 

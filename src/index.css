@@ -108,7 +108,7 @@
 
 @layer base {
   * {
-    @apply border-border;
+    border-color: hsl(var(--border));
   }
 
   html {
@@ -116,7 +116,10 @@
   }
 
   body {
-    @apply bg-background text-foreground antialiased;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     font-family: 'Jost', sans-serif;
   }
 
@@ -126,7 +129,7 @@
   h4,
   h5,
   h6 {
-    @apply font-semibold;
+    font-weight: 600;
     font-family: 'Cormorant Garamond', serif;
   }
 }
@@ -137,7 +140,15 @@
   }
 
   .glass {
-    @apply backdrop-blur-md bg-background/80 border border-border/50;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    background-color: hsla(var(--background) / 0.8);
+    border: 1px solid hsla(var(--border) / 0.5);
+  }
+
+  .content-visibility-auto {
+    content-visibility: auto;
+    contain-intrinsic-size: 1px 5000px;
   }
 
   .gradient-rose {

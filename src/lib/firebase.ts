@@ -14,7 +14,18 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 export const analytics = typeof window !== 'undefined' ? getAnalytics(app) : null;
-export const messaging = getMessaging(app);
+
+// Safe Messaging Initialization
+let messagingInstance: any = null;
+try {
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window) {
+        messagingInstance = getMessaging(app);
+    }
+} catch (e) {
+    console.warn("Ritual of Messaging not supported in this realm:", e);
+}
+
+export const messaging = messagingInstance;
 
 export const requestNotificationPermission = async (userId: string) => {
     try {

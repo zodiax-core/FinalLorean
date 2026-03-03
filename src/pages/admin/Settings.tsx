@@ -28,8 +28,16 @@ interface AdminSettingsProps {
 export default function AdminSettings({ defaultTab = "general" }: AdminSettingsProps) {
     const { user } = useAuth();
     const { toast } = useToast();
+    const [activeTab, setActiveTab] = useState(defaultTab);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
+
+    // Sync activeTab with defaultTab prop when it changes (e.g. navigating from Sidebar)
+    useEffect(() => {
+        if (defaultTab) {
+            setActiveTab(defaultTab);
+        }
+    }, [defaultTab]);
     const [configs, setConfigs] = useState<any>({
         general: {},
         orders: {},
@@ -117,7 +125,7 @@ export default function AdminSettings({ defaultTab = "general" }: AdminSettingsP
                 </div>
             </div>
 
-            <Tabs defaultValue={defaultTab} className="grid grid-cols-1 lg:grid-cols-4 gap-10">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="grid grid-cols-1 lg:grid-cols-4 gap-10">
                 <div className="lg:col-span-1">
                     <TabsList className="flex flex-col h-auto bg-transparent border-none space-y-2 p-0">
                         <SettingTabTrigger value="general" icon={Store} label="Store Identity" />

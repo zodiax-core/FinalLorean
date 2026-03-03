@@ -19,13 +19,21 @@ messaging.onBackgroundMessage((payload) => {
         payload
     );
 
-    const notificationTitle = payload.notification.title;
+    // Defensive parsing for background alerts
+    const title = payload.notification?.title || payload.data?.title || "Lorean Order";
+    const body = payload.notification?.body || payload.data?.message || "A new ritual has been initiated.";
+
     const notificationOptions = {
-        body: payload.notification.body,
-        icon: "/logo.png", // Assuming logo is at this path
+        body: body,
+        icon: "/logo.png",
         badge: "/logo.png",
-        data: payload.data
+        tag: 'order-notification', // Prevent stacking duplicates
+        renotify: true,
+        data: payload.data,
+        actions: [
+            { action: 'open', title: 'View Order' }
+        ]
     };
 
-    self.registration.showNotification(notificationTitle, notificationOptions);
+    self.registration.showNotification(title, notificationOptions);
 });
