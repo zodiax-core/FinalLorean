@@ -97,59 +97,59 @@ export default function GlobalMarketing() {
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => setShowPopup(false)}
-                                className="absolute top-8 right-8 z-10 w-12 h-12 rounded-full glass hover:bg-white/20 transition-all"
+                                className="absolute top-4 right-4 md:top-8 md:right-8 z-20 w-10 h-10 md:w-12 md:h-12 rounded-full glass hover:bg-white/20 transition-all"
                             >
-                                <X className="w-6 h-6" />
+                                <X className="w-5 h-5 md:w-6 md:h-6" />
                             </Button>
 
                             <div className="grid grid-cols-1 md:grid-cols-2">
-                                <div className="relative aspect-square md:aspect-auto h-[300px] md:h-auto overflow-hidden">
+                                <div className="relative aspect-video md:aspect-auto h-[240px] md:h-auto overflow-hidden">
                                     <img
                                         src={popupProduct.image}
                                         alt={popupProduct.name}
                                         className="w-full h-full object-cover"
                                     />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex flex-col justify-end p-10">
-                                        <div className="flex gap-1 mb-2">
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-6 md:p-10">
+                                        <div className="flex gap-1 mb-2 justify-center md:justify-start">
                                             {[...Array(5)].map((_, i) => (
                                                 <Star key={i} className="w-3 h-3 fill-amber-400 text-amber-400" />
                                             ))}
                                         </div>
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-white/80 italic">Curated Excellence</p>
+                                        <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-white/80 italic text-center md:text-left">Curated Excellence</p>
                                     </div>
                                 </div>
-                                <div className="p-12 flex flex-col justify-center space-y-8 bg-background/40">
-                                    <div className="space-y-4">
-                                        <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Limited Offering</h4>
-                                        <h2 className="text-5xl font-serif tracking-tight leading-tight">
-                                            {popupProduct.name.split(' ').slice(0, -1).join(' ')} <br />
-                                            <span className="text-primary italic">{popupProduct.name.split(' ').slice(-1)}</span>
+                                <div className="p-8 md:p-12 flex flex-col justify-center space-y-6 md:space-y-8 bg-background/40 items-center md:items-start text-center md:text-left">
+                                    <div className="space-y-3 md:space-y-4">
+                                        <h4 className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.3em] text-primary">Limited Offering</h4>
+                                        <h2 className="text-3xl md:text-5xl font-serif tracking-tight leading-tight">
+                                            {popupProduct.name.split(' ').slice(0, -1).join(' ')} <br className="hidden md:block" />
+                                            <span className="text-primary italic"> {popupProduct.name.split(' ').slice(-1)}</span>
                                         </h2>
-                                        <p className="text-sm text-muted-foreground font-light leading-relaxed max-w-xs">
+                                        <p className="text-xs md:text-sm text-muted-foreground font-light leading-relaxed max-w-xs mx-auto md:mx-0">
                                             {popupProduct.description || "Indulge in our most sought-after elixir, crafted for those who seek the extraordinary."}
                                         </p>
                                     </div>
 
-                                    <div className="flex items-center gap-6">
+                                    <div className="flex items-center gap-4 md:gap-6">
                                         <div>
-                                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">Ritual Exchange</p>
-                                            <p className="text-3xl font-serif italic text-primary">Rs. {popupProduct.price}</p>
+                                            <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">Ritual Exchange</p>
+                                            <p className="text-2xl md:text-3xl font-serif italic text-primary">Rs. {popupProduct.price}</p>
                                         </div>
-                                        <div className="w-px h-12 bg-border/20" />
+                                        <div className="w-px h-10 md:h-12 bg-border/20" />
                                         <div className="text-center">
-                                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">Stock</p>
-                                            <p className="text-base font-bold uppercase">{popupProduct.stock > 0 ? 'Available' : 'Sold Out'}</p>
+                                            <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">Stock</p>
+                                            <p className="text-sm md:text-base font-bold uppercase">{popupProduct.stock > 0 ? 'Available' : 'Sold Out'}</p>
                                         </div>
                                     </div>
 
-                                    <div className="flex gap-4 pt-4">
+                                    <div className="flex flex-col sm:flex-row gap-3 md:gap-4 pt-2 md:pt-4 w-full sm:w-auto">
                                         <Button
                                             size="lg"
                                             onClick={() => {
                                                 setShowPopup(false);
                                                 navigate(`/product/${popupProduct.id}`);
                                             }}
-                                            className="flex-1 h-16 rounded-full text-xs font-black uppercase tracking-widest shadow-xl shadow-primary/20 bg-primary group"
+                                            className="w-full sm:w-auto h-14 md:h-16 rounded-full text-[10px] font-black uppercase tracking-widest shadow-xl shadow-primary/20 bg-primary group px-8"
                                         >
                                             View Ritual  <ArrowRight className="w-4 h-4 ml-3 group-hover:translate-x-1 transition-transform" />
                                         </Button>
@@ -157,7 +157,7 @@ export default function GlobalMarketing() {
                                             size="lg"
                                             variant="outline"
                                             onClick={() => setShowPopup(false)}
-                                            className="h-16 rounded-full px-10 text-xs font-black uppercase tracking-widest border-2"
+                                            className="w-full sm:w-auto h-14 md:h-16 rounded-full px-8 text-[10px] font-black uppercase tracking-widest border-2"
                                         >
                                             Dismiss
                                         </Button>
