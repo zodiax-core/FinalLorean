@@ -372,11 +372,20 @@ const ProductDetail = () => {
                                     </div>
                                     <div className="text-right">
                                         <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block mb-1">Inventory</Label>
-                                        <div className="flex items-center gap-2 text-emerald-500 font-black uppercase tracking-widest text-[10px]">
-                                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                            {product.stock > 0 ? "Essence Manifested" : "Ether Transcending"}
-                                        </div>
+                                        {product.stock > 0 ? (
+                                            <div className="flex items-center gap-2 text-emerald-500 font-black uppercase tracking-widest text-[10px]">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                                Essence Manifested
+                                                <span className="text-muted-foreground/60 normal-case font-semibold">· {product.stock} left</span>
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center gap-2 text-rose-500 font-black uppercase tracking-widest text-[10px]">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                                                Out of Stock
+                                            </div>
+                                        )}
                                     </div>
+
                                 </div>
 
                                 <div className="flex items-center gap-4 h-16">
@@ -567,8 +576,8 @@ const ProductDetail = () => {
                                                     reviewCarouselRef.current?.children[i]?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
                                                 }}
                                                 className={`h-1.5 rounded-full transition-all duration-300 ${i === carouselIndex
-                                                        ? 'w-6 bg-primary'
-                                                        : 'w-2 bg-border hover:bg-primary/40'
+                                                    ? 'w-6 bg-primary'
+                                                    : 'w-2 bg-border hover:bg-primary/40'
                                                     }`}
                                             />
                                         ))}
