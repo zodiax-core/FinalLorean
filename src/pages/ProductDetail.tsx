@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     Star, Heart, ShoppingBag, ArrowLeft, Minus, Plus, Share2,
-    ShieldCheck, Truck, RotateCcw, CheckCircle2, Facebook,
+    ShieldCheck, CheckCircle2, Facebook,
     Twitter, Instagram, ChevronRight, MessageSquare, Info,
     Package, Sparkles, Clock, CreditCard, Loader2, HelpCircle,
     Copy, Check
@@ -78,7 +78,6 @@ const ProductDetail = () => {
     const [directProduct, setDirectProduct] = useState<Product | null>(null);
     const [directLoading, setDirectLoading] = useState(false);
 
-    // Fallback: fetch directly from Supabase if not found in context
     useEffect(() => {
         if (!loading && !contextProduct && productId) {
             setDirectLoading(true);
@@ -93,7 +92,6 @@ const ProductDetail = () => {
     }, [loading, contextProduct, productId]);
 
     const product = contextProduct || directProduct;
-    // Show loading if we are still fetching from context OR if we've decided to fetch direct but haven't finished
     const isActuallyLoading = loading || (directLoading && !product);
 
     const [activeImage, setActiveImage] = useState("");
@@ -103,6 +101,9 @@ const ProductDetail = () => {
     const [isCopied, setIsCopied] = useState(false);
     const [realReviews, setRealReviews] = useState<any[]>([]);
     const [fetchingReviews, setFetchingReviews] = useState(false);
+    const [submittingReview, setSubmittingReview] = useState(false);
+    const [carouselIndex, setCarouselIndex] = useState(0);
+    const reviewCarouselRef = useRef<HTMLDivElement>(null);
     const { user } = useAuth();
     const buySectionRef = useRef<HTMLDivElement>(null);
 
@@ -117,7 +118,6 @@ const ProductDetail = () => {
             created_at: new Date(Date.now() - (idx + 1) * 86400000).toISOString(),
             verified: true
         }));
-
         const all = [...formattedFake, ...realReviews];
         return all.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     }, [product?.reviews_list, realReviews]);
@@ -129,9 +129,6 @@ const ProductDetail = () => {
                 try {
                     const data = await reviewsService.getByProductId(product.id);
                     setRealReviews(data || []);
-                    console.log("Product Manifested:", product);
-                    console.log("Real Reviews Loaded:", data);
-                    console.log("Merged Reviews:", mergedReviews);
                 } catch (error) {
                     console.error("Reviews fetch error:", error);
                 } finally {
@@ -156,7 +153,6 @@ const ProductDetail = () => {
             setActiveImage(product.image);
             if (product.variants?.sizes?.length) setSelectedSize(product.variants.sizes[0]);
             window.scrollTo({ top: 0, behavior: "smooth" });
-
             try {
                 const recentlyViewed = JSON.parse(localStorage.getItem("recentlyViewed") || "[]");
                 if (!recentlyViewed.includes(product.id)) {
@@ -211,6 +207,9 @@ const ProductDetail = () => {
     const price = Number(product.price) || 0;
     const oldPrice = Number(product.old_price) || 0;
     const discountPercentage = oldPrice > price ? Math.round(((oldPrice - price) / oldPrice) * 100) : 0;
+
+    // Check if admin has entered specs data
+    const hasSpecs = product.specs && typeof product.specs === 'object' && Object.keys(product.specs).length > 0;
 
     return (
         <div className="min-h-screen bg-background">
@@ -278,7 +277,8 @@ const ProductDetail = () => {
                     <span className="text-primary font-black truncate max-w-[150px]">{product.name}</span>
                 </nav>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 xl:gap-32 mb-32">
+                {/* ── Main Grid ── */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 xl:gap-32 mb-16">
                     {/* Left: Interactive Gallery */}
                     <div className="space-y-8">
                         <motion.div
@@ -363,8 +363,8 @@ const ProductDetail = () => {
                                 </div>
                             </div>
 
-                            {/* Combined Actions Section - BEFORE Highlights */}
-                            <div className="glass p-8 rounded-[3rem] border-border/10 space-y-8 mb-8">
+                            {/* Combined Actions Section */}
+                            <div className="glass p-8 rounded-[3rem] border-border/10 space-y-8">
                                 <div className="flex items-center justify-between gap-4">
                                     <div className="space-y-1">
                                         <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Vessel Volume</Label>
@@ -401,67 +401,73 @@ const ProductDetail = () => {
                                     </Button>
                                 </div>
                             </div>
-
-                            {/* Scan Highlights & Trust Protocols Aligned */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                {(product.highlights || []).slice(0, 4).map((h: string) => (
-                                    <div key={h} className="flex items-center gap-4 bg-muted/20 p-5 rounded-[2rem] border border-border/10 group hover:border-primary/30 transition-all">
-                                        <div className="w-10 h-10 rounded-full bg-primary/5 flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-white transition-all">
-                                            <CheckCircle2 className="w-5 h-5" />
-                                        </div>
-                                        <span className="text-xs font-bold uppercase tracking-widest">{h}</span>
-                                    </div>
-                                ))}
-
-                                {/* Aligned Trust Icons */}
-                                {[
-                                    { icon: ShieldCheck, label: "Vault Secured" },
-                                    { icon: Truck, label: "Ethereal Shipping" },
-                                    { icon: RotateCcw, label: "Ritual Returns" }
-                                ].map((trust, i) => (
-                                    <div key={i} className="flex items-center gap-4 bg-primary/5 p-5 rounded-[2rem] border border-primary/10 group hover:border-primary/30 transition-all">
-                                        <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shrink-0 text-primary group-hover:bg-primary group-hover:text-white transition-all shadow-sm">
-                                            <trust.icon className="w-5 h-5" />
-                                        </div>
-                                        <span className="text-xs font-bold uppercase tracking-widest text-primary/80">{trust.label}</span>
-                                    </div>
-                                ))}
-                            </div>
                         </div>
                     </div>
                 </div>
 
-                {/* Continuous Sections Implementation */}
-                <div className="space-y-32">
-                    {/* Narrative Section */}
-                    <div id="narrative" className="animate-in fade-in slide-in-from-bottom-8 duration-700">
-                        <div className="max-w-4xl mx-auto glass p-12 md:p-20 rounded-[4rem] text-center space-y-8 border-border/10 shadow-sm relative overflow-hidden">
-                            <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -mr-32 -mt-32" />
-                            <Sparkles className="w-12 h-12 text-primary mx-auto opacity-20" />
-                            <h3 className="text-4xl md:text-5xl font-serif italic text-balance leading-tight uppercase tracking-tighter">{product.name}: The Ritual Synthesis</h3>
-                            <p className="text-xl text-muted-foreground font-light leading-relaxed text-balance max-w-2xl mx-auto">
-                                {product.detailed_description || product.description}
-                            </p>
-                        </div>
-                    </div>
-
-                    {/* Specs Section */}
-                    <div id="specs" className="animate-in fade-in slide-in-from-bottom-8 duration-700">
-                        <div className="text-center mb-16">
-                            <h2 className="text-4xl font-serif mb-4 uppercase">Technical <span className="text-primary italic">Synthesis</span></h2>
-                            <p className="text-muted-foreground text-sm uppercase tracking-widest">Botanical Composition & Molecular Alignments</p>
-                        </div>
-                        <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                            {Object.entries(product.specs || { "Texture": "Silky Elixir", "Absorption": "Instant", "Fragrance": "Celestial Bloom", "Hair Type": "All Alignments" }).map(([key, val]) => (
-                                <div key={key} className="flex flex-col gap-2 p-8 rounded-[3rem] bg-muted/20 border border-border/10 hover:border-primary/20 transition-all group">
-                                    <span className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/50 group-hover:text-primary transition-colors">{key}</span>
-                                    <span className="font-serif italic text-2xl text-foreground">{val as string}</span>
+                {/* ── Highlights: Full-width below the image/info grid, centered ── */}
+                {product.highlights && product.highlights.length > 0 && (
+                    <div className="mb-24">
+                        <div className="flex flex-wrap justify-center gap-3">
+                            {product.highlights.map((h: string) => (
+                                <div
+                                    key={h}
+                                    className="flex items-center gap-3 bg-muted/20 px-6 py-3.5 rounded-full border border-border/10 group hover:border-primary/30 hover:bg-primary/5 transition-all"
+                                >
+                                    <CheckCircle2 className="w-4 h-4 text-primary shrink-0" />
+                                    <span className="text-xs font-bold uppercase tracking-widest whitespace-nowrap">{h}</span>
                                 </div>
                             ))}
                         </div>
                     </div>
+                )}
 
-                    {/* Patron Proof (Reviews) Section */}
+                {/* ── Continuous Sections ── */}
+                <div className="space-y-32">
+
+                    {/* Narrative — compact minimalist strip */}
+                    <div id="narrative" className="animate-in fade-in slide-in-from-bottom-8 duration-700">
+                        <div className="rounded-[2rem] md:rounded-[3rem] border border-border/10 bg-muted/10 overflow-hidden">
+                            {/* Mobile: stacked card with accent top bar */}
+                            <div className="h-1 w-full bg-gradient-to-r from-primary/40 via-primary/20 to-transparent" />
+                            <div className="flex flex-col md:flex-row md:items-center gap-0 md:gap-0">
+                                {/* Label panel */}
+                                <div className="flex items-center gap-4 md:flex-col md:items-start md:gap-3 md:shrink-0 md:w-56 px-6 pt-6 pb-3 md:p-10 md:border-r border-border/10">
+                                    <Sparkles className="w-6 h-6 md:w-7 md:h-7 text-primary/50 shrink-0" />
+                                    <div>
+                                        <h3 className="text-lg md:text-2xl font-serif italic tracking-tight text-primary leading-tight">{product.name}</h3>
+                                        <p className="text-[9px] font-black uppercase tracking-[0.25em] text-muted-foreground/40 mt-0.5">The Ritual Synthesis</p>
+                                    </div>
+                                </div>
+                                {/* Divider — horizontal on mobile, vertical on desktop */}
+                                <div className="mx-6 md:mx-0 h-px md:h-auto md:w-px bg-border/20" />
+                                {/* Description */}
+                                <p className="px-6 pb-7 pt-4 md:px-10 md:py-10 text-sm md:text-base text-muted-foreground font-light leading-relaxed">
+                                    {product.detailed_description || product.description}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Specs — only shown if admin has entered data */}
+                    {hasSpecs && (
+                        <div id="specs" className="animate-in fade-in slide-in-from-bottom-8 duration-700">
+                            <div className="text-center mb-16">
+                                <h2 className="text-4xl font-serif mb-4 uppercase">Technical <span className="text-primary italic">Synthesis</span></h2>
+                                <p className="text-muted-foreground text-sm uppercase tracking-widest">Botanical Composition & Molecular Alignments</p>
+                            </div>
+                            <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                                {Object.entries(product.specs).map(([key, val]) => (
+                                    <div key={key} className="flex flex-col gap-2 p-8 rounded-[3rem] bg-muted/20 border border-border/10 hover:border-primary/20 transition-all group">
+                                        <span className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/50 group-hover:text-primary transition-colors">{key}</span>
+                                        <span className="font-serif italic text-2xl text-foreground">{val as string}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Patron Proof (Reviews) */}
                     <div id="reviews" className="animate-in fade-in slide-in-from-bottom-8 duration-700 space-y-16">
                         <div className="text-center">
                             <h2 className="text-4xl md:text-5xl font-serif mb-4 uppercase tracking-tighter">Patron <span className="text-primary italic">Proof</span></h2>
@@ -473,8 +479,116 @@ const ProductDetail = () => {
                             </div>
                         </div>
 
-                        {/* Review Submission Form */}
-                        <div className="max-w-4xl mx-auto glass p-10 rounded-[3rem] border-border/10 space-y-6">
+                        {/* Reviews — arrow-nav carousel */}
+                        {mergedReviews.length > 0 ? (
+                            <div className="relative">
+                                {/* Prev button */}
+                                {carouselIndex > 0 && (
+                                    <button
+                                        onClick={() => {
+                                            const next = carouselIndex - 1;
+                                            setCarouselIndex(next);
+                                            reviewCarouselRef.current?.children[next]?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
+                                        }}
+                                        className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 w-12 h-12 rounded-full bg-background border-2 border-border/20 shadow-xl flex items-center justify-center hover:border-primary/40 hover:text-primary transition-all"
+                                    >
+                                        <ArrowLeft className="w-5 h-5" />
+                                    </button>
+                                )}
+
+                                {/* Next button */}
+                                {carouselIndex < mergedReviews.length - 1 && (
+                                    <button
+                                        onClick={() => {
+                                            const next = carouselIndex + 1;
+                                            setCarouselIndex(next);
+                                            reviewCarouselRef.current?.children[next]?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
+                                        }}
+                                        className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 w-12 h-12 rounded-full bg-background border-2 border-border/20 shadow-xl flex items-center justify-center hover:border-primary/40 hover:text-primary transition-all"
+                                    >
+                                        <ArrowLeft className="w-5 h-5 rotate-180" />
+                                    </button>
+                                )}
+
+                                {/* Cards row */}
+                                <div
+                                    ref={reviewCarouselRef}
+                                    className="flex gap-6 overflow-x-hidden pb-2 snap-x snap-mandatory"
+                                >
+                                    {mergedReviews.map((rev: any, i: number) => (
+                                        <div
+                                            key={rev.id || i}
+                                            className="glass flex-none w-[340px] sm:w-[400px] p-8 rounded-[2.5rem] space-y-6 border-border/10 hover:shadow-xl transition-all duration-500 relative snap-start"
+                                        >
+                                            {rev.is_fake && (
+                                                <div className="absolute top-6 right-6 text-[8px] font-black uppercase tracking-[0.3em] text-primary/30">Curated</div>
+                                            )}
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex gap-1 text-primary">
+                                                    {[...Array(5)].map((_, j) => <Star key={j} className={`w-4 h-4 ${j < rev.rating ? "fill-primary" : "opacity-20"}`} />)}
+                                                </div>
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">
+                                                    {new Date(rev.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                                                </span>
+                                            </div>
+                                            <p className="text-base font-light leading-relaxed italic text-foreground/90 line-clamp-4">"{rev.comment}"</p>
+
+                                            {rev.admin_reply && (
+                                                <div className="p-5 rounded-[1.5rem] bg-primary/5 border border-primary/10 relative">
+                                                    <div className="absolute -left-1 top-4 bottom-4 w-1 bg-primary rounded-full" />
+                                                    <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-primary/60 mb-2">
+                                                        <ShieldCheck className="w-3.5 h-3.5" /> Guardian Response
+                                                    </div>
+                                                    <p className="text-sm font-medium italic text-primary/80">"{rev.admin_reply}"</p>
+                                                </div>
+                                            )}
+
+                                            <div className="flex items-center gap-4 pt-4 border-t border-border/10">
+                                                <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-primary/20 to-primary/5 flex items-center justify-center text-sm font-black text-primary uppercase shadow-inner shrink-0">
+                                                    {(rev.user_name || "P").slice(0, 2)}
+                                                </div>
+                                                <div>
+                                                    <p className="font-serif font-bold text-sm tracking-tight">{rev.user_name || "Anonymous Patron"}</p>
+                                                    <p className="text-[9px] text-emerald-500 font-black uppercase tracking-widest flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Verified Patron</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Dot indicators */}
+                                {mergedReviews.length > 1 && (
+                                    <div className="flex justify-center gap-2 mt-6">
+                                        {mergedReviews.map((_, i) => (
+                                            <button
+                                                key={i}
+                                                onClick={() => {
+                                                    setCarouselIndex(i);
+                                                    reviewCarouselRef.current?.children[i]?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
+                                                }}
+                                                className={`h-1.5 rounded-full transition-all duration-300 ${i === carouselIndex
+                                                        ? 'w-6 bg-primary'
+                                                        : 'w-2 bg-border hover:bg-primary/40'
+                                                    }`}
+                                            />
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="py-24 text-center space-y-6 glass rounded-[4rem] border-dashed border-2">
+                                <div className="w-20 h-20 bg-muted/30 rounded-full flex items-center justify-center mx-auto">
+                                    <MessageSquare className="w-10 h-10 opacity-30" />
+                                </div>
+                                <div className="space-y-2">
+                                    <p className="font-serif italic text-2xl text-foreground">Awaiting the first Patron's voice...</p>
+                                    <p className="text-muted-foreground text-sm uppercase tracking-widest">Share your botanical experience with the collective.</p>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Review Submission Form — AFTER reviews */}
+                        <div className="max-w-3xl mx-auto glass p-10 rounded-[3rem] border-border/10 space-y-6">
                             <h3 className="font-serif italic text-2xl text-center">Share your Botanical Experience</h3>
                             {user ? (
                                 <form className="space-y-6" onSubmit={async (e) => {
@@ -489,24 +603,36 @@ const ProductDetail = () => {
                                     }
 
                                     try {
+                                        setSubmittingReview(true);
                                         await reviewsService.create({
                                             product_id: product.id,
                                             user_id: user.id,
                                             user_name: user.user_metadata?.full_name || user.email?.split('@')[0],
                                             rating,
                                             comment,
-                                            status: 'approved' // Auto-approve for now or pending?
+                                            status: 'approved'
                                         });
+                                        // Optimistically prepend the new review so it shows instantly
+                                        const newReview = {
+                                            id: `new-${Date.now()}`,
+                                            user_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Patron',
+                                            rating,
+                                            comment,
+                                            is_fake: false,
+                                            created_at: new Date().toISOString(),
+                                            verified: true,
+                                        };
+                                        setRealReviews(prev => [newReview, ...prev]);
+                                        setCarouselIndex(0);
                                         toast({ title: "Insight Manifested", description: "Your Patron Proof has been added to the collective." });
-                                        // Refresh reviews
-                                        const data = await reviewsService.getByProductId(product.id);
-                                        setRealReviews(data);
                                         (e.target as HTMLFormElement).reset();
                                     } catch (err) {
                                         toast({ title: "Manifestation Failed", description: "Could not post review.", variant: "destructive" });
+                                    } finally {
+                                        setSubmittingReview(false);
                                     }
                                 }}>
-                                    <div className="flex flex-col items-center gap-4">
+                                    <div className="flex flex-col items-center gap-3">
                                         <div className="flex gap-2">
                                             {[1, 2, 3, 4, 5].map((s) => (
                                                 <div key={s} className="relative group">
@@ -523,75 +649,31 @@ const ProductDetail = () => {
                                         <textarea
                                             name="comment"
                                             placeholder="Describe your ritual experience with this essence..."
-                                            className="w-full h-40 bg-muted/20 rounded-[2rem] p-8 border border-border/10 focus:border-primary/30 focus:ring-0 outline-none font-light italic text-lg transition-all"
+                                            className="w-full h-36 bg-muted/20 rounded-[2rem] p-6 border border-border/10 focus:border-primary/30 focus:ring-0 outline-none font-light italic text-base transition-all resize-none"
                                             required
                                         />
-                                        <Button type="submit" className="w-full h-16 rounded-full bg-primary font-black uppercase tracking-widest shadow-xl shadow-primary/10">Submit Insight</Button>
+                                        <Button
+                                            type="submit"
+                                            disabled={submittingReview}
+                                            className="w-full h-14 rounded-full bg-primary font-black uppercase tracking-widest shadow-xl shadow-primary/10 disabled:opacity-60"
+                                        >
+                                            {submittingReview ? (
+                                                <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Manifesting...</span>
+                                            ) : 'Submit Insight'}
+                                        </Button>
                                     </div>
                                 </form>
                             ) : (
-                                <div className="text-center py-10 space-y-6">
+                                <div className="text-center py-8 space-y-6">
                                     <Info className="w-12 h-12 mx-auto text-primary/40" />
                                     <p className="text-muted-foreground font-light text-lg">You must be logged in to share your botanical experience.</p>
                                     <Button onClick={() => navigate('/auth')} variant="outline" className="rounded-full px-10 h-12 border-primary/20 text-primary hover:bg-primary hover:text-white transition-all">Sign In to Manifest</Button>
                                 </div>
                             )}
                         </div>
-
-                        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
-                            {mergedReviews.length > 0 ? (
-                                mergedReviews.map((rev: any, i: number) => (
-                                    <div key={rev.id || i} className="glass p-12 rounded-[3.5rem] space-y-8 flex flex-col justify-between border-border/10 hover:shadow-2xl transition-all duration-500 relative group">
-                                        {rev.is_fake && (
-                                            <div className="absolute top-8 right-8 text-[8px] font-black uppercase tracking-[0.3em] text-primary/30">Curated Essence</div>
-                                        )}
-                                        <div className="space-y-6">
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex gap-1 text-primary">
-                                                    {[...Array(5)].map((_, j) => <Star key={j} className={`w-4 h-4 ${j < rev.rating ? "fill-primary" : "opacity-20"}`} />)}
-                                                </div>
-                                                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">
-                                                    {new Date(rev.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-                                                </span>
-                                            </div>
-                                            <p className="text-xl font-light leading-relaxed italic text-foreground/90">"{rev.comment}"</p>
-
-                                            {rev.admin_reply && (
-                                                <div className="p-6 rounded-[2rem] bg-primary/5 border border-primary/10 relative mt-6">
-                                                    <div className="absolute -left-1 top-6 bottom-6 w-1 bg-primary rounded-full" />
-                                                    <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-primary/60 mb-2">
-                                                        <ShieldCheck className="w-4 h-4" /> Guardian Response
-                                                    </div>
-                                                    <p className="text-base font-medium italic text-primary/80">"{rev.admin_reply}"</p>
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div className="flex items-center gap-5 pt-8 border-t border-border/10">
-                                            <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-primary/20 to-primary/5 flex items-center justify-center text-sm font-black text-primary uppercase shadow-inner">
-                                                <span className="relative z-10">{(rev.user_name || "P").slice(0, 2)}</span>
-                                            </div>
-                                            <div>
-                                                <p className="font-serif font-bold text-lg tracking-tight group-hover:text-primary transition-colors">{rev.user_name || "Anonymous Patron"}</p>
-                                                <p className="text-[10px] text-emerald-500 font-black uppercase tracking-widest flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5" /> Verified Patron</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))
-                            ) : (
-                                <div className="col-span-2 py-32 text-center space-y-6 glass rounded-[4rem] border-dashed border-2">
-                                    <div className="w-20 h-20 bg-muted/30 rounded-full flex items-center justify-center mx-auto">
-                                        <MessageSquare className="w-10 h-10 opacity-30" />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <p className="font-serif italic text-2xl text-foreground">Awaiting the first Patron's voice...</p>
-                                        <p className="text-muted-foreground text-sm uppercase tracking-widest">Share your botanical experience with the collective.</p>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
                     </div>
 
-                    {/* FAQ Section */}
+                    {/* FAQ */}
                     <div id="faq" className="animate-in fade-in slide-in-from-bottom-8 duration-700">
                         <div className="text-center mb-16">
                             <h2 className="text-4xl md:text-5xl font-serif mb-4 uppercase tracking-tighter">Ritual <span className="text-primary italic">Inquiries</span></h2>
@@ -604,10 +686,10 @@ const ProductDetail = () => {
                                     { q: "Is it compatible with all hair alignments?", a: "Yes, our botanical formulation is clinically synthesized to harmonize with all hair alignments, including color-treated and chemically processed hair." }
                                 ]).map((faq: any, i: number) => (
                                     <AccordionItem key={i} value={`item-${i}`} className="border-none">
-                                        <AccordionTrigger className="glass px-10 py-10 rounded-[2.5rem] hover:no-underline text-xl font-serif italic focus:bg-primary/5 transition-all duration-500 border-border/10 data-[state=open]:rounded-b-none data-[state=open]:border-primary/20">
+                                        <AccordionTrigger className="glass px-10 py-8 rounded-[2.5rem] hover:no-underline text-xl font-serif italic focus:bg-primary/5 transition-all duration-500 border-border/10 data-[state=open]:rounded-b-none data-[state=open]:border-primary/20">
                                             {faq.q}
                                         </AccordionTrigger>
-                                        <AccordionContent className="glass px-12 py-10 text-muted-foreground font-light text-xl leading-relaxed border-t-0 rounded-b-[2.5rem] border-border/10 bg-muted/5 animate-in slide-in-from-top-4 duration-500">
+                                        <AccordionContent className="glass px-12 py-8 text-muted-foreground font-light text-lg leading-relaxed border-t-0 rounded-b-[2.5rem] border-border/10 bg-muted/5 animate-in slide-in-from-top-4 duration-500">
                                             {faq.a}
                                         </AccordionContent>
                                     </AccordionItem>
@@ -620,7 +702,7 @@ const ProductDetail = () => {
                 <RecentlyViewedProducts currentId={product.id} products={products} />
 
                 {/* Upsell Grid */}
-                <div className="mb-32">
+                <div className="mb-32 mt-32">
                     <div className="flex items-end justify-between mb-16">
                         <h2 className="text-5xl md:text-6xl font-serif tracking-tight">Luxury <span className="text-primary italic">Alternatives</span></h2>
                         <Link to="/shop" className="text-xs font-black uppercase tracking-widest flex items-center gap-2 hover:text-primary transition-colors">Explore All <ArrowLeft className="w-4 h-4 rotate-180" /></Link>
@@ -641,20 +723,47 @@ const ProductDetail = () => {
                     </div>
                 </div>
 
-                {/* Newsletter Ritual */}
-                <div className="bg-primary rounded-[4rem] p-16 md:p-24 text-primary-foreground text-center relative overflow-hidden shadow-2xl shadow-primary/20">
+                {/* The Inner Circle */}
+                <div className="bg-primary rounded-[2.5rem] md:rounded-[4rem] p-7 sm:p-10 md:p-14 text-primary-foreground relative overflow-hidden shadow-2xl shadow-primary/20">
                     <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/natural-paper.png')] opacity-10 pointer-events-none" />
-                    <div className="relative z-10 max-w-2xl mx-auto space-y-10">
-                        <Sparkles className="w-12 h-12 mx-auto opacity-30 animate-pulse" />
-                        <div className="space-y-3">
-                            <h2 className="text-4xl md:text-5xl font-serif italic text-balance leading-tight">The Inner Circle</h2>
-                            <p className="text-primary-foreground/70 font-light text-lg text-balance">Become a patron of Lorean and receive exclusive access to upcoming botanical manifestations.</p>
+                    <div className="relative z-10 max-w-5xl mx-auto">
+                        {/* Header row — icon + title side by side on mobile */}
+                        <div className="flex items-center gap-4 mb-4 md:hidden">
+                            <Sparkles className="w-6 h-6 opacity-40 shrink-0" />
+                            <h2 className="text-2xl font-serif italic leading-tight">The Inner Circle</h2>
                         </div>
-                        <div className="flex flex-col sm:flex-row gap-3 p-2 bg-white/10 rounded-[2.5rem] backdrop-blur-xl border border-white/20">
-                            <Input placeholder="Your Email Artifact" className="h-14 rounded-full bg-transparent border-none text-white placeholder:text-white/40 px-8 focus-visible:ring-0 text-base" />
-                            <Button className="h-14 rounded-full px-12 bg-white text-primary hover:bg-white/90 font-black uppercase tracking-widest text-[10px] shadow-lg">Join Ritual</Button>
+                        <div className="hidden md:flex flex-row items-center gap-12 lg:gap-16">
+                            <div className="shrink-0 text-left space-y-3">
+                                <Sparkles className="w-8 h-8 opacity-30 animate-pulse" />
+                                <h2 className="text-4xl font-serif italic">The Inner Circle</h2>
+                                <p className="text-primary-foreground/60 font-light text-sm max-w-xs text-balance">
+                                    Become a patron of Lorean — receive exclusive access to upcoming botanical manifestations.
+                                </p>
+                            </div>
+                            <div className="flex-1">
+                                <div className="flex flex-row gap-3 p-2 bg-white/10 rounded-[2rem] backdrop-blur-xl border border-white/20">
+                                    <Input placeholder="Your Email Artifact" className="h-12 rounded-full bg-transparent border-none text-white placeholder:text-white/40 px-8 focus-visible:ring-0 text-sm" />
+                                    <Button className="h-12 rounded-full px-10 bg-white text-primary hover:bg-white/90 font-black uppercase tracking-widest text-[10px] shadow-lg shrink-0">Join Ritual</Button>
+                                </div>
+                                <p className="text-[8px] font-black uppercase tracking-[0.3em] opacity-40 mt-3 text-center">Privacy is curated. We never disseminate artifact data.</p>
+                            </div>
                         </div>
-                        <p className="text-[8px] font-black uppercase tracking-[0.3em] opacity-40">Privacy is curated. We never disseminate artifact data.</p>
+                        {/* Mobile: stacked layout */}
+                        <div className="md:hidden space-y-5">
+                            <p className="text-primary-foreground/65 font-light text-sm leading-relaxed">
+                                Become a patron of Lorean — receive exclusive access to upcoming botanical manifestations.
+                            </p>
+                            <div className="space-y-3">
+                                <Input
+                                    placeholder="Your Email Artifact"
+                                    className="h-13 w-full rounded-2xl bg-white/10 border border-white/20 text-white placeholder:text-white/40 px-5 focus-visible:ring-0 focus-visible:border-white/40 text-sm"
+                                />
+                                <Button className="w-full h-12 rounded-2xl bg-white text-primary hover:bg-white/90 font-black uppercase tracking-widest text-[10px] shadow-lg">
+                                    Join Ritual
+                                </Button>
+                            </div>
+                            <p className="text-[8px] font-black uppercase tracking-[0.3em] opacity-40 text-center">Privacy is curated. We never disseminate artifact data.</p>
+                        </div>
                     </div>
                 </div>
             </main>

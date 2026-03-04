@@ -4,12 +4,25 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <!-- TODO: Set the document title to the name of your application -->
   <title>Lorean | Ancient Herbal Hair Rituals</title>
   <meta name="description"
     content="Lorean - Premium herbal hair oils crafted with ancient Ayurvedic wisdom. Discover our collection for healthy, thick, and radiant hair." />
   <meta name="author" content="Lorean" />
   <link rel="icon" type="image/png" href="/favicon.png" />
+
+  <!-- Theme color for mobile browsers -->
+  <meta name="theme-color" content="#0a0a0a" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+  <!-- Preconnect to external origins for faster resource loading -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+
+  <!-- Preconnect to Supabase so API calls start immediately -->
+  <link rel="dns-prefetch" href="https://lcsaghbsjlxotgxuwpkb.supabase.co" />
+  <link rel="preconnect" href="https://lcsaghbsjlxotgxuwpkb.supabase.co" crossorigin />
 
   <!-- Branding -->
   <meta property="og:title" content="Lorean | Ancient Herbal Hair Rituals" />
@@ -26,6 +39,41 @@
   <meta name="twitter:image" content="/og-image.png" />
 
   <link rel="canonical" href="https://lorean.online" />
+
+  <!-- Inline critical loading state — prevents white flash while JS loads -->
+  <style>
+    #root:empty::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: #0a0a0a;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #root:empty::after {
+      content: '';
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      width: 40px;
+      height: 40px;
+      margin: -20px 0 0 -20px;
+      border: 3px solid rgba(255, 255, 255, 0.1);
+      border-top-color: #c9a96e;
+      border-radius: 50%;
+      animation: lorean-spin 0.8s linear infinite;
+      z-index: 10000;
+    }
+
+    @keyframes lorean-spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+  </style>
 </head>
 
 <body>

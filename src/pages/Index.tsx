@@ -12,6 +12,8 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       <SEO />
+      {/* Spacer = hero bar height + navbar height (5rem/80px) so content starts below both fixed elements */}
+      <div style={{ height: "calc(var(--hero-bar-height, 0px) + 5rem)" }} />
       <Navbar />
       <HeroSection />
       <CategorySection />

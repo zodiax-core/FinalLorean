@@ -38,7 +38,7 @@ const HeroSection = () => {
       </div>
 
       <motion.div
-        className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-20 min-h-screen flex items-center"
+        className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-20 min-h-[calc(100vh-5rem)] flex items-center"
       >
         <div className="grid lg:grid-cols-2 gap-12 items-center w-full">
           {/* Text Content */}

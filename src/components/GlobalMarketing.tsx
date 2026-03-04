@@ -66,7 +66,7 @@ export default function GlobalMarketing() {
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: "auto", opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
-                        className="fixed top-0 left-0 right-0 z-[60] overflow-hidden"
+                        className="hero-bar fixed top-0 left-0 right-0 z-[60] overflow-hidden"
                         style={{ backgroundColor: config.hero_bar.bg_color || "#000000" }}
                     >
                         <div
