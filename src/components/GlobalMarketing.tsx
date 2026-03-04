@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, Sparkles, ShoppingBag, ArrowRight, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { marketingService, productsService, Product } from "@/services/supabase";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 
 export default function GlobalMarketing() {
     const navigate = useNavigate();
@@ -22,12 +22,13 @@ export default function GlobalMarketing() {
                     const product = await productsService.getById(settings.popup_product_id);
                     setPopupProduct(product);
 
-                    // Show popup only if not seen this session
-                    const hasSeenPopup = sessionStorage.getItem("LRN_POPUP_SEEN");
+                    // Show popup only if this specific product hasn't been seen this session
+                    const seenKey = `LRN_POP_SEEN_${settings.popup_product_id}`;
+                    const hasSeenPopup = sessionStorage.getItem(seenKey);
                     if (!hasSeenPopup) {
                         setTimeout(() => {
                             setShowPopup(true);
-                            sessionStorage.setItem("LRN_POPUP_SEEN", "true");
+                            sessionStorage.setItem(seenKey, "true");
                         }, 3000); // 3 second delay for elegance
                     }
                 }
@@ -41,8 +42,11 @@ export default function GlobalMarketing() {
         fetchMarketing();
     }, []);
 
+    const location = useLocation();
+    const isHomePage = location.pathname === "/";
+
     useEffect(() => {
-        if (config?.hero_bar?.enabled && config?.hero_bar?.text) {
+        if (isHomePage && config?.hero_bar?.enabled && config?.hero_bar?.text) {
             document.documentElement.style.setProperty('--hero-bar-height', '40px');
             document.body.classList.add('has-hero-bar');
         } else {
@@ -53,7 +57,7 @@ export default function GlobalMarketing() {
             document.documentElement.style.setProperty('--hero-bar-height', '0px');
             document.body.classList.remove('has-hero-bar');
         };
-    }, [config?.hero_bar?.enabled, config?.hero_bar?.text]);
+    }, [config?.hero_bar?.enabled, config?.hero_bar?.text, isHomePage]);
 
     if (loading || !config) return null;
 
@@ -61,7 +65,7 @@ export default function GlobalMarketing() {
         <>
             {/* Hero Bar */}
             <AnimatePresence>
-                {config.hero_bar?.enabled && config.hero_bar?.text && (
+                {isHomePage && config.hero_bar?.enabled && config.hero_bar?.text && (
                     <motion.div
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: "auto", opacity: 1 }}
