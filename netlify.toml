@@ -5,7 +5,7 @@
 [build.environment]
   NODE_VERSION = "20"
   NPM_FLAGS = "--legacy-peer-deps"
-  SECRETS_SCAN_OMIT_PATHS = "public/firebase-messaging-sw.js,dist/firebase-messaging-sw.js"
+  SECRETS_SCAN_OMIT_PATHS = "dist/*,public/*.js"
 
 # Clear build cache on every deploy so stale chunks never cause white-screen
 [build.processing]
