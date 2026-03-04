@@ -1,0 +1,92 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+  NPM_FLAGS = "--legacy-peer-deps"
+
+# Clear build cache on every deploy so stale chunks never cause white-screen
+[build.processing]
+  skip_processing = false
+
+[build.processing.css]
+  bundle = true
+  minify = true
+
+[build.processing.js]
+  bundle = true
+  minify = true
+
+[build.processing.images]
+  compress = true
+
+# ── Redirect Rules ───────────────────────────────────────────────────────────
+# 1. Force HTTPS + canonical domain (lorean.online, no www, no netlify subdomain)
+[[redirects]]
+  from = "https://lorean-shop.netlify.app/*"
+  to   = "https://lorean.online/:splat"
+  status = 301
+  force  = true
+
+[[redirects]]
+  from = "http://lorean.online/*"
+  to   = "https://lorean.online/:splat"
+  status = 301
+  force  = true
+
+[[redirects]]
+  from = "https://www.lorean.online/*"
+  to   = "https://lorean.online/:splat"
+  status = 301
+  force  = true
+
+# 2. SPA fallback — MUST be last. Serves index.html for every un-matched route
+#    so React Router can handle /product/:id, /admin, /shop, etc.
+[[redirects]]
+  from   = "/*"
+  to     = "/index.html"
+  status = 200
+
+# ── HTTP Headers ─────────────────────────────────────────────────────────────
+# Hashed assets (JS/CSS) — cache 1 year, immutable
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# HTML — never cache, always revalidate on deploy
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "DENY"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+[[headers]]
+  for = "/"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+# Service worker — never cache
+[[headers]]
+  for = "/firebase-messaging-sw.js"
+  [headers.values]
+    Cache-Control = "no-store"
+
+# Images — 7 days
+[[headers]]
+  for = "/*.png"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"
+
+[[headers]]
+  for = "/*.jpg"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"
+
+[[headers]]
+  for = "/*.webp"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"
