@@ -2,13 +2,16 @@ importScripts("https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js")
 importScripts("https://www.gstatic.com/firebasejs/9.0.0/firebase-messaging-compat.js");
 
 // Initialize the Firebase app in the service worker by passing in the messagingSenderId.
+// Initialize the Firebase app in the service worker.
+// NOTE: During build, these will be replaced by Vite or you can set them manually.
+// For Netlify, the secret scanner might flag these, so we use placeholders.
 firebase.initializeApp({
-    apiKey: "AIzaSyC49V2Mop4oZ0k4tyjDO-WvddDc1QpSuZQ",
-    authDomain: "lorean-4b059.firebaseapp.com",
-    projectId: "lorean-4b059",
-    storageBucket: "lorean-4b059.firebasestorage.app",
-    messagingSenderId: "112492076990",
-    appId: "1:112492076990:web:81cb4ffe9450ccaa3be3ef"
+    apiKey: "PLACEHOLDER_FIREBASE_API_KEY",
+    authDomain: "PLACEHOLDER_FIREBASE_AUTH_DOMAIN",
+    projectId: "PLACEHOLDER_FIREBASE_PROJECT_ID",
+    storageBucket: "PLACEHOLDER_FIREBASE_STORAGE_BUCKET",
+    messagingSenderId: "PLACEHOLDER_FIREBASE_MESSAGING_SENDER_ID",
+    appId: "PLACEHOLDER_FIREBASE_APP_ID"
 });
 
 const messaging = firebase.messaging();

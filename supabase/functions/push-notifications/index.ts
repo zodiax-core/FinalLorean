@@ -3,17 +3,19 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import * as jose from 'https://deno.land/x/jose@v4.14.4/index.ts';
 
+// Retrieve Firebase Service Account from environment variables
+// These must be set in Supabase: Settings -> Edge Functions -> Environment Variables
 const serviceAccount = {
     "type": "service_account",
-    "project_id": "lorean-4b059",
-    "private_key_id": "fdd9f0456aee4cf8af7feab583b1f34db0ab32b2",
-    "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCqCWR5iNefduaJ\nL/B3rFqS18Loag/468s1z6arURA4wY27pzpoEAulMWgRvMsCT5vbx6l59zc6K5Og\nllK16vdh5zJzPgA2brWDb6FD4kpteqLYlpNOX3QgnlJhK1sTYyp55RrWxqd3SDNI\nLuwJg3ROso39CmdIKMo+MmsuMiwc6dhrSF22G0ymouAi+nb7MfOphYA91MsD7f5Z\nOQIk3TdJz1lF1YMW2E/IMqjswFi2w9zbVVesmNd0O7S8f/yAX46rkFfWyUXF9JZk\nphjyAtB/y+eudaZRt7s61BMyyAngAUlgQM0hpXcbON7uxUEpy3RJ/HPfoxsXpw42\ncRHNXohZAgMBAAECggEAI6k0IBQdysUsTOXXvDWSylzDdSx3XJiRRiAef6wQ56Ja\nWBqWsof49USTI7MxbXLmSHYLundpZwMII2QbhSk6CFetekNs1n2qBl6VVxAg1Wyk\ntiGAU+3LhGLH+raV049W83kkA5rmuOrUzIUAvm8KJ84lXsY9ioH5hola9rWRkF94\nVtf7J+9/o2+PV7MNwOS4yTRnoV6Qlr6Mj3FXzl59rtD4naq1zvej8g9Gzta/KANI\nUqLsn3jRUqoxaqltWkEIMD12PbdBsyGFyoUD9ObLKXEGrj8IY1iL25DjsNZEq40w\nriD1TaiMsJoo6wNQOcWU//MbNCnwW7EjoW4yDsz7zQKBgQDWclPH5HMxeivhvNOF\nosoAYbEvewecZT4ZkfCg2Dy//vxWsw1OTOHW0XjZEZTNcKBN59dtdyDEXP9CqoUa\n+M6dFloFtD70WN0/M4yPkoUe/nYVFHCFyndiAGqZeENYPHjbnT/yDjYy9zak8V6n\n5VLd+b5jAZmr7E9UM/iBbckopQKBgQDK/BoN/t3fD9C/nh5PkShkj5zCYSLZlJD6\ntInGBCxt78kd21ql5aLiQhWTmeWQcm0kA/ms1MW0Nr7Ctg2ZYF8UhzU0I+Zl//dS\nDOjlqIG9ETBYpvEnUcsYCGv5z329677sC2p4xPpzf07a8kglhNy9V5fB/lXJycnB\ Au9nIeQepQKBgAhldY5QDYqUY/90qzuCQjJ9oLhhMs0W0bWily9VCBvkWfDzFcRJ\nElac4QRuwcrBbCVgvHiWv3uwwHXVw1xo/X39EA1FH2nlyNPeqtQ8QmYSRIFSyY0T\nflUh+wqDQO/Ffl3q7EQH9mtMbqFKqhAc1H/IdYHe4CtxFzIOzt4SdFvZAoGAcaNl\nqsQuznx6L2yEJ6Nqa7IC3semzQzhhZmhMBySCxIdE/wD6bB/2g+JKNMVtCJ7e5hG\nJT4RWOz1KujlACL11/ZCEOiwShZdDbBwinImAAUpfdgoVgzymIfOe1JwYO0kO93A\nQ9BzLkntiaHuRiL1uYLaUR7kRE4WB1pvUNumbIkCgYBeL0e83vKdVjknBk7pU9cH\nj8oCQIEIp7WjxAopA21ms7bBhzqQAMOCzAfMTcjHXt5KsS7cBUKlUoSQ1QP714TD\nz/ffu2qOaUVa11twItFlFnw+mlhKPjf1LaT0IothBS29e4WrKwu1gUJMzn4GWgS5\nIE++a2brP0gXptVhLr6rnA==\n-----END PRIVATE KEY-----\n",
-    "client_email": "firebase-adminsdk-fbsvc@lorean-4b059.iam.gserviceaccount.com",
-    "client_id": "116525168645005995658",
+    "project_id": Deno.env.get("FIREBASE_PROJECT_ID"),
+    "private_key_id": Deno.env.get("FIREBASE_PRIVATE_KEY_ID"),
+    "private_key": Deno.env.get("FIREBASE_PRIVATE_KEY")?.replace(/\\n/g, '\n'),
+    "client_email": Deno.env.get("FIREBASE_CLIENT_EMAIL"),
+    "client_id": Deno.env.get("FIREBASE_CLIENT_ID"),
     "auth_uri": "https://accounts.google.com/o/oauth2/auth",
     "token_uri": "https://oauth2.googleapis.com/token",
     "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-    "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40lorean-4b059.iam.gserviceaccount.com",
+    "client_x509_cert_url": `https://www.googleapis.com/robot/v1/metadata/x509/${encodeURIComponent(Deno.env.get("FIREBASE_CLIENT_EMAIL") || "")}`,
     "universe_domain": "googleapis.com"
 };
 

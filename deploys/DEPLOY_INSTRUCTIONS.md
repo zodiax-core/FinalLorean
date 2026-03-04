@@ -11,17 +11,17 @@ I have prepared the `netlify_deploy` folder which is ready to be dropped into Ne
 Before the site works, you MUST add these variables in **Netlify Settings** > **Build & Deploy** > **Environment**:
 
 ### Supabase (Mandatory)
-- `VITE_SUPABASE_URL`: `https://aeegdozbtqifmbhyfoso.supabase.co`
-- `VITE_SUPABASE_ANON_KEY`: `sb_publishable_rYrHtnKbtZEPDnksjIOJuQ_HA_hZFQ0`
+- `VITE_SUPABASE_URL`: `YOUR_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`: `YOUR_SUPABASE_ANON_KEY`
 
 ### Firebase (For Notifications)
-- `VITE_FIREBASE_API_KEY`: `AIzaSyC49V2Mop4oZ0k4tyjDO-WvddDc1QpSuZQ`
-- `VITE_FIREBASE_AUTH_DOMAIN`: `lorean-4b059.firebaseapp.com`
-- `VITE_FIREBASE_PROJECT_ID`: `lorean-4b059`
-- `VITE_FIREBASE_STORAGE_BUCKET`: `lorean-4b059.firebasestorage.app`
-- `VITE_FIREBASE_MESSAGING_SENDER_ID`: `112492076990`
-- `VITE_FIREBASE_APP_ID`: `1:112492076990:web:81cb4ffe9450ccaa3be3ef`
-- `VITE_FIREBASE_MEASUREMENT_ID`: `G-ZD3K66SMFV`
+- `VITE_FIREBASE_API_KEY`: `YOUR_FIREBASE_API_KEY`
+- `VITE_FIREBASE_AUTH_DOMAIN`: `YOUR_FIREBASE_AUTH_DOMAIN`
+- `VITE_FIREBASE_PROJECT_ID`: `YOUR_FIREBASE_PROJECT_ID`
+- `VITE_FIREBASE_STORAGE_BUCKET`: `YOUR_FIREBASE_STORAGE_BUCKET`
+- `VITE_FIREBASE_MESSAGING_SENDER_ID`: `YOUR_MESSAGING_SENDER_ID`
+- `VITE_FIREBASE_APP_ID`: `YOUR_APP_ID`
+- `VITE_FIREBASE_MEASUREMENT_ID`: `YOUR_MEASUREMENT_ID`
 
 ## 🗄️ Database Setup (Supabase)
 Ensure you have run the scripts in the `deploys/REQUIRED_SQL_MIGRATIONS` folder in your **Supabase SQL Editor**:
