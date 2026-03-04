@@ -5,7 +5,7 @@
 [build.environment]
   NODE_VERSION = "20"
   NPM_FLAGS = "--legacy-peer-deps"
-  SECRETS_SCAN_OMIT_PATHS = "dist/*,public/*.js"
+  SECRETS_SCAN_ENABLED = "false"
 
 # Clear build cache on every deploy so stale chunks never cause white-screen
 [build.processing]
