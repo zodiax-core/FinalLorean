@@ -27,6 +27,8 @@ export interface Product {
     vendor_id?: string;
     vessel_volume?: string;
     fake_sold_count?: number;
+    video_proofs?: string[];
+    tags?: string[];
 }
 
 export interface Category {

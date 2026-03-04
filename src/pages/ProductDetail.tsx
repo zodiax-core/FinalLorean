@@ -6,7 +6,7 @@ import {
     ShieldCheck, CheckCircle2, Facebook,
     Twitter, Instagram, ChevronRight, MessageSquare, Info,
     Package, Sparkles, Clock, CreditCard, Loader2, HelpCircle,
-    Copy, Check
+    Copy, Check, Play, ExternalLink, Youtube
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/layout/Navbar";
@@ -28,6 +28,65 @@ import { Product, reviewsService, productsService } from "@/services/supabase";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/context/AuthContext";
 import SEO from "@/components/SEO";
+
+const getVideoData = (url: string) => {
+    let platform = 'generic';
+    let id = '';
+    let embedUrl = '';
+    let thumb = '';
+
+    if (url.includes('youtube.com') || url.includes('youtu.be')) {
+        platform = 'youtube';
+        const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|shorts\/)([^"&?\/\s]{11})/);
+        id = match?.[1] || '';
+        embedUrl = `https://www.youtube.com/embed/${id}?autoplay=1`;
+        thumb = `https://img.youtube.com/vi/${id}/maxresdefault.jpg`;
+    } else if (url.includes('instagram.com')) {
+        platform = 'instagram';
+        const match = url.match(/(?:reels?|p)\/([^\/?#&]+)/);
+        id = match?.[1] || '';
+        embedUrl = `https://www.instagram.com/reels/${id}/embed`;
+        thumb = `https://www.instagram.com/reels/${id}/thumbnail`; // Note: Might need IG API for real ones, but common pattern
+    } else if (url.includes('tiktok.com')) {
+        platform = 'tiktok';
+        const match = url.match(/video\/(\d+)/);
+        id = match?.[1] || '';
+        embedUrl = `https://www.tiktok.com/embed/v2/${id}`;
+        // TikTok doesn't have a direct thumb URL that's reliable without API, but we'll use a placeholder or the card's style
+    }
+
+    return { platform, id, embedUrl, thumb };
+};
+
+const getUsernameFromUrl = (url: string) => {
+    try {
+        if (url.includes('tiktok.com')) {
+            const match = url.match(/@([^/\?]+)/);
+            return match ? match[1] : 'Patron';
+        }
+        if (url.includes('instagram.com')) {
+            const parts = url.split('/').filter(Boolean);
+            const idx = parts.findIndex(p => p.includes('instagram.com'));
+            // Sometimes it's the next part if it's instagram.com/username
+            if (parts[idx + 1] && !['reels', 'p', 'reel'].includes(parts[idx + 1])) return parts[idx + 1];
+            return 'Patron';
+        }
+        if (url.includes('youtube.com')) {
+            const match = url.match(/@([^/\?]+)/);
+            return match ? match[1] : 'Patron';
+        }
+    } catch (e) { }
+    return 'Patron';
+};
+
+const getPlatformIcon = (platform: string) => {
+    switch (platform) {
+        case 'youtube': return <Youtube className="w-4 h-4 text-red-600" />;
+        case 'instagram': return <Instagram className="w-4 h-4 text-pink-600" />;
+        case 'tiktok': return <Sparkles className="w-4 h-4 text-cyan-400" />;
+        default: return <Play className="w-4 h-4 text-primary" />;
+    }
+};
 
 const RecentlyViewedProducts = ({ currentId, products }: { currentId: number, products: Product[] }) => {
     const viewed = useMemo(() => {
@@ -103,9 +162,30 @@ const ProductDetail = () => {
     const [fetchingReviews, setFetchingReviews] = useState(false);
     const [submittingReview, setSubmittingReview] = useState(false);
     const [carouselIndex, setCarouselIndex] = useState(0);
+    const [visionsIndex, setVisionsIndex] = useState(0);
+    const [playingVideo, setPlayingVideo] = useState<string | null>(null);
+    const [tikTokSources, setTikTokSources] = useState<Record<string, string>>({});
     const reviewCarouselRef = useRef<HTMLDivElement>(null);
+    const visionsCarouselRef = useRef<HTMLDivElement>(null);
     const { user } = useAuth();
     const buySectionRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (product?.video_proofs) {
+            product.video_proofs.forEach(url => {
+                if (url.includes('tiktok.com') && !tikTokSources[url]) {
+                    fetch(`https://www.tikwm.com/api/video/get?url=${encodeURIComponent(url)}`)
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.data?.play) {
+                                setTikTokSources(prev => ({ ...prev, [url]: data.data.play }));
+                            }
+                        })
+                        .catch(err => console.error("TikTok fetch error:", err));
+                }
+            });
+        }
+    }, [product?.video_proofs]);
 
     const mergedReviews = useMemo(() => {
         const fakeOnes = product?.reviews_list || [];
@@ -176,6 +256,18 @@ const ProductDetail = () => {
         return () => window.removeEventListener("scroll", handleScroll);
     }, []);
 
+    useEffect(() => {
+        if (product?.video_proofs?.length) {
+            const hosts = ['www.tiktok.com', 'www.instagram.com', 'www.youtube.com'];
+            hosts.forEach(host => {
+                const link = document.createElement('link');
+                link.rel = 'preconnect';
+                link.href = `https://${host}`;
+                document.head.appendChild(link);
+            });
+        }
+    }, [product?.video_proofs]);
+
     const handleShare = () => {
         navigator.clipboard.writeText(window.location.href);
         setIsCopied(true);
@@ -220,48 +312,58 @@ const ProductDetail = () => {
             />
             <Navbar />
 
-            {/* Sticky Buy Bar */}
+            {/* Sticky Buy Bar (Floating Glass Design) */}
             <AnimatePresence>
                 {showStickyBar && (
                     <motion.div
-                        initial={{ y: 100 }}
-                        animate={{ y: 0 }}
-                        exit={{ y: 100 }}
-                        className="fixed bottom-0 left-0 right-0 z-[60] bg-background/95 backdrop-blur-xl border-t border-border/50 p-4 md:p-4 shadow-[0_-10px_40px_rgba(0,0,0,0.1)] flex flex-col sm:flex-row items-center justify-between gap-4 px-6 md:px-12 pb-8 sm:pb-4"
+                        initial={{ y: 100, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        exit={{ y: 100, opacity: 0 }}
+                        className="fixed bottom-0 left-0 right-0 z-[60] p-4 md:p-6 pb-10 md:pb-6 pointer-events-none"
                     >
-                        <div className="flex items-center gap-4 w-full sm:w-auto">
-                            <img src={product.image} className="w-12 h-12 md:w-14 md:h-14 rounded-xl md:rounded-2xl object-cover shadow-lg" alt="" />
-                            <div className="flex-1 min-w-0">
-                                <p className="font-serif text-sm md:text-lg font-medium truncate">{product.name}</p>
-                                <p className="text-primary font-bold text-sm md:text-base">Rs. {product.price}</p>
+                        <div className="max-w-4xl mx-auto glass rounded-[2.5rem] p-3 md:p-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-2xl border border-white/20 pointer-events-auto">
+                            <div className="flex items-center gap-4 w-full sm:w-auto">
+                                <img src={product.image} className="w-14 h-14 md:w-16 md:h-16 rounded-[1.25rem] md:rounded-[1.5rem] object-cover shadow-2xl border-white/30 border" alt="" />
+                                <div className="flex-1 min-w-0">
+                                    <p className="font-serif text-base md:text-xl font-bold truncate leading-tight">{product.name}</p>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-primary font-black text-sm md:text-lg">Rs. {product.price}</span>
+                                        {oldPrice > price && <span className="text-[10px] text-muted-foreground line-through decoration-primary/30">Rs. {oldPrice}</span>}
+                                    </div>
+                                </div>
+                                {/* Mobile Actions */}
+                                <div className="flex items-center gap-2 sm:hidden ml-auto">
+                                    <Button
+                                        onClick={() => addToWishlist(product)}
+                                        size="icon"
+                                        variant="outline"
+                                        className={`w-12 h-12 rounded-full border-none transition-all ${isInWishlist(product.id) ? "bg-rose-50 text-rose-500" : "bg-muted/30"}`}
+                                    >
+                                        <Heart className={`w-5 h-5 ${isInWishlist(product.id) ? "fill-rose-500" : ""}`} />
+                                    </Button>
+                                    <Button onClick={() => addToCart(product, quantity)} size="lg" className="rounded-full px-6 h-12 bg-primary font-black uppercase tracking-widest text-[10px] shadow-xl shadow-primary/20 active:scale-95 transition-all">Manifest</Button>
+                                </div>
                             </div>
-                            <div className="flex items-center gap-3 sm:hidden ml-auto">
-                                <Button
-                                    onClick={() => addToWishlist(product)}
-                                    size="icon"
-                                    variant="outline"
-                                    className={`w-11 h-11 rounded-full border-2 transition-all ${isInWishlist(product.id) ? "bg-rose-50 border-rose-100 text-rose-500" : "border-border"}`}
-                                >
-                                    <Heart className={`w-4 h-4 ${isInWishlist(product.id) ? "fill-rose-500" : ""}`} />
-                                </Button>
-                                <Button onClick={() => addToCart(product, quantity)} size="lg" className="rounded-full px-8 h-11 bg-primary font-black uppercase tracking-widest text-[9px] shadow-lg shadow-primary/20">Manifest</Button>
+
+                            {/* Desktop Actions */}
+                            <div className="hidden sm:flex items-center gap-6">
+                                <div className="flex items-center border border-border/20 rounded-full p-1 bg-muted/10 h-10">
+                                    <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="w-8 h-8 flex items-center justify-center hover:bg-primary hover:text-white rounded-full transition-all"><Minus className="w-3 h-3" /></button>
+                                    <span className="w-10 text-center font-bold text-sm tracking-widest">{quantity}</span>
+                                    <button onClick={() => setQuantity(quantity + 1)} className="w-8 h-8 flex items-center justify-center hover:bg-primary hover:text-white rounded-full transition-all"><Plus className="w-3 h-3" /></button>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <Button
+                                        onClick={() => addToWishlist(product)}
+                                        size="icon"
+                                        variant="outline"
+                                        className={`w-12 h-12 rounded-full border-none transition-all ${isInWishlist(product.id) ? "bg-rose-50 text-rose-500 shadow-lg" : "bg-muted/30 hover:bg-rose-50 hover:text-rose-500"}`}
+                                    >
+                                        <Heart className={`w-5 h-5 ${isInWishlist(product.id) ? "fill-rose-500" : ""}`} />
+                                    </Button>
+                                    <Button onClick={() => addToCart(product, quantity)} className="rounded-full px-10 h-14 shadow-2xl shadow-primary/30 bg-primary font-black uppercase tracking-widest text-[11px] hover:scale-105 transition-all">Manifest Into Bag</Button>
+                                </div>
                             </div>
-                        </div>
-                        <div className="hidden sm:flex items-center gap-4">
-                            <div className="flex items-center border border-border/50 rounded-full p-1 bg-muted/50 h-10">
-                                <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="w-8 h-8 flex items-center justify-center hover:bg-primary hover:text-white rounded-full transition-all"><Minus className="w-3 h-3" /></button>
-                                <span className="w-8 text-center font-bold text-sm">{quantity}</span>
-                                <button onClick={() => setQuantity(quantity + 1)} className="w-8 h-8 flex items-center justify-center hover:bg-primary hover:text-white rounded-full transition-all"><Plus className="w-3 h-3" /></button>
-                            </div>
-                            <Button onClick={() => addToCart(product, quantity)} className="rounded-full px-8 h-12 shadow-lg shadow-primary/20 bg-primary font-black uppercase tracking-widest text-xs">Manifest Into Bag</Button>
-                            <Button
-                                onClick={() => addToWishlist(product)}
-                                size="icon"
-                                variant="outline"
-                                className={`w-12 h-12 rounded-full border-2 transition-all ${isInWishlist(product.id) ? "bg-rose-50 border-rose-100 text-rose-500 shadow-lg" : "border-border hover:border-rose-100 hover:text-rose-500"}`}
-                            >
-                                <Heart className={`w-5 h-5 ${isInWishlist(product.id) ? "fill-rose-500" : ""}`} />
-                            </Button>
                         </div>
                     </motion.div>
                 )}
@@ -332,9 +434,9 @@ const ProductDetail = () => {
                                             <Star key={i} className={`w-3 h-3 ${i < Math.floor(product.rating) ? "fill-primary text-primary" : "fill-muted text-muted"}`} />
                                         ))}
                                     </div>
-                                    <span className="text-[10px] font-black text-foreground">
-                                        {product.rating} <span className="text-muted-foreground/60">({mergedReviews.length})</span>
-                                        {product.fake_sold_count ? <span className="ml-2 text-primary">| {product.fake_sold_count}+ sold already</span> : null}
+                                    <span className="text-[10px] font-black text-foreground uppercase tracking-wider">
+                                        {product.rating} <span className="text-muted-foreground/60">({Math.max(mergedReviews.length, product.reviews || 0)})</span>
+                                        {product.fake_sold_count ? <span className="ml-2 text-primary">| {product.fake_sold_count}+ vessels manifested</span> : null}
                                     </span>
                                 </div>
                             </div>
@@ -349,9 +451,9 @@ const ProductDetail = () => {
                                 </p>
 
                                 {product.stock !== undefined && product.stock <= (product.min_stock_level || 5) && (
-                                    <div className="flex items-center justify-center lg:justify-start gap-2 text-rose-500 animate-pulse">
+                                    <div className="flex items-center justify-center lg:justify-start gap-2 text-red-600 animate-pulse font-black">
                                         <Clock className="w-4 h-4" />
-                                        <span className="text-[10px] font-black uppercase tracking-[0.2em]">
+                                        <span className="text-[10px] uppercase tracking-[0.2em]">
                                             {product.stock === 0 ? "Out of Stock" : `Botanical Shortage: Only ${product.stock} vessels Left`}
                                         </span>
                                     </div>
@@ -436,29 +538,7 @@ const ProductDetail = () => {
                 {/* ── Continuous Sections ── */}
                 <div className="space-y-32">
 
-                    {/* Narrative — compact minimalist strip */}
-                    <div id="narrative" className="animate-in fade-in slide-in-from-bottom-8 duration-700">
-                        <div className="rounded-[2rem] md:rounded-[3rem] border border-border/10 bg-muted/10 overflow-hidden">
-                            {/* Mobile: stacked card with accent top bar */}
-                            <div className="h-1 w-full bg-gradient-to-r from-primary/40 via-primary/20 to-transparent" />
-                            <div className="flex flex-col md:flex-row md:items-center gap-0 md:gap-0">
-                                {/* Label panel */}
-                                <div className="flex items-center gap-4 md:flex-col md:items-start md:gap-3 md:shrink-0 md:w-56 px-6 pt-6 pb-3 md:p-10 md:border-r border-border/10">
-                                    <Sparkles className="w-6 h-6 md:w-7 md:h-7 text-primary/50 shrink-0" />
-                                    <div>
-                                        <h3 className="text-lg md:text-2xl font-serif italic tracking-tight text-primary leading-tight">{product.name}</h3>
-                                        <p className="text-[9px] font-black uppercase tracking-[0.25em] text-muted-foreground/40 mt-0.5">The Ritual Synthesis</p>
-                                    </div>
-                                </div>
-                                {/* Divider — horizontal on mobile, vertical on desktop */}
-                                <div className="mx-6 md:mx-0 h-px md:h-auto md:w-px bg-border/20" />
-                                {/* Description */}
-                                <p className="px-6 pb-7 pt-4 md:px-10 md:py-10 text-sm md:text-base text-muted-foreground font-light leading-relaxed">
-                                    {product.detailed_description || product.description}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
+                    {/* Narrative panel moved lower */}
 
                     {/* Specs — only shown if admin has entered data */}
                     {hasSpecs && (
@@ -478,7 +558,138 @@ const ProductDetail = () => {
                         </div>
                     )}
 
-                    {/* Patron Proof (Reviews) */}
+                    {/* ── Patron Visions (Video Proofs) ── */}
+                    {product.video_proofs && product.video_proofs.length > 0 && (
+                        <div id="visions" className="animate-in fade-in slide-in-from-bottom-8 duration-700 space-y-16">
+                            <div className="text-center">
+                                <h2 className="text-4xl md:text-5xl font-serif mb-4 uppercase tracking-tighter">Patron <span className="text-primary italic">Visions</span></h2>
+                                <div className="flex items-center justify-center gap-2">
+                                    <Play className="w-3 h-3 text-primary" />
+                                    <span className="text-[10px] font-black uppercase tracking-widest">Ritual Manifestations In Motion</span>
+                                </div>
+                            </div>
+
+                            <div className="relative max-w-7xl mx-auto px-4 group">
+                                {/* Edge Blurs */}
+                                <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-background via-background/40 to-transparent z-20 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                                <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-background via-background/40 to-transparent z-20 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+                                {/* Navigation Buttons */}
+                                {visionsIndex > 0 && (
+                                    <button
+                                        onClick={() => {
+                                            const next = visionsIndex - 1;
+                                            setVisionsIndex(next);
+                                            visionsCarouselRef.current?.children[next]?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
+                                        }}
+                                        className="absolute left-4 md:left-8 top-1/2 -translate-y-1/2 z-30 w-14 h-14 rounded-full bg-white/10 backdrop-blur-3xl border border-white/20 shadow-2xl flex items-center justify-center hover:bg-primary hover:text-white transition-all duration-500 group/btn"
+                                    >
+                                        <div className="absolute inset-0 rounded-full bg-primary/20 blur-xl opacity-0 group-hover/btn:opacity-100 transition-opacity" />
+                                        <ArrowLeft className="w-6 h-6 relative z-10" />
+                                    </button>
+                                )}
+                                {visionsIndex < product.video_proofs.length - 1 && (
+                                    <button
+                                        onClick={() => {
+                                            const next = visionsIndex + 1;
+                                            setVisionsIndex(next);
+                                            visionsCarouselRef.current?.children[next]?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
+                                        }}
+                                        className="absolute right-4 md:right-8 top-1/2 -translate-y-1/2 z-30 w-14 h-14 rounded-full bg-white/10 backdrop-blur-3xl border border-white/20 shadow-2xl flex items-center justify-center hover:bg-primary hover:text-white transition-all duration-500 group/btn"
+                                    >
+                                        <div className="absolute inset-0 rounded-full bg-primary/20 blur-xl opacity-0 group-hover/btn:opacity-100 transition-opacity" />
+                                        <ArrowLeft className="w-6 h-6 rotate-180 relative z-10" />
+                                    </button>
+                                )}
+
+                                <div
+                                    ref={visionsCarouselRef}
+                                    className="flex gap-6 overflow-x-hidden pb-8 snap-x snap-mandatory px-4 md:px-0 [mask-image:linear-gradient(to_right,transparent,black_15%,black_85%,transparent)]"
+                                >
+                                    {product.video_proofs.map((url: string, i: number) => {
+                                        const { platform, embedUrl, thumb } = getVideoData(url);
+                                        const handle = getUsernameFromUrl(url);
+                                        const isPlaying = playingVideo === url;
+                                        const tiktokMp4 = tikTokSources[url];
+
+                                        return (
+                                            <div key={i} className="flex-none w-[280px] md:w-[320px] snap-start">
+                                                <div className="glass rounded-[3rem] overflow-hidden border-border/10 group/vid-card hover:shadow-2xl transition-all duration-700 relative h-full">
+                                                    <div className="aspect-[9/16] bg-black relative overflow-hidden">
+                                                        {isPlaying ? (
+                                                            platform === 'tiktok' && tiktokMp4 ? (
+                                                                <video
+                                                                    src={tiktokMp4}
+                                                                    className="absolute inset-0 w-full h-full z-30 object-cover"
+                                                                    controls
+                                                                    autoPlay
+                                                                    playsInline
+                                                                />
+                                                            ) : (
+                                                                <iframe
+                                                                    src={embedUrl}
+                                                                    className="absolute inset-0 w-full h-full z-30 bg-black"
+                                                                    allow="autoplay; encrypted-media; picture-in-picture"
+                                                                    allowFullScreen
+                                                                />
+                                                            )
+                                                        ) : (
+                                                            <>
+                                                                {thumb && (
+                                                                    <img src={thumb} className="w-full h-full object-cover grayscale-[0.2] group-hover/vid-card:grayscale-0 group-hover/vid-card:scale-105 transition-all duration-[2s]" alt="" />
+                                                                )}
+                                                                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent z-10" />
+                                                                <div className="absolute inset-0 flex items-center justify-center z-20">
+                                                                    <button
+                                                                        onClick={() => setPlayingVideo(url)}
+                                                                        className="w-20 h-20 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white flex items-center justify-center shadow-2xl hover:bg-primary hover:border-primary hover:scale-110 transition-all duration-700 group/play"
+                                                                    >
+                                                                        <Play className="w-8 h-8 fill-white group-hover/play:scale-110 transition-transform ml-1" />
+                                                                    </button>
+                                                                </div>
+                                                            </>
+                                                        )}
+
+                                                        <div className="absolute bottom-8 left-8 right-8 z-20 space-y-4">
+                                                            <div className="flex items-center justify-between">
+                                                                <div className="flex items-center gap-3">
+                                                                    <div className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white text-[10px] font-black uppercase">
+                                                                        {handle.charAt(0)}
+                                                                    </div>
+                                                                    <div className="min-w-0">
+                                                                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white truncate">@{handle}</p>
+                                                                        <p className="text-[8px] text-white/50 font-bold uppercase tracking-widest">Patron Testimony</p>
+                                                                    </div>
+                                                                </div>
+                                                                <button
+                                                                    onClick={() => window.open(url, '_blank')}
+                                                                    className="w-9 h-9 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white hover:bg-white hover:text-black transition-all duration-300"
+                                                                    title="Open Ritual Source"
+                                                                >
+                                                                    <ExternalLink className="w-4 h-4" />
+                                                                </button>
+                                                            </div>
+                                                            <div className="flex items-center justify-between pt-5 border-t border-white/10">
+                                                                <div className="flex items-center gap-2">
+                                                                    <div className="p-1.5 rounded-lg bg-white/5 backdrop-blur-sm">
+                                                                        {getPlatformIcon(platform)}
+                                                                    </div>
+                                                                    <span className="text-[8px] font-black uppercase tracking-[0.2em] text-white/60">{platform}</span>
+                                                                </div>
+                                                                <div className="flex gap-0.5">
+                                                                    {[1, 2, 3, 4, 5].map(s => <Star key={s} className="w-2.5 h-2.5 fill-primary text-primary" />)}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </div>
+                    )}
                     <div id="reviews" className="animate-in fade-in slide-in-from-bottom-8 duration-700 space-y-16">
                         <div className="text-center">
                             <h2 className="text-4xl md:text-5xl font-serif mb-4 uppercase tracking-tighter">Patron <span className="text-primary italic">Proof</span></h2>
@@ -486,7 +697,7 @@ const ProductDetail = () => {
                                 <div className="flex gap-1">
                                     {[...Array(5)].map((_, i) => <Star key={i} className="w-4 h-4 fill-primary text-primary" />)}
                                 </div>
-                                <span className="text-sm font-black uppercase tracking-widest">Trusted by {mergedReviews.length + (product.fake_sold_count || 0)} Patrons</span>
+                                <span className="text-sm font-black uppercase tracking-widest">Trusted by {Math.max(mergedReviews.length, product.reviews || 0)} Patrons</span>
                             </div>
                         </div>
 
@@ -681,6 +892,49 @@ const ProductDetail = () => {
                                     <Button onClick={() => navigate('/auth')} variant="outline" className="rounded-full px-10 h-12 border-primary/20 text-primary hover:bg-primary hover:text-white transition-all">Sign In to Manifest</Button>
                                 </div>
                             )}
+                        </div>
+                    </div>
+
+                    {/* Narrative — Restructured and moved here */}
+                    <div id="narrative" className="animate-in fade-in slide-in-from-bottom-8 duration-700">
+                        <div className="rounded-[2rem] md:rounded-[3rem] border border-border/10 bg-muted/5 overflow-hidden">
+                            <div className="h-1.5 w-full bg-gradient-to-r from-primary/60 via-primary/20 to-transparent" />
+                            <div className="flex flex-col md:flex-row md:items-stretch">
+                                <div className="p-8 md:p-12 md:w-1/3 md:border-r border-border/10 flex flex-col justify-center gap-6 bg-muted/5">
+                                    <div className="space-y-4">
+                                        <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
+                                            <Sparkles className="w-7 h-7 text-primary" />
+                                        </div>
+                                        <h3 className="text-3xl md:text-4xl font-serif italic text-primary leading-tight tracking-tight">{product.name}</h3>
+                                        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/50">The Ritual Narrative</p>
+                                    </div>
+                                    <div className="h-px w-12 bg-primary/30" />
+                                    <p className="text-xs text-muted-foreground uppercase tracking-widest leading-relaxed">
+                                        A manifestation of botanical excellence, curated for the modern patron.
+                                    </p>
+                                </div>
+                                <div className="p-8 md:p-12 md:w-2/3">
+                                    <div className="prose prose-primary max-w-none">
+                                        <p className="text-lg md:text-xl text-muted-foreground/80 font-light leading-relaxed italic">
+                                            {product.detailed_description || product.description}
+                                        </p>
+                                    </div>
+
+                                    {/* SEO Tags Dispay */}
+                                    {product.tags && product.tags.length > 0 && (
+                                        <div className="mt-12 pt-12 border-t border-border/10">
+                                            <p className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 mb-6">Synthesis Alignments (Tags)</p>
+                                            <div className="flex flex-wrap gap-3">
+                                                {product.tags.map((tag: string) => (
+                                                    <span key={tag} className="px-5 py-2 rounded-full bg-muted/40 border border-border/10 text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 hover:border-primary/30 hover:text-primary transition-all cursor-default">
+                                                        #{tag.replace(/\s+/g, '')}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
                         </div>
                     </div>
 

@@ -61,6 +61,8 @@ export default function ProductForm() {
         reviews_list: [],
         vessel_volume: "",
         fake_sold_count: 0,
+        video_proofs: [],
+        tags: [],
         variants: { sizes: ["30ml", "50ml", "100ml"], colors: [] }
     });
 
@@ -104,6 +106,8 @@ export default function ProductForm() {
                         faqs: data.faqs || [],
                         reviews_list: data.reviews_list || [],
                         specs: data.specs || {},
+                        video_proofs: data.video_proofs || [],
+                        tags: data.tags || [],
                         variants: data.variants || { sizes: ["30ml", "50ml", "100ml"], colors: [] }
                     });
                 } catch (error) {
@@ -424,6 +428,40 @@ export default function ProductForm() {
                                 </Button>
                             </div>
                         </div>
+
+                        {/* Video Proofs Section */}
+                        <div className="glass p-10 rounded-[3rem] space-y-8 shadow-sm lg:col-span-2">
+                            <SectionHeader icon={ImageIcon} title="Patron"
+                                subtitle="Visions (Videos)" />
+                            <p className="text-xs text-muted-foreground ml-1">Add links from TikTok, Instagram Reels, or YouTube. These will be fetched and displayed on the product page.</p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {(formData.video_proofs || []).map((url, i) => (
+                                    <div key={i} className="flex gap-4 items-center animate-in slide-in-from-left-2">
+                                        <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                                            <Sparkles className="w-5 h-5 text-primary" />
+                                        </div>
+                                        <Input
+                                            value={url}
+                                            onChange={(e) => {
+                                                const newVideos = [...(formData.video_proofs || [])];
+                                                newVideos[i] = e.target.value;
+                                                setFormData({ ...formData, video_proofs: newVideos });
+                                            }}
+                                            placeholder="https://tiktok.com/@user/video/..."
+                                            className="h-12 rounded-xl bg-muted/20 border-none px-4 flex-1 font-mono text-[10px]"
+                                        />
+                                        <Button variant="ghost" size="icon" onClick={() => removeItem('video_proofs', i)} className="text-destructive"><Trash2 className="w-4 h-4" /></Button>
+                                    </div>
+                                ))}
+                                <Button
+                                    variant="outline"
+                                    className="h-12 rounded-2xl border-dashed border-2 gap-2"
+                                    onClick={() => addItem('video_proofs', "")}
+                                >
+                                    <Plus className="w-4 h-4" /> Add Video Proof
+                                </Button>
+                            </div>
+                        </div>
                     </div>
 
                     <div className="flex justify-end mt-12">
@@ -478,6 +516,34 @@ export default function ProductForm() {
                                         />
                                         <CheckCircle2 className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary" />
                                         <button onClick={() => removeItem('highlights', i)} className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-destructive"><Trash2 className="w-3 h-3" /></button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* SEO Tags Section */}
+                        <div className="space-y-6 pt-6 border-t border-border/10">
+                            <div className="flex items-center justify-between">
+                                <div className="space-y-1">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest ml-1">SEO Tags</Label>
+                                    <p className="text-[10px] text-muted-foreground ml-1">Tags help in Google search rankings. Add keywords like "organic hair oil", "Ayurvedic serum", etc.</p>
+                                </div>
+                                <Button variant="ghost" size="sm" onClick={() => addItem('tags', "")} className="text-primary gap-2"><Plus className="w-4 h-4" /> Add Tag</Button>
+                            </div>
+                            <div className="flex flex-wrap gap-3">
+                                {(formData.tags || []).map((t, i) => (
+                                    <div key={i} className="relative group">
+                                        <Input
+                                            value={t}
+                                            onChange={(e) => {
+                                                const newTags = [...(formData.tags || [])];
+                                                newTags[i] = e.target.value;
+                                                setFormData({ ...formData, tags: newTags });
+                                            }}
+                                            className="h-10 px-4 pr-10 rounded-full bg-primary/5 border-primary/20 border text-[10px] font-black uppercase tracking-widest w-40"
+                                            placeholder="e.g. Organic"
+                                        />
+                                        <button onClick={() => removeItem('tags', i)} className="absolute right-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-destructive"><X className="w-3 h-3" /></button>
                                     </div>
                                 ))}
                             </div>
