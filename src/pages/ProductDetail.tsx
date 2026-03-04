@@ -227,7 +227,7 @@ const ProductDetail = () => {
                         initial={{ y: 100 }}
                         animate={{ y: 0 }}
                         exit={{ y: 100 }}
-                        className="fixed bottom-0 left-0 right-0 z-[60] bg-background/95 backdrop-blur-xl border-t border-border/50 p-3 md:p-4 shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-4 px-4 md:px-12"
+                        className="fixed bottom-0 left-0 right-0 z-[60] bg-background/95 backdrop-blur-xl border-t border-border/50 p-4 md:p-4 shadow-[0_-10px_40px_rgba(0,0,0,0.1)] flex flex-col sm:flex-row items-center justify-between gap-4 px-6 md:px-12 pb-8 sm:pb-4"
                     >
                         <div className="flex items-center gap-4 w-full sm:w-auto">
                             <img src={product.image} className="w-12 h-12 md:w-14 md:h-14 rounded-xl md:rounded-2xl object-cover shadow-lg" alt="" />
@@ -235,16 +235,16 @@ const ProductDetail = () => {
                                 <p className="font-serif text-sm md:text-lg font-medium truncate">{product.name}</p>
                                 <p className="text-primary font-bold text-sm md:text-base">Rs. {product.price}</p>
                             </div>
-                            <div className="flex items-center gap-2 sm:hidden">
+                            <div className="flex items-center gap-3 sm:hidden ml-auto">
                                 <Button
                                     onClick={() => addToWishlist(product)}
                                     size="icon"
                                     variant="outline"
-                                    className={`w-10 h-10 rounded-full border-2 transition-all ${isInWishlist(product.id) ? "bg-rose-50 border-rose-100 text-rose-500" : "border-border"}`}
+                                    className={`w-11 h-11 rounded-full border-2 transition-all ${isInWishlist(product.id) ? "bg-rose-50 border-rose-100 text-rose-500" : "border-border"}`}
                                 >
                                     <Heart className={`w-4 h-4 ${isInWishlist(product.id) ? "fill-rose-500" : ""}`} />
                                 </Button>
-                                <Button onClick={() => addToCart(product, quantity)} size="sm" className="rounded-full px-6 h-10 bg-primary font-black uppercase tracking-widest text-[10px]">Add</Button>
+                                <Button onClick={() => addToCart(product, quantity)} size="lg" className="rounded-full px-8 h-11 bg-primary font-black uppercase tracking-widest text-[9px] shadow-lg shadow-primary/20">Manifest</Button>
                             </div>
                         </div>
                         <div className="hidden sm:flex items-center gap-4">
@@ -340,16 +340,16 @@ const ProductDetail = () => {
                             </div>
 
                             <div className="space-y-6">
-                                <h1 className="text-4xl md:text-5xl lg:text-6xl font-serif leading-tight tracking-tighter uppercase animate-in slide-in-from-left-8 duration-1000">
+                                <h1 className="text-4xl md:text-5xl lg:text-6xl font-serif leading-tight tracking-tighter uppercase animate-in slide-in-from-left-8 duration-1000 text-center lg:text-left">
                                     {product.name}
                                 </h1>
 
-                                <p className="text-muted-foreground text-lg leading-relaxed font-light text-balance max-w-xl">
+                                <p className="text-muted-foreground text-base md:text-lg leading-relaxed font-light text-balance max-w-xl text-center lg:text-left mx-auto lg:mx-0">
                                     {product.description}
                                 </p>
 
                                 {product.stock !== undefined && product.stock <= (product.min_stock_level || 5) && (
-                                    <div className="flex items-center gap-2 text-rose-500 animate-pulse">
+                                    <div className="flex items-center justify-center lg:justify-start gap-2 text-rose-500 animate-pulse">
                                         <Clock className="w-4 h-4" />
                                         <span className="text-[10px] font-black uppercase tracking-[0.2em]">
                                             {product.stock === 0 ? "Out of Stock" : `Botanical Shortage: Only ${product.stock} vessels Left`}
@@ -357,14 +357,14 @@ const ProductDetail = () => {
                                     </div>
                                 )}
 
-                                <div className="flex items-end gap-4 pb-6">
+                                <div className="flex items-end justify-center lg:justify-start gap-4">
                                     <span className="text-4xl font-bold font-serif text-primary tracking-tighter">Rs. {product.price}</span>
                                     {oldPrice > 0 && <span className="text-xl text-muted-foreground line-through mb-1.5 font-light tracking-tighter">Rs. {oldPrice}</span>}
                                 </div>
                             </div>
 
                             {/* Combined Actions Section */}
-                            <div className="glass p-8 rounded-[3rem] border-border/10 space-y-8">
+                            <div className="glass p-6 md:p-8 rounded-[2.5rem] md:rounded-[3rem] border-border/10 space-y-6 md:space-y-8 mt-4 md:mt-0">
                                 <div className="flex items-center justify-between gap-4">
                                     <div className="space-y-1">
                                         <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Vessel Volume</Label>
@@ -388,43 +388,45 @@ const ProductDetail = () => {
 
                                 </div>
 
-                                <div className="flex items-center gap-4 h-16">
-                                    <div className="flex items-center border-2 border-border/20 rounded-full p-1 bg-muted/10 h-full shrink-0">
-                                        <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="w-10 h-10 flex items-center justify-center hover:bg-primary hover:text-white rounded-full transition-all duration-300"><Minus className="w-4 h-4" /></button>
-                                        <span className="w-10 text-center font-black text-lg font-serif italic">{quantity}</span>
-                                        <button onClick={() => setQuantity(quantity + 1)} className="w-10 h-10 flex items-center justify-center hover:bg-primary hover:text-white rounded-full transition-all duration-300"><Plus className="w-4 h-4" /></button>
+                                <div className="flex flex-col sm:flex-row items-center gap-4 h-auto sm:h-16">
+                                    <div className="flex items-center border-2 border-border/20 rounded-full p-1 bg-muted/10 h-14 sm:h-full w-full sm:w-auto shrink-0">
+                                        <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="flex-1 sm:w-10 h-full flex items-center justify-center hover:bg-primary hover:text-white rounded-full transition-all duration-300"><Minus className="w-4 h-4" /></button>
+                                        <span className="w-12 text-center font-black text-lg font-serif italic">{quantity}</span>
+                                        <button onClick={() => setQuantity(quantity + 1)} className="flex-1 sm:w-10 h-full flex items-center justify-center hover:bg-primary hover:text-white rounded-full transition-all duration-300"><Plus className="w-4 h-4" /></button>
                                     </div>
-                                    <Button
-                                        onClick={() => addToCart(product, quantity)}
-                                        className="flex-1 h-full rounded-full text-sm font-black uppercase tracking-[0.2em] shadow-xl shadow-primary/20 bg-primary group hover:bg-primary/90 transition-all duration-500"
-                                    >
-                                        Manifest Into Bag
-                                        <ShoppingBag className="ml-3 w-5 h-5 group-hover:-translate-y-1 transition-transform" />
-                                    </Button>
-                                    <Button
-                                        onClick={() => addToWishlist(product)}
-                                        variant="outline"
-                                        className={`h-full w-16 rounded-full border-2 transition-all duration-500 shrink-0 flex items-center justify-center ${isInWishlist(product.id) ? "bg-rose-50 border-rose-100 text-rose-500 shadow-lg" : "border-border hover:border-rose-100 hover:text-rose-500"}`}
-                                    >
-                                        <Heart className={`w-6 h-6 ${isInWishlist(product.id) ? "fill-rose-500" : ""}`} />
-                                    </Button>
+                                    <div className="flex gap-3 w-full sm:flex-1 h-14 sm:h-full">
+                                        <Button
+                                            onClick={() => addToCart(product, quantity)}
+                                            className="flex-1 h-full rounded-full text-xs font-black uppercase tracking-[0.2em] shadow-xl shadow-primary/20 bg-primary group hover:bg-primary/90 transition-all duration-500"
+                                        >
+                                            Manifest Into Bag
+                                            <ShoppingBag className="ml-3 w-5 h-5 group-hover:-translate-y-1 transition-transform" />
+                                        </Button>
+                                        <Button
+                                            onClick={() => addToWishlist(product)}
+                                            variant="outline"
+                                            className={`h-full w-14 sm:w-16 rounded-full border-2 transition-all duration-500 shrink-0 flex items-center justify-center ${isInWishlist(product.id) ? "bg-rose-50 border-rose-100 text-rose-500 shadow-lg" : "border-border hover:border-rose-100 hover:text-rose-500"}`}
+                                        >
+                                            <Heart className={`w-5 h-5 md:w-6 h-6 ${isInWishlist(product.id) ? "fill-rose-500" : ""}`} />
+                                        </Button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                {/* ── Highlights: Full-width below the image/info grid, centered ── */}
+                {/* ── Highlights: Pair in one line on mobile ── */}
                 {product.highlights && product.highlights.length > 0 && (
-                    <div className="mb-24">
-                        <div className="flex flex-wrap justify-center gap-3">
+                    <div className="mb-24 px-2">
+                        <div className="grid grid-cols-2 lg:flex lg:flex-wrap justify-center gap-3">
                             {product.highlights.map((h: string) => (
                                 <div
                                     key={h}
-                                    className="flex items-center gap-3 bg-muted/20 px-6 py-3.5 rounded-full border border-border/10 group hover:border-primary/30 hover:bg-primary/5 transition-all"
+                                    className="flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-2 sm:gap-3 bg-muted/20 p-4 sm:px-6 sm:py-3.5 rounded-[1.5rem] sm:rounded-full border border-border/10 group hover:border-primary/30 hover:bg-primary/5 transition-all text-center sm:text-left"
                                 >
-                                    <CheckCircle2 className="w-4 h-4 text-primary shrink-0" />
-                                    <span className="text-xs font-bold uppercase tracking-widest whitespace-nowrap">{h}</span>
+                                    <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary shrink-0" />
+                                    <span className="text-[9px] sm:text-xs font-bold uppercase tracking-widest">{h}</span>
                                 </div>
                             ))}
                         </div>
@@ -527,7 +529,7 @@ const ProductDetail = () => {
                                     {mergedReviews.map((rev: any, i: number) => (
                                         <div
                                             key={rev.id || i}
-                                            className="glass flex-none w-[340px] sm:w-[400px] p-8 rounded-[2.5rem] space-y-6 border-border/10 hover:shadow-xl transition-all duration-500 relative snap-start"
+                                            className="glass flex-none w-[280px] sm:w-[400px] p-6 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] space-y-6 border-border/10 hover:shadow-xl transition-all duration-500 relative snap-start"
                                         >
                                             {rev.is_fake && (
                                                 <div className="absolute top-6 right-6 text-[8px] font-black uppercase tracking-[0.3em] text-primary/30">Curated</div>
@@ -552,13 +554,13 @@ const ProductDetail = () => {
                                                 </div>
                                             )}
 
-                                            <div className="flex items-center gap-4 pt-4 border-t border-border/10">
-                                                <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-primary/20 to-primary/5 flex items-center justify-center text-sm font-black text-primary uppercase shadow-inner shrink-0">
+                                            <div className="flex items-center gap-3 sm:gap-4 pt-4 border-t border-border/10">
+                                                <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-gradient-to-tr from-primary/20 to-primary/5 flex items-center justify-center text-[10px] sm:text-sm font-black text-primary uppercase shadow-inner shrink-0">
                                                     {(rev.user_name || "P").slice(0, 2)}
                                                 </div>
-                                                <div>
-                                                    <p className="font-serif font-bold text-sm tracking-tight">{rev.user_name || "Anonymous Patron"}</p>
-                                                    <p className="text-[9px] text-emerald-500 font-black uppercase tracking-widest flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Verified Patron</p>
+                                                <div className="min-w-0">
+                                                    <p className="font-serif font-bold text-xs sm:text-sm tracking-tight truncate">{rev.user_name || "Anonymous Patron"}</p>
+                                                    <p className="text-[8px] sm:text-[9px] text-emerald-500 font-black uppercase tracking-widest flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Verified</p>
                                                 </div>
                                             </div>
                                         </div>

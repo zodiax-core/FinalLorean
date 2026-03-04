@@ -62,11 +62,11 @@ const Navbar = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-20">
             {/* Logo */}
-            <Link to="/" className="flex items-center">
+            <Link to="/" className="flex items-center shrink-0">
               <motion.img
                 src="/logo.png"
                 alt="Lorean Logo"
-                className="h-10 md:h-14 w-auto object-contain"
+                className="h-9 md:h-14 w-auto object-contain"
                 whileHover={{ scale: 1.05 }}
                 transition={{ type: "spring", stiffness: 400, damping: 10 }}
               />
@@ -95,7 +95,7 @@ const Navbar = () => {
             </div>
 
             {/* Icons */}
-            <div className="flex items-center space-x-2 md:space-x-4">
+            <div className="flex items-center space-x-0.5 md:space-x-4">
               <motion.button
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.95 }}
@@ -111,14 +111,14 @@ const Navbar = () => {
                 onClick={() => setIsWishlistOpen(true)}
                 className="p-2 text-foreground/70 hover:text-primary transition-colors relative"
               >
-                <Heart className="w-5 h-5" />
+                <Heart className="w-4.5 h-4.5 md:w-5 md:h-5" />
                 <AnimatePresence>
                   {wishlistCount > 0 && (
                     <motion.span
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
                       exit={{ scale: 0 }}
-                      className="absolute top-0 right-0 w-4 h-4 bg-primary text-primary-foreground text-[8px] font-black rounded-full flex items-center justify-center shadow-lg border border-background"
+                      className="absolute top-1 right-1 w-3.5 h-3.5 bg-primary text-primary-foreground text-[7px] md:text-[8px] font-black rounded-full flex items-center justify-center shadow-lg border border-background"
                     >
                       {wishlistCount}
                     </motion.span>
@@ -142,14 +142,14 @@ const Navbar = () => {
                 onClick={() => setIsCartOpen(true)}
                 className="p-2 text-foreground/70 hover:text-primary transition-colors relative"
               >
-                <ShoppingBag className="w-5 h-5" />
+                <ShoppingBag className="w-4.5 h-4.5 md:w-5 md:h-5" />
                 <AnimatePresence>
                   {cartCount > 0 && (
                     <motion.span
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
                       exit={{ scale: 0 }}
-                      className="absolute top-0 right-0 w-4 h-4 bg-primary text-primary-foreground text-[8px] font-black rounded-full flex items-center justify-center shadow-lg border border-background"
+                      className="absolute top-1 right-1 w-3.5 h-3.5 bg-primary text-primary-foreground text-[7px] md:text-[8px] font-black rounded-full flex items-center justify-center shadow-lg border border-background"
                     >
                       {cartCount}
                     </motion.span>
