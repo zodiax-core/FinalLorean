@@ -4,11 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { marketingService } from "@/services/supabase";
+import { emailService } from "@/services/email";
 import { useToast } from "@/components/ui/use-toast";
 
 const NewsletterSection = () => {
   const [email, setEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [isSubscribed, setIsSubscribed] = useState(false);
   const { toast } = useToast();
 
   const handleSubscribe = async (e: React.FormEvent) => {
@@ -18,6 +20,15 @@ const NewsletterSection = () => {
     setSubmitting(true);
     try {
       await marketingService.subscribe(email);
+
+      // Send welcome email via EmailJS (optional but recommended for "proper backend")
+      try {
+        await emailService.sendWelcomeEmail(email);
+      } catch (emailError) {
+        console.warn("Welcome email could not be sent, but subscription was successful:", emailError);
+      }
+
+      setIsSubscribed(true);
       toast({
         title: "Welcome to the Inner Circle",
         description: "You've successfully subscribed to our newsletter."
@@ -66,32 +77,52 @@ const NewsletterSection = () => {
             first to know about new product launches.
           </p>
 
-          <form
-            onSubmit={handleSubscribe}
-            className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto"
-          >
-            <Input
-              type="email"
-              placeholder="Enter your email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="flex-1 h-14 rounded-full px-6 bg-background/80 border-border/50 focus:border-primary"
-              required
-            />
-            <Button
-              type="submit"
-              size="lg"
-              disabled={submitting}
-              className="h-14 px-8 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground group"
+          {isSubscribed ? (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="py-8"
             >
-              {submitting ? "Subscribing..." : "Join Ritual"}
-              <Send className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
-            </Button>
-          </form>
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/20 flex items-center justify-center">
+                <Send className="w-8 h-8 text-primary" />
+              </div>
+              <p className="text-xl font-medium mb-2" style={{ fontFamily: "'Cormorant Garamond', serif" }}>
+                You have subscribed
+              </p>
+              <p className="text-muted-foreground">
+                Welcome to the inner circle. The botanical secrets will find you soon.
+              </p>
+            </motion.div>
+          ) : (
+            <>
+              <form
+                onSubmit={handleSubscribe}
+                className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto"
+              >
+                <Input
+                  type="email"
+                  placeholder="Enter your email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="flex-1 h-14 rounded-full px-6 bg-background/80 border-border/50 focus:border-primary"
+                  required
+                />
+                <Button
+                  type="submit"
+                  size="lg"
+                  disabled={submitting}
+                  className="h-14 px-8 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground group"
+                >
+                  {submitting ? "Subscribing..." : "Join Ritual"}
+                  <Send className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </Button>
+              </form>
 
-          <p className="text-xs text-muted-foreground mt-4">
-            No spam, unsubscribe anytime. We respect your privacy.
-          </p>
+              <p className="text-xs text-muted-foreground mt-4">
+                No spam, unsubscribe anytime. We respect your privacy.
+              </p>
+            </>
+          )}
         </motion.div>
       </div>
     </section>

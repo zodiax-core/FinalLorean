@@ -4,9 +4,44 @@ import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Mail, Phone, MapPin, MessageSquare } from "lucide-react";
+import { Mail, Phone, MapPin, MessageSquare, Loader2, CheckCircle2 } from "lucide-react";
+import { useState } from "react";
+import { emailService } from "@/services/email";
+import { useToast } from "@/components/ui/use-toast";
 
 const Contact = () => {
+    const { toast } = useToast();
+    const [submitting, setSubmitting] = useState(false);
+    const [submitted, setSubmitted] = useState(false);
+    const [formData, setFormData] = useState({
+        name: "",
+        email: "",
+        subject: "",
+        message: ""
+    });
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setSubmitting(true);
+
+        try {
+            await emailService.sendContactForm(formData);
+            setSubmitted(true);
+            toast({
+                title: "Message Summoned",
+                description: "Your inquiry has been relayed to our care team."
+            });
+        } catch (error: any) {
+            toast({
+                variant: "destructive",
+                title: "Ritual Interrupted",
+                description: error.message || "Something went wrong. Please try again later."
+            });
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
     return (
         <div className="min-h-screen bg-background text-foreground">
             <Navbar />
@@ -70,30 +105,90 @@ const Contact = () => {
                             transition={{ delay: 0.3 }}
                             className="bg-card p-10 rounded-3xl border border-border/50 shadow-sm"
                         >
-                            <form className="space-y-6">
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                    <div className="space-y-2">
-                                        <label className="text-sm font-medium">Full Name</label>
-                                        <Input placeholder="Jane Doe" className="rounded-xl h-12" />
+                            {submitted ? (
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 0.9 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    className="text-center py-12"
+                                >
+                                    <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6 text-primary">
+                                        <CheckCircle2 className="w-10 h-10" />
+                                    </div>
+                                    <h3 className="text-3xl font-serif italic mb-4">Message Manifested</h3>
+                                    <p className="text-muted-foreground mb-8">
+                                        Our care team has received your message. We shall respond as soon as the botanical spirits guide us.
+                                    </p>
+                                    <Button
+                                        onClick={() => setSubmitted(false)}
+                                        variant="outline"
+                                        className="rounded-full px-8"
+                                    >
+                                        Send Another
+                                    </Button>
+                                </motion.div>
+                            ) : (
+                                <form className="space-y-6" onSubmit={handleSubmit}>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-medium">Full Name</label>
+                                            <Input
+                                                required
+                                                placeholder="Jane Doe"
+                                                className="rounded-xl h-12"
+                                                value={formData.name}
+                                                onChange={e => setFormData(p => ({ ...p, name: e.target.value }))}
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-medium">Email Address</label>
+                                            <Input
+                                                required
+                                                placeholder="jane@example.com"
+                                                type="email"
+                                                className="rounded-xl h-12"
+                                                value={formData.email}
+                                                onChange={e => setFormData(p => ({ ...p, email: e.target.value }))}
+                                            />
+                                        </div>
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-sm font-medium">Email Address</label>
-                                        <Input placeholder="jane@example.com" type="email" className="rounded-xl h-12" />
+                                        <label className="text-sm font-medium">Subject</label>
+                                        <Input
+                                            required
+                                            placeholder="How can we help?"
+                                            className="rounded-xl h-12"
+                                            value={formData.subject}
+                                            onChange={e => setFormData(p => ({ ...p, subject: e.target.value }))}
+                                        />
                                     </div>
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium">Subject</label>
-                                    <Input placeholder="How can we help?" className="rounded-xl h-12" />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium">Message</label>
-                                    <Textarea placeholder="Share your thoughts..." className="rounded-xl min-h-[150px]" />
-                                </div>
-                                <Button className="w-full h-14 rounded-xl text-lg group">
-                                    Send Message
-                                    <MessageSquare className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                                </Button>
-                            </form>
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium">Message</label>
+                                        <Textarea
+                                            required
+                                            placeholder="Share your thoughts..."
+                                            className="rounded-xl min-h-[150px]"
+                                            value={formData.message}
+                                            onChange={e => setFormData(p => ({ ...p, message: e.target.value }))}
+                                        />
+                                    </div>
+                                    <Button
+                                        className="w-full h-14 rounded-xl text-lg group bg-primary hover:bg-primary/90"
+                                        disabled={submitting}
+                                    >
+                                        {submitting ? (
+                                            <>
+                                                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                                                Manifesting...
+                                            </>
+                                        ) : (
+                                            <>
+                                                Send Message
+                                                <MessageSquare className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                                            </>
+                                        )}
+                                    </Button>
+                                </form>
+                            )}
                         </motion.div>
                     </div>
                 </div>

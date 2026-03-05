@@ -24,7 +24,8 @@ import { Badge } from "@/components/ui/badge";
 import { useProducts } from "@/context/ProductsContext";
 import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
-import { Product, reviewsService, productsService } from "@/services/supabase";
+import { Product, reviewsService, productsService, marketingService } from "@/services/supabase";
+import { emailService } from "@/services/email";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/context/AuthContext";
 import SEO from "@/components/SEO";
@@ -166,6 +167,10 @@ const ProductDetail = () => {
     const [playingVideo, setPlayingVideo] = useState<string | null>(null);
     const [finishedVideos, setFinishedVideos] = useState<Set<string>>(new Set());
     const [tikTokSources, setTikTokSources] = useState<Record<string, string>>({});
+    const [subscriberEmail, setSubscriberEmail] = useState("");
+    const [subscribing, setSubscribing] = useState(false);
+    const [isSubscribed, setIsSubscribed] = useState(false);
+    const [isReviewSubmitted, setIsReviewSubmitted] = useState(false);
     const reviewCarouselRef = useRef<HTMLDivElement>(null);
     const visionsCarouselRef = useRef<HTMLDivElement>(null);
     const { user } = useAuth();
@@ -274,6 +279,29 @@ const ProductDetail = () => {
         setIsCopied(true);
         toast({ title: "Link Ritualized", description: "Product essence link copied to clipboard." });
         setTimeout(() => setIsCopied(false), 2000);
+    };
+
+    const handleSubscribe = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!subscriberEmail) return;
+        setSubscribing(true);
+        try {
+            await marketingService.subscribe(subscriberEmail);
+
+            // Send welcome email via EmailJS
+            try {
+                await emailService.sendWelcomeEmail(subscriberEmail);
+            } catch (emailError) {
+                console.warn("Welcome email could not be sent:", emailError);
+            }
+
+            setIsSubscribed(true);
+            toast({ title: "Welcome to the Inner Circle", description: "You've successfully subscribed to our newsletter." });
+        } catch (error: any) {
+            toast({ variant: "destructive", title: "Subscription Failed", description: error.message || "The ritual was interrupted." });
+        } finally {
+            setSubscribing(false);
+        }
     };
 
     if (isActuallyLoading) {
@@ -879,78 +907,102 @@ const ProductDetail = () => {
                         <div className="max-w-3xl mx-auto glass p-10 rounded-[3rem] border-border/10 space-y-6">
                             <h3 className="font-serif italic text-2xl text-center">Share your Botanical Experience</h3>
                             {user ? (
-                                <form className="space-y-6" onSubmit={async (e) => {
-                                    e.preventDefault();
-                                    const formData = new FormData(e.currentTarget);
-                                    const comment = formData.get('comment') as string;
-                                    const rating = Number(formData.get('rating'));
-
-                                    if (!comment || !rating) {
-                                        toast({ title: "Ritual Incomplete", description: "Please provide both rating and insight.", variant: "destructive" });
-                                        return;
-                                    }
-
-                                    try {
-                                        setSubmittingReview(true);
-                                        await reviewsService.create({
-                                            product_id: product.id,
-                                            user_id: user.id,
-                                            user_name: user.user_metadata?.full_name || user.email?.split('@')[0],
-                                            rating,
-                                            comment,
-                                            status: 'approved'
-                                        });
-                                        // Optimistically prepend the new review so it shows instantly
-                                        const newReview = {
-                                            id: `new-${Date.now()}`,
-                                            user_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Patron',
-                                            rating,
-                                            comment,
-                                            is_fake: false,
-                                            created_at: new Date().toISOString(),
-                                            verified: true,
-                                        };
-                                        setRealReviews(prev => [newReview, ...prev]);
-                                        setCarouselIndex(0);
-                                        toast({ title: "Insight Manifested", description: "Your Patron Proof has been added to the collective." });
-                                        (e.target as HTMLFormElement).reset();
-                                    } catch (err) {
-                                        toast({ title: "Manifestation Failed", description: "Could not post review.", variant: "destructive" });
-                                    } finally {
-                                        setSubmittingReview(false);
-                                    }
-                                }}>
-                                    <div className="flex flex-col items-center gap-3">
-                                        <div className="flex gap-2">
-                                            {[1, 2, 3, 4, 5].map((s) => (
-                                                <div key={s} className="relative group">
-                                                    <input type="radio" name="rating" value={s} id={`star-${s}`} className="peer absolute opacity-0 cursor-pointer" required />
-                                                    <label htmlFor={`star-${s}`} className="cursor-pointer text-muted-foreground peer-checked:text-primary hover:text-primary transition-colors">
-                                                        <Star className="w-10 h-10 fill-current" />
-                                                    </label>
-                                                </div>
-                                            ))}
+                                isReviewSubmitted ? (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        className="text-center py-10 space-y-4"
+                                    >
+                                        <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+                                            <CheckCircle2 className="w-10 h-10 text-primary" />
                                         </div>
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Select Alignment Rating</p>
-                                    </div>
-                                    <div className="space-y-4">
-                                        <textarea
-                                            name="comment"
-                                            placeholder="Describe your ritual experience with this essence..."
-                                            className="w-full h-36 bg-muted/20 rounded-[2rem] p-6 border border-border/10 focus:border-primary/30 focus:ring-0 outline-none font-light italic text-base transition-all resize-none"
-                                            required
-                                        />
+                                        <div className="space-y-2">
+                                            <p className="font-serif italic text-2xl text-foreground">Insight Manifested</p>
+                                            <p className="text-muted-foreground text-sm uppercase tracking-widest">Your Patron Proof has been added to the collective.</p>
+                                        </div>
                                         <Button
-                                            type="submit"
-                                            disabled={submittingReview}
-                                            className="w-full h-14 rounded-full bg-primary font-black uppercase tracking-widest shadow-xl shadow-primary/10 disabled:opacity-60"
+                                            variant="outline"
+                                            onClick={() => setIsReviewSubmitted(false)}
+                                            className="rounded-full px-8 h-12 border-primary/20 text-primary"
                                         >
-                                            {submittingReview ? (
-                                                <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Manifesting...</span>
-                                            ) : 'Submit Insight'}
+                                            Submit Another Insight
                                         </Button>
-                                    </div>
-                                </form>
+                                    </motion.div>
+                                ) : (
+                                    <form className="space-y-6" onSubmit={async (e) => {
+                                        e.preventDefault();
+                                        const formData = new FormData(e.currentTarget);
+                                        const comment = formData.get('comment') as string;
+                                        const rating = Number(formData.get('rating'));
+
+                                        if (!comment || !rating) {
+                                            toast({ title: "Ritual Incomplete", description: "Please provide both rating and insight.", variant: "destructive" });
+                                            return;
+                                        }
+
+                                        try {
+                                            setSubmittingReview(true);
+                                            await reviewsService.create({
+                                                product_id: product.id,
+                                                user_id: user.id,
+                                                user_name: user.user_metadata?.full_name || user.email?.split('@')[0],
+                                                rating,
+                                                comment,
+                                                status: 'approved'
+                                            });
+                                            // Optimistically prepend the new review so it shows instantly
+                                            const newReview = {
+                                                id: `new-${Date.now()}`,
+                                                user_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Patron',
+                                                rating,
+                                                comment,
+                                                is_fake: false,
+                                                created_at: new Date().toISOString(),
+                                                verified: true,
+                                            };
+                                            setRealReviews(prev => [newReview, ...prev]);
+                                            setCarouselIndex(0);
+                                            setIsReviewSubmitted(true);
+                                            toast({ title: "Insight Manifested", description: "Your Patron Proof has been added to the collective." });
+                                            (e.target as HTMLFormElement).reset();
+                                        } catch (err) {
+                                            toast({ title: "Manifestation Failed", description: "Could not post review.", variant: "destructive" });
+                                        } finally {
+                                            setSubmittingReview(false);
+                                        }
+                                    }}>
+                                        <div className="flex flex-col items-center gap-3">
+                                            <div className="flex gap-2">
+                                                {[1, 2, 3, 4, 5].map((s) => (
+                                                    <div key={s} className="relative group">
+                                                        <input type="radio" name="rating" value={s} id={`star-${s}`} className="peer absolute opacity-0 cursor-pointer" required />
+                                                        <label htmlFor={`star-${s}`} className="cursor-pointer text-muted-foreground peer-checked:text-primary hover:text-primary transition-colors">
+                                                            <Star className="w-10 h-10 fill-current" />
+                                                        </label>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Select Alignment Rating</p>
+                                        </div>
+                                        <div className="space-y-4">
+                                            <textarea
+                                                name="comment"
+                                                placeholder="Describe your ritual experience with this essence..."
+                                                className="w-full h-36 bg-muted/20 rounded-[2rem] p-6 border border-border/10 focus:border-primary/30 focus:ring-0 outline-none font-light italic text-base transition-all resize-none"
+                                                required
+                                            />
+                                            <Button
+                                                type="submit"
+                                                disabled={submittingReview}
+                                                className="w-full h-14 rounded-full bg-primary font-black uppercase tracking-widest shadow-xl shadow-primary/10 disabled:opacity-60"
+                                            >
+                                                {submittingReview ? (
+                                                    <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Manifesting...</span>
+                                                ) : 'Submit Insight'}
+                                            </Button>
+                                        </div>
+                                    </form>
+                                )
                             ) : (
                                 <div className="text-center py-8 space-y-6">
                                     <Info className="w-12 h-12 mx-auto text-primary/40" />
@@ -1072,11 +1124,40 @@ const ProductDetail = () => {
                                 </p>
                             </div>
                             <div className="flex-1">
-                                <div className="flex flex-row gap-3 p-2 bg-white/10 rounded-[2rem] backdrop-blur-xl border border-white/20">
-                                    <Input placeholder="Your Email Artifact" className="h-12 rounded-full bg-transparent border-none text-white placeholder:text-white/40 px-8 focus-visible:ring-0 text-sm" />
-                                    <Button className="h-12 rounded-full px-10 bg-white text-primary hover:bg-white/90 font-black uppercase tracking-widest text-[10px] shadow-lg shrink-0">Join Ritual</Button>
-                                </div>
-                                <p className="text-[8px] font-black uppercase tracking-[0.3em] opacity-40 mt-3 text-center">Privacy is curated. We never disseminate artifact data.</p>
+                                {isSubscribed ? (
+                                    <motion.div
+                                        initial={{ opacity: 0, scale: 0.9 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        className="p-6 rounded-[2rem] bg-white/10 backdrop-blur-xl border border-white/20 text-center"
+                                    >
+                                        <div className="flex items-center justify-center gap-3 text-white mb-1">
+                                            <CheckCircle2 className="w-5 h-5 text-white" />
+                                            <p className="font-serif italic text-lg">You have subscribed</p>
+                                        </div>
+                                        <p className="text-[10px] uppercase tracking-widest opacity-60">The botanical secrets will find you soon.</p>
+                                    </motion.div>
+                                ) : (
+                                    <form onSubmit={handleSubscribe}>
+                                        <div className="flex flex-row gap-3 p-2 bg-white/10 rounded-[2rem] backdrop-blur-xl border border-white/20">
+                                            <Input
+                                                value={subscriberEmail}
+                                                onChange={(e) => setSubscriberEmail(e.target.value)}
+                                                type="email"
+                                                required
+                                                placeholder="Your Email Artifact"
+                                                className="h-12 rounded-full bg-transparent border-none text-white placeholder:text-white/40 px-8 focus-visible:ring-0 text-sm"
+                                            />
+                                            <Button
+                                                type="submit"
+                                                disabled={subscribing}
+                                                className="h-12 rounded-full px-10 bg-white text-primary hover:bg-white/90 font-black uppercase tracking-widest text-[10px] shadow-lg shrink-0"
+                                            >
+                                                {subscribing ? "Joining..." : "Join Ritual"}
+                                            </Button>
+                                        </div>
+                                        <p className="text-[8px] font-black uppercase tracking-[0.3em] opacity-40 mt-3 text-center">Privacy is curated. We never disseminate artifact data.</p>
+                                    </form>
+                                )}
                             </div>
                         </div>
                         {/* Mobile: stacked layout */}
@@ -1084,15 +1165,37 @@ const ProductDetail = () => {
                             <p className="text-primary-foreground/65 font-light text-sm leading-relaxed">
                                 Become a patron of Lorean — receive exclusive access to upcoming botanical manifestations.
                             </p>
-                            <div className="space-y-3">
-                                <Input
-                                    placeholder="Your Email Artifact"
-                                    className="h-13 w-full rounded-2xl bg-white/10 border border-white/20 text-white placeholder:text-white/40 px-5 focus-visible:ring-0 focus-visible:border-white/40 text-sm"
-                                />
-                                <Button className="w-full h-12 rounded-2xl bg-white text-primary hover:bg-white/90 font-black uppercase tracking-widest text-[10px] shadow-lg">
-                                    Join Ritual
-                                </Button>
-                            </div>
+                            {isSubscribed ? (
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 0.9 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    className="p-6 rounded-2xl bg-white/10 backdrop-blur-xl border border-white/20 text-center"
+                                >
+                                    <div className="flex items-center justify-center gap-3 text-white mb-2">
+                                        <CheckCircle2 className="w-5 h-5 text-white" />
+                                        <p className="font-serif italic text-xl">You have subscribed</p>
+                                    </div>
+                                    <p className="text-[9px] uppercase tracking-widest opacity-60"> Secrets are on the way.</p>
+                                </motion.div>
+                            ) : (
+                                <form onSubmit={handleSubscribe} className="space-y-3">
+                                    <Input
+                                        value={subscriberEmail}
+                                        onChange={(e) => setSubscriberEmail(e.target.value)}
+                                        type="email"
+                                        required
+                                        placeholder="Your Email Artifact"
+                                        className="h-13 w-full rounded-2xl bg-white/10 border border-white/20 text-white placeholder:text-white/40 px-5 focus-visible:ring-0 focus-visible:border-white/40 text-sm"
+                                    />
+                                    <Button
+                                        type="submit"
+                                        disabled={subscribing}
+                                        className="w-full h-12 rounded-2xl bg-white text-primary hover:bg-white/90 font-black uppercase tracking-widest text-[10px] shadow-lg"
+                                    >
+                                        {subscribing ? "Joining..." : "Join Ritual"}
+                                    </Button>
+                                </form>
+                            )}
                             <p className="text-[8px] font-black uppercase tracking-[0.3em] opacity-40 text-center">Privacy is curated. We never disseminate artifact data.</p>
                         </div>
                     </div>

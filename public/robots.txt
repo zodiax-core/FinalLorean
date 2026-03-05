@@ -3,6 +3,6 @@ Allow: /
 Disallow: /admin
 Disallow: /dashboard
 Disallow: /checkout
-Disallow: /order-success
+Allow: /order-success
 
 Sitemap: https://lorean.online/sitemap.xml

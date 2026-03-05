@@ -16,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { settingsService, productsService, Product, marketingService, NewsletterSubscription } from "@/services/supabase";
+import { emailService, EmailConfig } from "@/services/email";
 import { useAuth } from "@/context/AuthContext";
 
 interface Testimonial {
@@ -50,6 +51,12 @@ export default function AdminSettings({ defaultTab }: { defaultTab?: string }) {
                 youtube: ""
             },
             testimonials: []
+        },
+        email_config: {
+            service_id: "",
+            template_id: "",
+            public_key: "",
+            contact_template_id: ""
         }
     });
     const [products, setProducts] = useState<Product[]>([]);
@@ -104,6 +111,7 @@ export default function AdminSettings({ defaultTab }: { defaultTab?: string }) {
         setSubmitting(true);
         try {
             await settingsService.updateConfig('marketing', configs.marketing);
+            await settingsService.updateConfig('email_config', configs.email_config);
             toast({ title: "Manifested", description: "Your shop transformations have been preserved." });
         } catch (error) {
             toast({ variant: "destructive", title: "Failed", description: "The ritual was interrupted." });
@@ -139,11 +147,22 @@ export default function AdminSettings({ defaultTab }: { defaultTab?: string }) {
         }
         setSendingBroadcast(true);
         try {
+            // First send the actual emails via EmailService (which uses EmailJS)
+            await emailService.sendEmail({
+                subject: broadcast.subject,
+                message: broadcast.detail,
+                button_text: broadcast.button_text,
+                button_link: broadcast.button_link,
+                to_count: subscribers.length
+            });
+
+            // Also call the marketingService just in case there's any server-side logging or additional processing
             await marketingService.sendBroadcast(broadcast);
-            toast({ title: "Broadcast Sent", description: `Message queued for ${subscribers.length} subscribers.` });
+
+            toast({ title: "Broadcast Sent", description: `Message successfully summoned to ${subscribers.length} souls via EmailJS.` });
             setBroadcast({ subject: "", detail: "", button_text: "Discover Rituals", button_link: "" });
-        } catch (e) {
-            toast({ variant: "destructive", title: "Failed", description: "Could not send broadcast." });
+        } catch (e: any) {
+            toast({ variant: "destructive", title: "Ritual Failed", description: e.message || "The email spirits were not summoned." });
         } finally {
             setSendingBroadcast(false);
         }
@@ -486,6 +505,62 @@ export default function AdminSettings({ defaultTab }: { defaultTab?: string }) {
                                             </Button>
                                         </div>
                                     </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* EmailJS Configuration */}
+                        <Card className="glass border-border/10 shadow-2xl rounded-[3.5rem] overflow-hidden border-2">
+                            <CardHeader className="p-10 pb-6 flex flex-row items-center gap-6 border-b border-border/5">
+                                <div className="w-16 h-16 rounded-[2rem] bg-primary/10 flex items-center justify-center text-primary">
+                                    <Send className="w-8 h-8" />
+                                </div>
+                                <div>
+                                    <CardTitle className="text-3xl font-serif italic">Email Backend (EmailJS)</CardTitle>
+                                    <CardDescription className="text-xs font-medium uppercase tracking-widest opacity-50">Configure your professional email delivery system</CardDescription>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="p-10 grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div className="space-y-3">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest ml-1">EmailJS Service ID</Label>
+                                    <Input
+                                        value={configs.email_config?.service_id || ""}
+                                        onChange={(e) => setConfigs((p: any) => ({ ...p, email_config: { ...p.email_config, service_id: e.target.value } }))}
+                                        placeholder="service_xxxxxxxx"
+                                        className="h-12 rounded-[1.5rem] bg-muted/20 border-none px-6"
+                                    />
+                                </div>
+                                <div className="space-y-3">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest ml-1">EmailJS Public Key</Label>
+                                    <Input
+                                        value={configs.email_config?.public_key || ""}
+                                        onChange={(e) => setConfigs((p: any) => ({ ...p, email_config: { ...p.email_config, public_key: e.target.value } }))}
+                                        placeholder="user_xxxxxxxxxxxx"
+                                        className="h-12 rounded-[1.5rem] bg-muted/20 border-none px-6"
+                                    />
+                                </div>
+                                <div className="space-y-3">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Broadcast Template ID</Label>
+                                    <Input
+                                        value={configs.email_config?.template_id || ""}
+                                        onChange={(e) => setConfigs((p: any) => ({ ...p, email_config: { ...p.email_config, template_id: e.target.value } }))}
+                                        placeholder="template_xxxxxxxx"
+                                        className="h-12 rounded-[1.5rem] bg-muted/20 border-none px-6"
+                                    />
+                                </div>
+                                <div className="space-y-3">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Contact Form Template ID</Label>
+                                    <Input
+                                        value={configs.email_config?.contact_template_id || ""}
+                                        onChange={(e) => setConfigs((p: any) => ({ ...p, email_config: { ...p.email_config, contact_template_id: e.target.value } }))}
+                                        placeholder="template_xxxxxxxx"
+                                        className="h-12 rounded-[1.5rem] bg-muted/20 border-none px-6"
+                                    />
+                                </div>
+                                <div className="md:col-span-2">
+                                    <p className="text-[10px] text-muted-foreground font-light px-2 italic bg-primary/5 p-4 rounded-2xl">
+                                        Pro Tip: Use <code className="text-primary font-bold">{"{{subject}}"}</code>, <code className="text-primary font-bold">{"{{message}}"}</code>, <code className="text-primary font-bold">{"{{from_name}}"}</code>, and <code className="text-primary font-bold">{"{{from_email}}"}</code> variables in your EmailJS templates to dynamically inject content.
+                                    </p>
                                 </div>
                             </CardContent>
                         </Card>
