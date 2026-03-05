@@ -164,6 +164,7 @@ const ProductDetail = () => {
     const [carouselIndex, setCarouselIndex] = useState(0);
     const [visionsIndex, setVisionsIndex] = useState(0);
     const [playingVideo, setPlayingVideo] = useState<string | null>(null);
+    const [finishedVideos, setFinishedVideos] = useState<Set<string>>(new Set());
     const [tikTokSources, setTikTokSources] = useState<Record<string, string>>({});
     const reviewCarouselRef = useRef<HTMLDivElement>(null);
     const visionsCarouselRef = useRef<HTMLDivElement>(null);
@@ -574,13 +575,15 @@ const ProductDetail = () => {
                                 <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-background via-background/40 to-transparent z-20 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                                 <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-background via-background/40 to-transparent z-20 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
-                                {/* Navigation Buttons */}
-                                {visionsIndex > 0 && (
+                                {product.video_proofs && product.video_proofs.length > 2 && visionsIndex > 0 && (
                                     <button
                                         onClick={() => {
                                             const next = visionsIndex - 1;
                                             setVisionsIndex(next);
-                                            visionsCarouselRef.current?.children[next]?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
+                                            visionsCarouselRef.current?.scrollTo({
+                                                left: (visionsCarouselRef.current?.scrollWidth / product.video_proofs.length) * next,
+                                                behavior: 'smooth'
+                                            });
                                         }}
                                         className="absolute left-4 md:left-8 top-1/2 -translate-y-1/2 z-30 w-14 h-14 rounded-full bg-white/10 backdrop-blur-3xl border border-white/20 shadow-2xl flex items-center justify-center hover:bg-primary hover:text-white transition-all duration-500 group/btn"
                                     >
@@ -588,12 +591,15 @@ const ProductDetail = () => {
                                         <ArrowLeft className="w-6 h-6 relative z-10" />
                                     </button>
                                 )}
-                                {visionsIndex < product.video_proofs.length - 1 && (
+                                {product.video_proofs && product.video_proofs.length > 2 && visionsIndex < product.video_proofs.length - 1 && (
                                     <button
                                         onClick={() => {
                                             const next = visionsIndex + 1;
                                             setVisionsIndex(next);
-                                            visionsCarouselRef.current?.children[next]?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
+                                            visionsCarouselRef.current?.scrollTo({
+                                                left: (visionsCarouselRef.current?.scrollWidth / product.video_proofs.length) * next,
+                                                behavior: 'smooth'
+                                            });
                                         }}
                                         className="absolute right-4 md:right-8 top-1/2 -translate-y-1/2 z-30 w-14 h-14 rounded-full bg-white/10 backdrop-blur-3xl border border-white/20 shadow-2xl flex items-center justify-center hover:bg-primary hover:text-white transition-all duration-500 group/btn"
                                     >
@@ -602,14 +608,24 @@ const ProductDetail = () => {
                                     </button>
                                 )}
 
-                                <div
+                                <motion.div
                                     ref={visionsCarouselRef}
-                                    className="flex gap-6 overflow-x-hidden pb-8 snap-x snap-mandatory px-4 md:px-0 [mask-image:linear-gradient(to_right,transparent,black_15%,black_85%,transparent)]"
+                                    drag="x"
+                                    dragConstraints={{ left: -1000, right: 0 }} // Dynamic constraints would be better but this enables the feel
+                                    dragElastic={0.2}
+                                    className="flex gap-6 overflow-x-auto pb-12 snap-x snap-mandatory px-4 md:px-0 scroll-smooth cursor-grab active:cursor-grabbing scrollbar-hide [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]"
+                                    onScroll={(e) => {
+                                        const el = e.currentTarget;
+                                        const index = Math.round(el.scrollLeft / (el.scrollWidth / product.video_proofs.length));
+                                        if (index !== visionsIndex) setVisionsIndex(index);
+                                    }}
                                 >
+                                    <div className="flex-none w-[5vw] md:w-[20vw]" /> {/* Centering padding */}
                                     {product.video_proofs.map((url: string, i: number) => {
                                         const { platform, embedUrl, thumb } = getVideoData(url);
                                         const handle = getUsernameFromUrl(url);
                                         const isPlaying = playingVideo === url;
+                                        const isFinished = finishedVideos.has(url);
                                         const tiktokMp4 = tikTokSources[url];
 
                                         return (
@@ -618,13 +634,35 @@ const ProductDetail = () => {
                                                     <div className="aspect-[9/16] bg-black relative overflow-hidden">
                                                         {isPlaying ? (
                                                             platform === 'tiktok' && tiktokMp4 ? (
-                                                                <video
-                                                                    src={tiktokMp4}
-                                                                    className="absolute inset-0 w-full h-full z-30 object-cover"
-                                                                    controls
-                                                                    autoPlay
-                                                                    playsInline
-                                                                />
+                                                                <div className="absolute inset-0 z-30">
+                                                                    <video
+                                                                        src={tiktokMp4}
+                                                                        className="w-full h-full object-cover"
+                                                                        controls
+                                                                        autoPlay
+                                                                        playsInline
+                                                                        onEnded={() => {
+                                                                            setPlayingVideo(null);
+                                                                            setFinishedVideos(prev => new Set(prev).add(url));
+                                                                        }}
+                                                                    />
+                                                                    <motion.div
+                                                                        initial={{ opacity: 0 }}
+                                                                        animate={{ opacity: 1 }}
+                                                                        className="absolute top-4 right-4 z-40"
+                                                                    >
+                                                                        <Button
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                window.open(url, '_blank');
+                                                                            }}
+                                                                            size="icon"
+                                                                            className="rounded-full w-10 h-10 bg-white/20 backdrop-blur-md text-white hover:bg-primary transition-all shadow-xl"
+                                                                        >
+                                                                            <ExternalLink className="w-4 h-4" />
+                                                                        </Button>
+                                                                    </motion.div>
+                                                                </div>
                                                             ) : (
                                                                 <iframe
                                                                     src={embedUrl}
@@ -639,9 +677,36 @@ const ProductDetail = () => {
                                                                     <img src={thumb} className="w-full h-full object-cover grayscale-[0.2] group-hover/vid-card:grayscale-0 group-hover/vid-card:scale-105 transition-all duration-[2s]" alt="" />
                                                                 )}
                                                                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent z-10" />
+
+                                                                {/* Post-play redirection button */}
+                                                                {isFinished && (
+                                                                    <motion.div
+                                                                        initial={{ opacity: 0, scale: 0.8 }}
+                                                                        animate={{ opacity: 1, scale: 1 }}
+                                                                        className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-40"
+                                                                    >
+                                                                        <Button
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                window.open(url, '_blank');
+                                                                            }}
+                                                                            className="rounded-full px-8 h-14 bg-primary text-white font-black uppercase tracking-widest hover:scale-110 transition-all shadow-2xl"
+                                                                        >
+                                                                            Explore Source <ExternalLink className="ml-3 w-4 h-4" />
+                                                                        </Button>
+                                                                    </motion.div>
+                                                                )}
+
                                                                 <div className="absolute inset-0 flex items-center justify-center z-20">
                                                                     <button
-                                                                        onClick={() => setPlayingVideo(url)}
+                                                                        onClick={() => {
+                                                                            setPlayingVideo(url);
+                                                                            setFinishedVideos(prev => {
+                                                                                const next = new Set(prev);
+                                                                                next.delete(url);
+                                                                                return next;
+                                                                            });
+                                                                        }}
                                                                         className="w-20 h-20 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white flex items-center justify-center shadow-2xl hover:bg-primary hover:border-primary hover:scale-110 transition-all duration-700 group/play"
                                                                     >
                                                                         <Play className="w-8 h-8 fill-white group-hover/play:scale-110 transition-transform ml-1" />
@@ -686,7 +751,8 @@ const ProductDetail = () => {
                                             </div>
                                         );
                                     })}
-                                </div>
+                                    <div className="flex-none w-[5vw] md:w-[20vw]" /> {/* Centering padding */}
+                                </motion.div>
                             </div>
                         </div>
                     )}
