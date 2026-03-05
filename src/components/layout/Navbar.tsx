@@ -237,7 +237,7 @@ const Navbar = () => {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: "100%" }}
             transition={{ type: "spring", damping: 30 }}
-            className="fixed inset-0 z-50 bg-background/98 backdrop-blur-2xl md:hidden flex flex-col"
+            className="fixed inset-0 z-50 bg-background/95 backdrop-blur-lg md:hidden flex flex-col"
           >
             <div className="p-8 flex justify-between items-center border-b border-border/50">
               <img src="/logo.png" alt="Lorean Logo" className="h-10 w-auto" />

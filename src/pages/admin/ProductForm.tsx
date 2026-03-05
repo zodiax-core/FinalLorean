@@ -63,6 +63,7 @@ export default function ProductForm() {
         fake_sold_count: 0,
         video_proofs: [],
         tags: [],
+        slug: "",
         variants: { sizes: ["30ml", "50ml", "100ml"], colors: [] }
     });
 
@@ -86,6 +87,17 @@ export default function ProductForm() {
             localStorage.setItem("LRN_PRODUCT_DRAFT", JSON.stringify(formData));
         }
     }, [formData, isEditing]);
+
+    // Auto-generate slug from name
+    useEffect(() => {
+        if (!isEditing && formData.name && !formData.slug) {
+            const generatedSlug = formData.name
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/(^-|-$)/g, '');
+            setFormData(prev => ({ ...prev, slug: generatedSlug }));
+        }
+    }, [formData.name, isEditing]);
 
     useEffect(() => {
         if (contextCategories.length > 0) {
@@ -269,6 +281,15 @@ export default function ProductForm() {
                                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                         placeholder="Skin Rejuvenation Serum"
                                         className="h-16 rounded-[2rem] bg-muted/20 border-none text-xl font-serif italic px-8"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest ml-1">URL Slug (e.g. skin-rejuvenation-serum)</Label>
+                                    <Input
+                                        value={formData.slug}
+                                        onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+                                        placeholder="skin-rejuvenation-serum"
+                                        className="h-12 rounded-[1.5rem] bg-muted/20 border-none px-8 font-mono text-xs text-primary"
                                     />
                                 </div>
                                 <div className="grid grid-cols-2 gap-6">

@@ -140,9 +140,9 @@
   }
 
   .glass {
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    background-color: hsla(var(--background) / 0.8);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    background-color: hsla(var(--background) / 0.6);
     border: 1px solid hsla(var(--border) / 0.5);
   }
 

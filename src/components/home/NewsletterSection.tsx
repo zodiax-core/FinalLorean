@@ -3,9 +3,36 @@ import { Send, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
+import { marketingService } from "@/services/supabase";
+import { useToast } from "@/components/ui/use-toast";
 
 const NewsletterSection = () => {
   const [email, setEmail] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const { toast } = useToast();
+
+  const handleSubscribe = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) return;
+
+    setSubmitting(true);
+    try {
+      await marketingService.subscribe(email);
+      toast({
+        title: "Welcome to the Inner Circle",
+        description: "You've successfully subscribed to our newsletter."
+      });
+      setEmail("");
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Subscription Failed",
+        description: error.message || "Something went wrong."
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <section className="py-24 relative overflow-hidden">
@@ -40,7 +67,7 @@ const NewsletterSection = () => {
           </p>
 
           <form
-            onSubmit={(e) => e.preventDefault()}
+            onSubmit={handleSubscribe}
             className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto"
           >
             <Input
@@ -49,13 +76,15 @@ const NewsletterSection = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="flex-1 h-14 rounded-full px-6 bg-background/80 border-border/50 focus:border-primary"
+              required
             />
             <Button
               type="submit"
               size="lg"
+              disabled={submitting}
               className="h-14 px-8 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground group"
             >
-              Subscribe
+              {submitting ? "Subscribing..." : "Join Ritual"}
               <Send className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </Button>
           </form>

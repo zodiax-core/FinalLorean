@@ -1,7 +1,10 @@
 import { useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import Lenis from "lenis";
 
 export const SmoothScroll = ({ children }: { children: React.ReactNode }) => {
+    const { pathname } = useLocation();
+
     useEffect(() => {
         const lenis = new Lenis({
             duration: 1.2,
@@ -21,10 +24,14 @@ export const SmoothScroll = ({ children }: { children: React.ReactNode }) => {
 
         requestAnimationFrame(raf);
 
+        // Scroll to top on route change
+        lenis.scrollTo(0, { immediate: true });
+        window.scrollTo(0, 0);
+
         return () => {
             lenis.destroy();
         };
-    }, []);
+    }, [pathname]);
 
     return <>{children}</>;
 };

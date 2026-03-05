@@ -47,11 +47,11 @@ const Contact = () => {
                                 </div>
                                 <div>
                                     <h3 className="text-xl font-medium mb-1">Call Us</h3>
-                                    <p className="text-muted-foreground">+33 (0) 1 23 45 67 89</p>
-                                    <p className="text-muted-foreground">Mon - Fri, 9am - 6pm CET</p>
+                                    <p className="text-muted-foreground">+92 325 7978051</p>
+                                    <p className="text-muted-foreground">Mon - Fri, 9am - 6pm</p>
                                 </div>
                             </div>
-                            <div className="flex gap-6">
+                            {/* <div className="flex gap-6">
                                 <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center shrink-0">
                                     <MapPin className="w-6 h-6 text-primary" />
                                 </div>
@@ -60,7 +60,7 @@ const Contact = () => {
                                     <p className="text-muted-foreground">12 bis Place Royale</p>
                                     <p className="text-muted-foreground">75001 Paris, France</p>
                                 </div>
-                            </div>
+                            </div> */}
                         </motion.div>
 
                         {/* Form */}

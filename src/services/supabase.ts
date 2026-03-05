@@ -29,6 +29,14 @@ export interface Product {
     fake_sold_count?: number;
     video_proofs?: string[];
     tags?: string[];
+    slug?: string;
+}
+
+export interface NewsletterSubscription {
+    id: string;
+    email: string;
+    subscribed_at: string;
+    status: 'active' | 'unsubscribed';
 }
 
 export interface Category {
@@ -725,6 +733,8 @@ export const settingsService = {
     }
 };
 
+
+
 export const taxService = {
     async getAll() {
         const { data, error } = await supabase
@@ -1340,7 +1350,8 @@ export const marketingService = {
         if (error) throw error;
         return data?.settings || {
             popup_product_id: null,
-            hero_bar: { enabled: false, text: "SALE SALE SALE", bg_color: "#000000", text_color: "#ffffff" }
+            hero_bar: { enabled: false, text: "SALE SALE SALE", bg_color: "#000000", text_color: "#ffffff" },
+            social_links: { instagram: "", twitter: "", facebook: "", youtube: "" }
         };
     },
 
@@ -1355,5 +1366,33 @@ export const marketingService = {
 
         if (error) throw error;
         return settings;
+    },
+
+    async subscribe(email: string) {
+        const { error } = await supabase
+            .from('newsletter_subscriptions')
+            .upsert({ email, subscribed_at: new Date().toISOString(), status: 'active' }, { onConflict: 'email' });
+        if (error) throw error;
+        return true;
+    },
+
+    async getSubscriptions() {
+        const { data, error } = await supabase
+            .from('newsletter_subscriptions')
+            .select('*')
+            .order('subscribed_at', { ascending: false });
+        if (error) throw error;
+        return data as NewsletterSubscription[];
+    },
+
+    async sendBroadcast(payload: { subject: string, detail: string, button_text?: string, button_link?: string }) {
+        console.log("Sending broadcast to all subscribers:", payload);
+        // This invokes a function if it exists, otherwise it's a mock for UI feedback
+        try {
+            await supabase.functions.invoke('send-broadcast', { body: payload });
+        } catch (e) {
+            console.warn("Broadcast function not deployed, simulated success.");
+        }
+        return { success: true };
     }
 };

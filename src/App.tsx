@@ -17,6 +17,7 @@ import { WishlistProvider } from "./context/WishlistContext";
 // Components
 import ProtectedRoute from "./components/ProtectedRoute";
 import GlobalMarketing from "./components/GlobalMarketing";
+import ScrollToTop from "./components/ScrollToTop";
 
 // Pages
 import Index from "./pages/Index";
@@ -88,6 +89,7 @@ const App = () => (
               <WishlistProvider>
                 <CartProvider>
                   <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+                    <ScrollToTop />
                     <GlobalMarketing />
                     <SmoothScroll>
                       <Suspense fallback={<RitualLoader />}>
