@@ -75,26 +75,29 @@ export const AdminLayout = () => {
                 console.error("FCM Setup Failed:", err);
             });
 
-            const channel = notificationService.subscribeToNotifications(user.id, (payload: any) => {
+            const channel = notificationService.subscribeToNotifications(undefined, (payload: any) => {
+                console.log("Admin Realm Real-time event:", payload);
                 fetchStats();
 
-                // Show in-app notification & Desktop notification
-                if (payload.new) {
-                    // In-app Sonner
-                    sonnerToast(payload.new.title, {
-                        description: payload.new.message,
-                        action: {
-                            label: "View",
-                            onClick: () => navigate("/admin/notifications")
-                        }
-                    });
-
-                    // Desktop Browser Notification
-                    if (Notification.permission === 'granted') {
-                        new Notification(payload.new.title, {
-                            body: payload.new.message,
-                            icon: "/favicon.png"
+                if (payload.eventType === 'INSERT' && payload.new) {
+                    const notify = payload.new;
+                    // Show toast if it's Global (user_id is null) or specifically for this Admin
+                    if (!notify.user_id || notify.user_id === user.id) {
+                        console.log("Displaying notification toast:", notify.title);
+                        sonnerToast(notify.title || "New Divine Alert", {
+                            description: notify.message,
+                            action: {
+                                label: "View",
+                                onClick: () => navigate("/admin/notifications")
+                            }
                         });
+
+                        if (Notification.permission === 'granted') {
+                            new Notification(notify.title, {
+                                body: notify.message,
+                                icon: "/favicon.png"
+                            });
+                        }
                     }
                 }
             });

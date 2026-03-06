@@ -31,6 +31,7 @@ export const emailService = {
         }
 
         const logoUrl = params.logo_url || 'https://lorean.online/logo.png';
+        const heroUrl = params.hero_url || params.event_image || 'https://images.unsplash.com/photo-1557177324-56c5421653ce?q=80&w=1200&auto=format&fit=crop';
         let html = '';
 
         // === BROADCAST TEMPLATE ===
@@ -58,7 +59,7 @@ export const emailService = {
 </tr>
 
 <!-- Hero Image -->
-${params.event_image ? `<tr><td><img src="${params.event_image}" width="600" style="display:block;width:100%;max-height:400px;object-fit:cover;" alt="Lorean Ritual"></td></tr>` : ''}
+<tr><td><img src="${heroUrl}" width="600" style="display:block;width:100%;max-height:400px;object-fit:cover;" alt="Lorean Ritual"></td></tr>
 
 <!-- Content -->
 <tr>

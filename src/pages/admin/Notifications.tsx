@@ -58,7 +58,19 @@ export default function AdminNotifications() {
     useEffect(() => {
         const fetchUser = async () => {
             const { data: { user } } = await supabase.auth.getUser();
-            if (user) setUserId(user.id);
+            if (user) {
+                setUserId(user.id);
+                // Check if push is enabled (has token and permission)
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('fcm_token')
+                    .eq('id', user.id)
+                    .single();
+
+                if (profile?.fcm_token && Notification.permission === 'granted') {
+                    setPushEnabled(true);
+                }
+            }
         };
         fetchUser();
         fetchNotifications();
@@ -215,6 +227,31 @@ export default function AdminNotifications() {
         setSelectedIds(prev =>
             prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
         );
+    };
+
+    const handleTestNotification = async () => {
+        try {
+            console.log("Summoning test notification for user:", userId);
+            await notificationService.create({
+                type: 'system',
+                priority: 'info',
+                title: 'Ritual Test Manifested',
+                message: 'If you see this, your alchemical alerts are functioning perfectly.',
+                user_id: null, // Set to NULL for test to ensure it bypasses any user filters
+                metadata: { test: true }
+            });
+            toast({
+                title: "Ritual Initiated",
+                description: "The notification seed has been planted in the database."
+            });
+        } catch (error) {
+            console.error("Test Notification Error:", error);
+            toast({
+                variant: "destructive",
+                title: "Ritual Failed",
+                description: "Could not create the test notification entry."
+            });
+        }
     };
 
     const filteredNotifications = notifications.filter(notification => {
@@ -391,6 +428,9 @@ export default function AdminNotifications() {
                                         Push: {pushEnabled ? 'Active' : 'Disconnected'}
                                     </span>
                                 </div>
+                                <Button variant="outline" size="sm" onClick={handleTestNotification} className="rounded-xl gap-2 border-primary/20 bg-primary/5 text-primary hover:bg-primary/10">
+                                    <Bell className="w-4 h-4" /> Test Noti
+                                </Button>
                                 <Button variant="outline" size="sm" onClick={async () => {
                                     if (userId) {
                                         try {
