@@ -1,0 +1,23 @@
+{
+    "name": "Lorean | Ancient Herbal Hair Rituals",
+    "short_name": "Lorean",
+    "description": "Premium herbal hair oils crafted with ancient Ayurvedic wisdom.",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#0a0a0a",
+    "theme_color": "#c9a96e",
+    "icons": [
+        {
+            "src": "/favicon.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/favicon.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ],
+    "orientation": "portrait"
+}

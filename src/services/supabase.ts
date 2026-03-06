@@ -1409,3 +1409,57 @@ export const marketingService = {
         return { success: true };
     }
 };
+
+export const contactsService = {
+    async getAll() {
+        const { data, error } = await supabase
+            .from('contact_messages')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        return data;
+    },
+
+    async getById(id: string) {
+        const { data, error } = await supabase
+            .from('contact_messages')
+            .select('*')
+            .eq('id', id)
+            .single();
+
+        if (error) throw error;
+        return data;
+    },
+
+    async create(message: { name: string, email: string, subject: string, message: string }) {
+        const { data, error } = await supabase
+            .from('contact_messages')
+            .insert(message)
+            .select()
+            .single();
+
+        if (error) throw error;
+        return data;
+    },
+
+    async updateStatus(id: string, status: 'read' | 'unread' | 'archived') {
+        const { error } = await supabase
+            .from('contact_messages')
+            .update({ status })
+            .eq('id', id);
+
+        if (error) throw error;
+        return true;
+    },
+
+    async delete(id: string) {
+        const { error } = await supabase
+            .from('contact_messages')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+        return true;
+    }
+};

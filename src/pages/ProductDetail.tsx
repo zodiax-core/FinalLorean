@@ -638,10 +638,7 @@ const ProductDetail = () => {
 
                                 <motion.div
                                     ref={visionsCarouselRef}
-                                    drag="x"
-                                    dragConstraints={{ left: -1000, right: 0 }} // Dynamic constraints would be better but this enables the feel
-                                    dragElastic={0.2}
-                                    className="flex gap-6 overflow-x-auto pb-12 snap-x snap-mandatory px-4 md:px-0 scroll-smooth cursor-grab active:cursor-grabbing scrollbar-hide [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]"
+                                    className="flex gap-6 overflow-x-auto pb-12 snap-x snap-mandatory px-4 md:px-0 scroll-smooth cursor-default scrollbar-hide [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]"
                                     onScroll={(e) => {
                                         const el = e.currentTarget;
                                         const index = Math.round(el.scrollLeft / (el.scrollWidth / product.video_proofs.length));

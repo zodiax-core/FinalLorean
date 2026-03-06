@@ -385,24 +385,33 @@ export default function AdminNotifications() {
                                 <Button variant="outline" size="sm" onClick={fetchNotifications} className="rounded-xl gap-2">
                                     <RefreshCcw className="w-4 h-4" /> Refresh
                                 </Button>
+                                <div className="flex items-center gap-2 px-4 py-2 bg-muted/20 rounded-xl border border-border/10">
+                                    <div className={`w-2 h-2 rounded-full ${pushEnabled ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                                        Push: {pushEnabled ? 'Active' : 'Disconnected'}
+                                    </span>
+                                </div>
                                 <Button variant="outline" size="sm" onClick={async () => {
                                     if (userId) {
                                         try {
                                             const token = await requestNotificationPermission(userId);
                                             if (token) {
                                                 setPushEnabled(true);
-                                                toast({ title: "Notifications Enabled", description: "Push notifications enabled successfully." });
+                                                toast({
+                                                    title: "Notifications Manifested",
+                                                    description: "Your device is now bound to the Lorean notification ritual."
+                                                });
                                             }
                                         } catch (err: any) {
                                             toast({
-                                                title: "Action Blocked",
-                                                description: err.message || "Could not enable notifications. Check browser settings.",
+                                                title: "Ritual Interrupted",
+                                                description: err.message || "Could not enable notifications.",
                                                 variant: "destructive"
                                             });
                                         }
                                     }
-                                }} className="rounded-xl gap-2 text-primary border-primary/20 bg-primary/5 hover:bg-primary/10">
-                                    <Bell className="w-4 h-4" /> {pushEnabled ? "Push Enabled" : "Enable Push"}
+                                }} className={`rounded-xl gap-2 ${pushEnabled ? 'text-emerald-500 border-emerald-500/20 bg-emerald-500/5' : 'text-primary border-primary/20 bg-primary/5'}`}>
+                                    <Sparkles className="w-4 h-4" /> {pushEnabled ? "Rebind Ritual" : "Enable App Alerts"}
                                 </Button>
                             </div>
                         </div>

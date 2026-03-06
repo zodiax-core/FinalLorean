@@ -170,8 +170,8 @@ serve(async (req) => {
                             },
                             webpush: {
                                 notification: {
-                                    icon: "https://lorean.online/logo.png",
-                                    badge: "https://lorean.online/logo.png",
+                                    icon: "https://lorean.online/favicon.png",
+                                    badge: "https://lorean.online/favicon.png",
                                     click_action: payload.url?.startsWith('http') ? payload.url : `https://lorean.online${payload.url || '/dashboard'}`
                                 },
                                 fcm_options: {

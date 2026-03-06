@@ -29,47 +29,52 @@ export const messaging = messagingInstance;
 
 export const requestNotificationPermission = async (userId: string) => {
     try {
+        if (typeof window === 'undefined') return null;
+
         if (!('serviceWorker' in navigator)) {
-            throw new Error("Service Workers not supported (try Chrome/Edge)");
+            throw new Error("Service Workers are not supported in this browser.");
         }
 
         const permission = await Notification.requestPermission();
         if (permission !== 'granted') {
-            throw new Error(`Permission ${permission} - Please allow notifications in browser settings`);
+            throw new Error("Notification permission denied. Please allow notifications in your browser settings.");
         }
 
-        let registration = await navigator.serviceWorker.getRegistration();
-        if (!registration) {
-            try {
-                registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-            } catch (e: any) {
-                throw new Error(`SW Register Failed: ${e.message}`);
-            }
+        // Wait for service worker to be ready
+        let registration = await navigator.serviceWorker.ready;
+
+        // Ensure the correct SW is registered
+        if (!registration || !registration.active || !registration.scope.includes(window.location.origin)) {
+            registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
         }
 
         try {
+            const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY || "BJl-tQwVr82P2JDI3oyvlS9SKCEYLqmRpVo-LHVYoOPtwzp-sjPToNQQ1s2Rumi_85k1b4XHfK_XFKzjWH9vOD8";
+
             const token = await getToken(messaging, {
-                vapidKey: "BJl-tQwVr82P2JDI3oyvlS9SKCEYLqmRpVo-LHVYoOPtwzp-sjPToNQQ1s2Rumi_85k1b4XHfK_XFKzjWH9vOD8",
+                vapidKey: vapidKey,
                 serviceWorkerRegistration: registration
             });
 
-            if (!token) throw new Error("No FCM token returned");
+            if (!token) throw new Error("No registration token available. Request permission to generate one.");
 
-            console.log("FCM Token:", token);
+            console.log("FCM Token Manifested:", token);
+
+            // Persist to Supabase
             await profilesService.updateFcmToken(userId, token);
-            return token;
 
+            return token;
         } catch (e: any) {
-            console.error("Token Error:", e);
-            if (e.message?.includes("registration-token-not-registered") || e.code === "messaging/token-subscribe-failed") {
-                throw new Error("Invalid VAPID Key or Project Config");
+            console.error("Token Generation Failed:", e);
+            if (e.code === 'messaging/permission-blocked') {
+                throw new Error("Notifications are blocked by the browser.");
             }
-            throw new Error(`Token Gen Failed: ${e.message || e.code}`);
+            throw e;
         }
 
     } catch (error: any) {
-        console.error("Ritual of Permission Failed:", error);
-        throw error; // Propagate to UI
+        console.error("FCM Setup Error:", error);
+        throw error;
     }
 };
 

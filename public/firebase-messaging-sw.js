@@ -22,21 +22,42 @@ messaging.onBackgroundMessage((payload) => {
         payload
     );
 
-    // Defensive parsing for background alerts
-    const title = payload.notification?.title || payload.data?.title || "Lorean Order";
-    const body = payload.notification?.body || payload.data?.message || "A new ritual has been initiated.";
+    const title = payload.notification?.title || payload.data?.title || "Lorean Alchemical Alert";
+    const body = payload.notification?.body || payload.data?.message || "A new ritual has been Manifested.";
+    const url = payload.data?.url || '/admin/notifications';
 
     const notificationOptions = {
         body: body,
-        icon: "/logo.png",
-        badge: "/logo.png",
-        tag: 'order-notification', // Prevent stacking duplicates
+        icon: "https://lorean.online/favicon.png",
+        badge: "https://lorean.online/favicon.png",
+        tag: 'lorean-notification',
         renotify: true,
-        data: payload.data,
-        actions: [
-            { action: 'open', title: 'View Order' }
-        ]
+        data: {
+            url: url
+        }
     };
 
     self.registration.showNotification(title, notificationOptions);
+});
+
+// Handle notification click
+self.addEventListener('notificationclick', (event) => {
+    event.notification.close();
+    const urlToOpen = event.notification.data?.url || '/admin/notifications';
+
+    event.waitUntil(
+        clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+            // If a window client is already open, focus it
+            for (let i = 0; i < windowClients.length; i++) {
+                const client = windowClients[i];
+                if (client.url.includes(urlToOpen) && 'focus' in client) {
+                    return client.focus();
+                }
+            }
+            // If no window client is open, open a new one
+            if (clients.openWindow) {
+                return clients.openWindow(urlToOpen);
+            }
+        })
+    );
 });

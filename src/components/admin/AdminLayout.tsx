@@ -93,7 +93,7 @@ export const AdminLayout = () => {
                     if (Notification.permission === 'granted') {
                         new Notification(payload.new.title, {
                             body: payload.new.message,
-                            icon: "/favicon.ico"
+                            icon: "/favicon.png"
                         });
                     }
                 }

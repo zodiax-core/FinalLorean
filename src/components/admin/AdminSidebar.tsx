@@ -19,6 +19,7 @@ import {
     Receipt,
     Bell,
     Settings,
+    Mail,
     LifeBuoy,
     ChevronRight
 } from "lucide-react";
@@ -42,6 +43,7 @@ export const menuItems = [
     { icon: Receipt, label: "Taxes", path: "/admin/taxes" },
     { icon: Bell, label: "Notifications", path: "/admin/notifications" },
     { icon: Settings, label: "Settings", path: "/admin/settings" },
+    { icon: Mail, label: "Contact Messages", path: "/admin/contact" },
     { icon: LifeBuoy, label: "Support / Tickets", path: "/admin/support" },
 ];
 

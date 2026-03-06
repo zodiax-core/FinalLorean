@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Mail, Phone, MapPin, MessageSquare, Loader2, CheckCircle2 } from "lucide-react";
 import { useState } from "react";
 import { emailService } from "@/services/email";
+import { contactsService } from "@/services/supabase";
 import { useToast } from "@/components/ui/use-toast";
 
 const Contact = () => {
@@ -25,7 +26,12 @@ const Contact = () => {
         setSubmitting(true);
 
         try {
+            // 1. Save to database
+            await contactsService.create(formData);
+
+            // 2. Send email notification (optional but good for redundancy)
             await emailService.sendContactForm(formData);
+
             setSubmitted(true);
             toast({
                 title: "Message Summoned",
