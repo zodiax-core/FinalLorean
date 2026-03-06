@@ -18,6 +18,7 @@ import Footer from "@/components/layout/Footer";
 import { ordersService, settingsService, discountsService, notificationService } from "@/services/supabase";
 import { supabase } from "@/integrations/supabase/client";
 import { useCart } from "@/context/CartContext";
+import { emailService } from "@/services/email";
 
 const Checkout = () => {
     const navigate = useNavigate();
@@ -189,6 +190,13 @@ const Checkout = () => {
                 });
             } catch (notifyError) {
                 console.warn("Notification triggers completed with warnings:", notifyError);
+            }
+
+            // Send Confirmation Email
+            try {
+                await emailService.sendOrderConfirmation(newOrder);
+            } catch (emailError) {
+                console.error("Confirmation email failed:", emailError);
             }
 
             clearCart();

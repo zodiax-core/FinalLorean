@@ -15,7 +15,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
-import { settingsService, productsService, Product, marketingService, NewsletterSubscription } from "@/services/supabase";
+import { settingsService, productsService, Product, marketingService, NewsletterSubscription, Order, ordersService } from "@/services/supabase";
 import { emailService, EmailConfig } from "@/services/email";
 import { useAuth } from "@/context/AuthContext";
 
@@ -70,12 +70,26 @@ export default function AdminSettings({ defaultTab }: { defaultTab?: string }) {
 
     // Inner Circle state
     const [subscribers, setSubscribers] = useState<NewsletterSubscription[]>([]);
-    const [broadcast, setBroadcast] = useState({ subject: "", detail: "", button_text: "Discover Rituals", button_link: "" });
+    const [orders, setOrders] = useState<Order[]>([]);
+    const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
+    const [broadcast, setBroadcast] = useState({
+        subject: "The New Ritual Arrival",
+        logo_url: "https://lorean.online/logo.png",
+        event_image: "",
+        event_title: "Exclusive Botanicals",
+        event_description: "The spirits have whispered of new essences waiting for you.",
+        primary_button_text: "Discover Rituals",
+        primary_button_link: "https://lorean.online/shop",
+        shop_link: "https://lorean.online/shop",
+        about_link: "https://lorean.online/about"
+    });
     const [sendingBroadcast, setSendingBroadcast] = useState(false);
+    const [sendingOrders, setSendingOrders] = useState(false);
 
     useEffect(() => {
         fetchSettings();
         fetchSubscribers();
+        fetchRecentOrders();
     }, []);
 
     const fetchSubscribers = async () => {
@@ -84,6 +98,15 @@ export default function AdminSettings({ defaultTab }: { defaultTab?: string }) {
             setSubscribers(data);
         } catch (e) {
             console.error("Failed to fetch subscribers");
+        }
+    };
+
+    const fetchRecentOrders = async () => {
+        try {
+            const data = await ordersService.getAll();
+            setOrders(data.slice(0, 20)); // Show last 20 for quick selection
+        } catch (e) {
+            console.error("Failed to fetch orders");
         }
     };
 
@@ -141,30 +164,108 @@ export default function AdminSettings({ defaultTab }: { defaultTab?: string }) {
     };
 
     const handleSendBroadcast = async () => {
-        if (!broadcast.subject || !broadcast.detail) {
-            toast({ variant: "destructive", title: "Inquire", description: "Subject and Message are essential." });
+        if (!broadcast.subject || !broadcast.event_description) {
+            toast({ variant: "destructive", title: "Inquire", description: "Subject and Description are essential for a ritual." });
             return;
         }
+
+        if (subscribers.length === 0) {
+            toast({ variant: "destructive", title: "No Souls Found", description: "The Inner Circle is empty. No one to broadcast to." });
+            return;
+        }
+
         setSendingBroadcast(true);
+        let successCount = 0;
+        let failCount = 0;
+
         try {
-            // First send the actual emails via EmailService (which uses EmailJS)
-            await emailService.sendEmail({
-                subject: broadcast.subject,
-                message: broadcast.detail,
-                button_text: broadcast.button_text,
-                button_link: broadcast.button_link,
-                to_count: subscribers.length
+            toast({ title: "Initiating Ritual", description: `Summoning spirits for ${subscribers.length} souls...` });
+
+            for (const sub of subscribers) {
+                try {
+                    await emailService.sendEmail({
+                        ...broadcast,
+                        to_email: sub.email,
+                        to_name: "Subscriber"
+                    }, 'broadcast');
+                    successCount++;
+                } catch (err) {
+                    console.error(`Failed to send broadcast to ${sub.email}:`, err);
+                    failCount++;
+                }
+            }
+
+            toast({
+                title: "Broadcast Complete",
+                description: `Successfully reached ${successCount} souls.${failCount > 0 ? ` (${failCount} failed to manifest)` : ''}`
             });
-
-            // Also call the marketingService just in case there's any server-side logging or additional processing
-            await marketingService.sendBroadcast(broadcast);
-
-            toast({ title: "Broadcast Sent", description: `Message successfully summoned to ${subscribers.length} souls via EmailJS.` });
-            setBroadcast({ subject: "", detail: "", button_text: "Discover Rituals", button_link: "" });
         } catch (e: any) {
-            toast({ variant: "destructive", title: "Ritual Failed", description: e.message || "The email spirits were not summoned." });
+            console.error("Broadcast Process Error:", e);
+            toast({
+                variant: "destructive",
+                title: "Ritual Interrupted",
+                description: "A major disruption occurred in the broadcast ritual."
+            });
         } finally {
             setSendingBroadcast(false);
+        }
+    };
+
+    const handleSendOrderConfirmations = async () => {
+        if (selectedOrders.length === 0) {
+            toast({ variant: "destructive", title: "Selection Required", description: "Choose at least one ritual order to confirm." });
+            return;
+        }
+
+        setSendingOrders(true);
+        let successCount = 0;
+
+        try {
+            toast({ title: "Confirming Rituals", description: `Sending confirmations for ${selectedOrders.length} orders...` });
+
+            for (const orderId of selectedOrders) {
+                const order = orders.find(o => o.id === orderId);
+                if (order) {
+                    try {
+                        await emailService.sendOrderConfirmation(order);
+                        successCount++;
+                    } catch (err) {
+                        console.error(`Failed to send order confirmation for ${orderId}:`, err);
+                    }
+                }
+            }
+
+            toast({
+                title: "Rituals Dispatched",
+                description: `Successfully confirmed ${successCount} order manifestations.`
+            });
+            setSelectedOrders([]);
+        } catch (e) {
+            toast({ variant: "destructive", title: "Failed", description: "The order confirmation ritual failed." });
+        } finally {
+            setSendingOrders(false);
+        }
+    };
+
+    const handleTestEmailConfig = async () => {
+        try {
+            await emailService.sendEmail({
+                order_id: "TEST-777",
+                to_email: "loreanpk@gmail.com",
+                name: "Patron of Rituals",
+                price: 1500,
+                cost: {
+                    shipping: 0,
+                    tax: 120,
+                    total: 1620
+                },
+                subject: "Ritual Connection Test",
+                message: "The bridge between digital and botanical realms is established.",
+                to_name: "Lorean Admin"
+            });
+            toast({ title: "Connection Established", description: "The email spirits have responded successfully!" });
+        } catch (e: any) {
+            toast({ variant: "destructive", title: "Connection Failed", description: e.message });
         }
     };
 
@@ -450,117 +551,193 @@ export default function AdminSettings({ defaultTab }: { defaultTab?: string }) {
                                     <div className="lg:col-span-2 space-y-8 p-10 rounded-[3rem] bg-primary/[0.02] border border-primary/5">
                                         <div className="space-y-1">
                                             <h4 className="font-serif italic text-2xl text-primary">Send Ritual Broadcast</h4>
-                                            <p className="text-xs text-muted-foreground opacity-70">Reach your entire audience at once with a beautiful email.</p>
+                                            <p className="text-xs text-muted-foreground opacity-70">Summon a beautiful, high-fidelity message to your Inner Circle.</p>
                                         </div>
 
-                                        <div className="space-y-6">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <div className="space-y-3">
+                                                <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Logo URL</Label>
+                                                <Input
+                                                    value={broadcast.logo_url}
+                                                    onChange={e => setBroadcast(p => ({ ...p, logo_url: e.target.value }))}
+                                                    placeholder="https://lorean.online/logo.png"
+                                                    className="h-12 rounded-[1.5rem] bg-white border-none px-6"
+                                                />
+                                            </div>
+                                            <div className="space-y-3">
+                                                <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Hero Banner Image URL</Label>
+                                                <Input
+                                                    value={broadcast.event_image}
+                                                    onChange={e => setBroadcast(p => ({ ...p, event_image: e.target.value }))}
+                                                    placeholder="https://images.unsplash.com/..."
+                                                    className="h-12 rounded-[1.5rem] bg-white border-none px-6"
+                                                />
+                                            </div>
                                             <div className="space-y-3">
                                                 <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Email Subject</Label>
                                                 <Input
                                                     value={broadcast.subject}
                                                     onChange={e => setBroadcast(p => ({ ...p, subject: e.target.value }))}
-                                                    placeholder="The New Moon Ritual Collection is here..."
-                                                    className="h-12 rounded-[1.5rem] bg-white border-none px-6 text-foreground"
+                                                    placeholder="The New Moon Ritual..."
+                                                    className="h-12 rounded-[1.5rem] bg-white border-none px-6"
                                                 />
                                             </div>
-
                                             <div className="space-y-3">
-                                                <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Message Detail</Label>
-                                                <Textarea
-                                                    value={broadcast.detail}
-                                                    onChange={e => setBroadcast(p => ({ ...p, detail: e.target.value }))}
-                                                    placeholder="Write your beautiful message here. Support rich text is coming soon..."
-                                                    rows={6}
-                                                    className="rounded-[2rem] bg-white border-none px-6 py-5 resize-none font-light leading-relaxed"
+                                                <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Event Title</Label>
+                                                <Input
+                                                    value={broadcast.event_title}
+                                                    onChange={e => setBroadcast(p => ({ ...p, event_title: e.target.value }))}
+                                                    placeholder="Exclusive Arrival"
+                                                    className="h-12 rounded-[1.5rem] bg-white border-none px-6"
                                                 />
                                             </div>
-
-                                            <div className="grid grid-cols-2 gap-6">
-                                                <div className="space-y-3">
-                                                    <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Button Text (Optional)</Label>
-                                                    <Input
-                                                        value={broadcast.button_text}
-                                                        onChange={e => setBroadcast(p => ({ ...p, button_text: e.target.value }))}
-                                                        placeholder="Shop Collection"
-                                                        className="h-12 rounded-2xl bg-white border-none px-6"
-                                                    />
-                                                </div>
-                                                <div className="space-y-3">
-                                                    <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Button Link (URL)</Label>
-                                                    <Input
-                                                        value={broadcast.button_link}
-                                                        onChange={e => setBroadcast(p => ({ ...p, button_link: e.target.value }))}
-                                                        placeholder="https://lorean.boutique/rituals"
-                                                        className="h-12 rounded-2xl bg-white border-none px-6"
-                                                    />
-                                                </div>
+                                            <div className="space-y-3 md:col-span-2">
+                                                <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Message Description</Label>
+                                                <Textarea
+                                                    value={broadcast.event_description}
+                                                    onChange={e => setBroadcast(p => ({ ...p, event_description: e.target.value }))}
+                                                    placeholder="Tell the story of this ritual..."
+                                                    rows={4}
+                                                    className="rounded-[2rem] bg-white border-none px-6 py-4 resize-none"
+                                                />
                                             </div>
-
-                                            <Button
-                                                onClick={handleSendBroadcast}
-                                                disabled={sendingBroadcast || subscribers.length === 0}
-                                                className="w-full h-16 rounded-[2rem] bg-primary text-xs font-black uppercase tracking-[0.2em] shadow-lg shadow-primary/20 transition-all hover:scale-[1.02]"
-                                            >
-                                                {sendingBroadcast ? <><Loader2 className="w-4 h-4 animate-spin mr-3" />Summoning Emails...</> : <><Send className="w-4 h-4 mr-3" />Send To {subscribers.length} Souls</>}
-                                            </Button>
+                                            <div className="space-y-3">
+                                                <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Primary Button Text</Label>
+                                                <Input
+                                                    value={broadcast.primary_button_text}
+                                                    onChange={e => setBroadcast(p => ({ ...p, primary_button_text: e.target.value }))}
+                                                    className="h-12 rounded-xl bg-white border-none px-6"
+                                                />
+                                            </div>
+                                            <div className="space-y-3">
+                                                <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Primary Button Link</Label>
+                                                <Input
+                                                    value={broadcast.primary_button_link}
+                                                    onChange={e => setBroadcast(p => ({ ...p, primary_button_link: e.target.value }))}
+                                                    className="h-12 rounded-xl bg-white border-none px-6"
+                                                />
+                                            </div>
+                                            <div className="space-y-3">
+                                                <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Shop Link</Label>
+                                                <Input
+                                                    value={broadcast.shop_link}
+                                                    onChange={e => setBroadcast(p => ({ ...p, shop_link: e.target.value }))}
+                                                    className="h-12 rounded-xl bg-white border-none px-6"
+                                                />
+                                            </div>
+                                            <div className="space-y-3">
+                                                <Label className="text-[10px] font-black uppercase tracking-widest ml-1">About Link</Label>
+                                                <Input
+                                                    value={broadcast.about_link}
+                                                    onChange={e => setBroadcast(p => ({ ...p, about_link: e.target.value }))}
+                                                    className="h-12 rounded-xl bg-white border-none px-6"
+                                                />
+                                            </div>
                                         </div>
+
+                                        <Button
+                                            onClick={handleSendBroadcast}
+                                            disabled={sendingBroadcast || subscribers.length === 0}
+                                            className="w-full h-16 rounded-[2rem] bg-primary text-xs font-black uppercase tracking-[0.2em] shadow-lg shadow-primary/20 transition-all hover:scale-[1.01]"
+                                        >
+                                            {sendingBroadcast ? <><Loader2 className="w-4 h-4 animate-spin mr-3" />Summoning...</> : <><Send className="w-4 h-4 mr-3" />Disperse Broadcast</>}
+                                        </Button>
                                     </div>
                                 </div>
                             </CardContent>
                         </Card>
 
                         {/* EmailJS Configuration */}
+                        <Card className="glass border-border/20 shadow-xl rounded-[3rem] overflow-hidden">
+                            <CardHeader className="p-10 pb-6">
+                                <div className="flex items-center gap-4 mb-2">
+                                    <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
+                                        <Mail className="w-6 h-6 text-primary" />
+                                    </div>
+                                    <CardTitle className="text-3xl font-serif">Email <span className="text-primary italic">Engine</span></CardTitle>
+                                </div>
+                                <CardDescription className="text-muted-foreground font-light px-1">
+                                    Configure your Resend infrastructure for transactional rituals.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="p-10 pt-0 grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div className="space-y-3 md:col-span-2">
+                                    <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground ml-2">Resend API Key</Label>
+                                    <Input
+                                        value={configs.email_config?.public_key}
+                                        onChange={(e) => setConfigs({ ...configs, email_config: { ...configs.email_config, public_key: e.target.value } })}
+                                        placeholder="re_R7J4..."
+                                        type="password"
+                                        className="h-14 rounded-[1.5rem] bg-muted/20 border-none px-6"
+                                    />
+                                    <p className="text-[10px] text-muted-foreground italic px-2">
+                                        Note: While using onboarding@resend.dev, you can only send emails to your own verified mailbox.
+                                    </p>
+                                </div>
+                                <div className="md:col-span-2 flex flex-col gap-4">
+                                    <Button
+                                        onClick={handleTestEmailConfig}
+                                        variant="outline"
+                                        className="h-12 rounded-[1.5rem] border-primary/20 hover:bg-primary/5 text-primary text-xs uppercase tracking-widest font-black"
+                                    >
+                                        Test Resend Connection
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* Order Confirmation Resend */}
                         <Card className="glass border-border/10 shadow-2xl rounded-[3.5rem] overflow-hidden border-2">
                             <CardHeader className="p-10 pb-6 flex flex-row items-center gap-6 border-b border-border/5">
                                 <div className="w-16 h-16 rounded-[2rem] bg-primary/10 flex items-center justify-center text-primary">
-                                    <Send className="w-8 h-8" />
+                                    <Sparkles className="w-8 h-8" />
                                 </div>
-                                <div>
-                                    <CardTitle className="text-3xl font-serif italic">Email Backend (EmailJS)</CardTitle>
-                                    <CardDescription className="text-xs font-medium uppercase tracking-widest opacity-50">Configure your professional email delivery system</CardDescription>
+                                <div className="flex-1">
+                                    <CardTitle className="text-3xl font-serif italic">Manual Ritual Confirmation</CardTitle>
+                                    <CardDescription className="text-xs font-medium uppercase tracking-widest opacity-50">Select orders to re-send the botanical confirmation email</CardDescription>
                                 </div>
+                                <Button
+                                    onClick={handleSendOrderConfirmations}
+                                    disabled={sendingOrders || selectedOrders.length === 0}
+                                    className="rounded-full h-12 px-8 bg-primary text-xs font-bold uppercase tracking-widest"
+                                >
+                                    {sendingOrders ? <Loader2 className="w-4 h-4 animate-spin" /> : `Send to ${selectedOrders.length} Orders`}
+                                </Button>
                             </CardHeader>
-                            <CardContent className="p-10 grid grid-cols-1 md:grid-cols-2 gap-8">
-                                <div className="space-y-3">
-                                    <Label className="text-[10px] font-black uppercase tracking-widest ml-1">EmailJS Service ID</Label>
-                                    <Input
-                                        value={configs.email_config?.service_id || ""}
-                                        onChange={(e) => setConfigs((p: any) => ({ ...p, email_config: { ...p.email_config, service_id: e.target.value } }))}
-                                        placeholder="service_xxxxxxxx"
-                                        className="h-12 rounded-[1.5rem] bg-muted/20 border-none px-6"
-                                    />
-                                </div>
-                                <div className="space-y-3">
-                                    <Label className="text-[10px] font-black uppercase tracking-widest ml-1">EmailJS Public Key</Label>
-                                    <Input
-                                        value={configs.email_config?.public_key || ""}
-                                        onChange={(e) => setConfigs((p: any) => ({ ...p, email_config: { ...p.email_config, public_key: e.target.value } }))}
-                                        placeholder="user_xxxxxxxxxxxx"
-                                        className="h-12 rounded-[1.5rem] bg-muted/20 border-none px-6"
-                                    />
-                                </div>
-                                <div className="space-y-3">
-                                    <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Broadcast Template ID</Label>
-                                    <Input
-                                        value={configs.email_config?.template_id || ""}
-                                        onChange={(e) => setConfigs((p: any) => ({ ...p, email_config: { ...p.email_config, template_id: e.target.value } }))}
-                                        placeholder="template_xxxxxxxx"
-                                        className="h-12 rounded-[1.5rem] bg-muted/20 border-none px-6"
-                                    />
-                                </div>
-                                <div className="space-y-3">
-                                    <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Contact Form Template ID</Label>
-                                    <Input
-                                        value={configs.email_config?.contact_template_id || ""}
-                                        onChange={(e) => setConfigs((p: any) => ({ ...p, email_config: { ...p.email_config, contact_template_id: e.target.value } }))}
-                                        placeholder="template_xxxxxxxx"
-                                        className="h-12 rounded-[1.5rem] bg-muted/20 border-none px-6"
-                                    />
-                                </div>
-                                <div className="md:col-span-2">
-                                    <p className="text-[10px] text-muted-foreground font-light px-2 italic bg-primary/5 p-4 rounded-2xl">
-                                        Pro Tip: Use <code className="text-primary font-bold">{"{{subject}}"}</code>, <code className="text-primary font-bold">{"{{message}}"}</code>, <code className="text-primary font-bold">{"{{from_name}}"}</code>, and <code className="text-primary font-bold">{"{{from_email}}"}</code> variables in your EmailJS templates to dynamically inject content.
-                                    </p>
+                            <CardContent className="p-10">
+                                <div className="space-y-4 max-h-[400px] overflow-y-auto pr-4 scrollbar-thin">
+                                    {orders.length === 0 ? (
+                                        <p className="text-center py-10 text-muted-foreground italic">No recent ritual orders found.</p>
+                                    ) : (
+                                        <div className="grid grid-cols-1 gap-3">
+                                            {orders.map(order => (
+                                                <div
+                                                    key={order.id}
+                                                    onClick={() => setSelectedOrders(prev =>
+                                                        prev.includes(order.id) ? prev.filter(id => id !== order.id) : [...prev, order.id]
+                                                    )}
+                                                    className={`p-5 rounded-3xl border-2 cursor-pointer transition-all flex items-center justify-between ${selectedOrders.includes(order.id)
+                                                        ? "border-primary bg-primary/5 shadow-inner"
+                                                        : "border-border/10 bg-muted/10 hover:border-primary/30"
+                                                        }`}
+                                                >
+                                                    <div className="flex items-center gap-4">
+                                                        <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${selectedOrders.includes(order.id) ? "bg-primary border-primary" : "border-muted-foreground/30"
+                                                            }`}>
+                                                            {selectedOrders.includes(order.id) && <Check className="w-4 h-4 text-white" />}
+                                                        </div>
+                                                        <div>
+                                                            <p className="font-serif font-bold text-sm">#{(order.short_id || order.id).slice(0, 8)} - {order.full_name}</p>
+                                                            <p className="text-[10px] text-muted-foreground uppercase tracking-widest">{order.email} • Rs. {order.total_amount}</p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="text-[10px] bg-muted px-3 py-1 rounded-full uppercase font-bold tracking-tighter opacity-60">
+                                                        {new Date(order.created_at).toLocaleDateString()}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             </CardContent>
                         </Card>

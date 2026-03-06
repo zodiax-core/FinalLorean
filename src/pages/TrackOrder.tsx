@@ -29,13 +29,18 @@ const TrackOrder = () => {
         if (!id) return;
         setLoading(true);
         try {
-            // Try short ID first, then fallback to slice(0,8) match logic if needed
+            // Try short ID first
             let data = await ordersService.getByShortId(id);
 
-            if (!data) {
-                // Try matching by the first 8 chars of full UUID if it looks like a hex string
+            // Try full UUID matches if it looks like one
+            if (!data && (id.length === 36 || id.includes('-'))) {
+                data = await ordersService.getById(id);
+            }
+
+            // Fallback for truncated manual IDs
+            if (!data && id.length >= 8) {
                 const allOrders = await ordersService.getAll();
-                data = (allOrders as any[])?.find(o => o.id.slice(0, 8) === id) || null;
+                data = (allOrders as any[])?.find(o => o.id.slice(0, 8) === id || o.short_id === id) || null;
             }
 
             setOrder(data);

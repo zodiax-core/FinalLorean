@@ -1372,7 +1372,17 @@ export const marketingService = {
         const { error } = await supabase
             .from('newsletter_subscriptions')
             .upsert({ email, subscribed_at: new Date().toISOString(), status: 'active' }, { onConflict: 'email' });
+
         if (error) throw error;
+
+        // Sync with Resend Audience
+        try {
+            const { emailService } = await import('./email');
+            await emailService.addToAudience(email);
+        } catch (syncError) {
+            console.error("Failed to sync subscriber with Resend:", syncError);
+        }
+
         return true;
     },
 
@@ -1385,13 +1395,16 @@ export const marketingService = {
         return data as NewsletterSubscription[];
     },
 
-    async sendBroadcast(payload: { subject: string, detail: string, button_text?: string, button_link?: string }) {
-        console.log("Sending broadcast to all subscribers:", payload);
-        // This invokes a function if it exists, otherwise it's a mock for UI feedback
+    async sendBroadcast(payload: any) {
         try {
-            await supabase.functions.invoke('send-broadcast', { body: payload });
+            await supabase.functions.invoke('resend-ritual', {
+                body: {
+                    action: 'send_email',
+                    payload: payload
+                }
+            });
         } catch (e) {
-            console.warn("Broadcast function not deployed, simulated success.");
+            console.warn("Resend Ritual broadcast function error:", e);
         }
         return { success: true };
     }

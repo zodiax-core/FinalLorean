@@ -171,10 +171,11 @@ serve(async (req) => {
                             webpush: {
                                 notification: {
                                     icon: "https://lorean.online/logo.png",
-                                    click_action: payload.url || "https://lorean.online/admin"
+                                    badge: "https://lorean.online/logo.png",
+                                    click_action: payload.url?.startsWith('http') ? payload.url : `https://lorean.online${payload.url || '/dashboard'}`
                                 },
                                 fcm_options: {
-                                    link: payload.url || "https://lorean.online/admin"
+                                    link: payload.url?.startsWith('http') ? payload.url : `https://lorean.online${payload.url || '/dashboard'}`
                                 }
                             },
                             data: payload.data || {}
