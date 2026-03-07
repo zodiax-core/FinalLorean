@@ -91,9 +91,20 @@ export const AdminLayout = () => {
                             onMessage(messaging, (payload) => {
                                 console.log("[FCM] Foreground message received:", payload);
                                 const notificationTitle = payload.notification?.title || "Lorean Alchemical Alert";
+                                const notificationBody = payload.notification?.body || "New event manifested.";
+
+                                // Show a visible toast in the app
+                                sonnerToast(notificationTitle, {
+                                    description: notificationBody,
+                                    action: {
+                                        label: "View",
+                                        onClick: () => navigate("/admin/notifications")
+                                    }
+                                });
+
                                 if (Notification.permission === 'granted') {
                                     new Notification(notificationTitle, {
-                                        body: payload.notification?.body,
+                                        body: notificationBody,
                                         icon: "/favicon.png",
                                     });
                                 }
