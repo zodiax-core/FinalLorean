@@ -1,7 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
 import { getMessaging, getToken, onMessage } from "firebase/messaging";
-import { profilesService } from "@/services/supabase";
+import { supabase } from "@/integrations/supabase/client";
 
 const firebaseConfig = {
     apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -27,6 +27,14 @@ try {
 
 export const messaging = messagingInstance;
 
+/**
+ * Registers this device for push notifications and saves the FCM token
+ * to BOTH tables:
+ *  - admin_push_tokens (multi-device: one row per user+token)
+ *  - profiles.fcm_token (legacy fallback)
+ *
+ * Uses UPSERT so re-registering the same device is idempotent.
+ */
 export const requestNotificationPermission = async (userId: string) => {
     try {
         if (typeof window === 'undefined') return null;
@@ -48,32 +56,57 @@ export const requestNotificationPermission = async (userId: string) => {
             registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
         }
 
-        try {
-            const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY || "BJl-tQwVr82P2JDI3oyvlS9SKCEYLqmRpVo-LHVYoOPtwzp-sjPToNQQ1s2Rumi_85k1b4XHfK_XFKzjWH9vOD8";
+        const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY ||
+            "BJl-tQwVr82P2JDI3oyvlS9SKCEYLqmRpVo-LHVYoOPtwzp-sjPToNQQ1s2Rumi_85k1b4XHfK_XFKzjWH9vOD8";
 
-            const token = await getToken(messaging, {
-                vapidKey: vapidKey,
-                serviceWorkerRegistration: registration
-            });
+        const token = await getToken(messaging, {
+            vapidKey,
+            serviceWorkerRegistration: registration
+        });
 
-            if (!token) throw new Error("No registration token available. Request permission to generate one.");
+        if (!token) throw new Error("No registration token available. Request permission to generate one.");
 
-            console.log("FCM Token Manifested:", token);
+        console.log("[FCM] Token generated:", token.substring(0, 15) + "...");
 
-            // Persist to Supabase
-            await profilesService.updateFcmToken(userId, token);
+        // ─────────────────────────────────────────────────────────────
+        // Save to admin_push_tokens (multi-device support)
+        // UPSERT: same user+token → update last_seen_at (idempotent)
+        // ─────────────────────────────────────────────────────────────
+        const deviceInfo = `${navigator.userAgent.substring(0, 80)}`;
 
-            return token;
-        } catch (e: any) {
-            console.error("Token Generation Failed:", e);
-            if (e.code === 'messaging/permission-blocked') {
-                throw new Error("Notifications are blocked by the browser.");
-            }
-            throw e;
+        const { error: tokenError } = await supabase
+            .from('admin_push_tokens')
+            .upsert(
+                {
+                    user_id: userId,
+                    fcm_token: token,
+                    device_info: deviceInfo,
+                    last_seen_at: new Date().toISOString()
+                },
+                { onConflict: 'user_id,fcm_token' }
+            );
+
+        if (tokenError) {
+            console.error("[FCM] Failed to save to admin_push_tokens:", tokenError);
+            // Don't throw — fall through to legacy save
+        } else {
+            console.log("[FCM] Token upserted into admin_push_tokens.");
         }
 
+        // ─────────────────────────────────────────────────────────────
+        // Also update profiles.fcm_token (legacy fallback)
+        // ─────────────────────────────────────────────────────────────
+        await supabase
+            .from('profiles')
+            .update({
+                fcm_token: token,
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', userId);
+
+        return token;
     } catch (error: any) {
-        console.error("FCM Setup Error:", error);
+        console.error("[FCM] Setup Error:", error);
         throw error;
     }
 };

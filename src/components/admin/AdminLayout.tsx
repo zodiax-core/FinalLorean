@@ -75,6 +75,25 @@ export const AdminLayout = () => {
                 console.error("FCM Setup Failed:", err);
             });
 
+            // Listen for FCM foreground messages
+            import("@/lib/firebase").then(({ messaging }) => {
+                if (messaging) {
+                    import("firebase/messaging").then(({ onMessage }) => {
+                        onMessage(messaging, (payload) => {
+                            console.log("[FCM] Foreground message received:", payload);
+                            const notificationTitle = payload.notification?.title || "Lorean Alchemical Alert";
+
+                            if (Notification.permission === 'granted') {
+                                new Notification(notificationTitle, {
+                                    body: payload.notification?.body,
+                                    icon: "/favicon.png",
+                                });
+                            }
+                        });
+                    });
+                }
+            });
+
             const channel = notificationService.subscribeToNotifications(undefined, (payload: any) => {
                 console.log("Admin Realm Real-time event:", payload);
                 fetchStats();
@@ -91,13 +110,6 @@ export const AdminLayout = () => {
                                 onClick: () => navigate("/admin/notifications")
                             }
                         });
-
-                        if (Notification.permission === 'granted') {
-                            new Notification(notify.title, {
-                                body: notify.message,
-                                icon: "/favicon.png"
-                            });
-                        }
                     }
                 }
             });

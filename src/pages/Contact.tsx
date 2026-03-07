@@ -26,11 +26,15 @@ const Contact = () => {
         setSubmitting(true);
 
         try {
-            // 1. Save to database
+            // 1. Save to database (the critical ritual)
             await contactsService.create(formData);
 
-            // 2. Send email notification (optional but good for redundancy)
-            await emailService.sendContactForm(formData);
+            // 2. Attempt email notification (secondary, might fail for guests)
+            try {
+                await emailService.sendContactForm(formData);
+            } catch (emailError) {
+                console.warn("Secondary email notification failed, but ritual is database-bound:", emailError);
+            }
 
             setSubmitted(true);
             toast({
@@ -38,6 +42,7 @@ const Contact = () => {
                 description: "Your inquiry has been relayed to our care team."
             });
         } catch (error: any) {
+            console.error("Critical submission failure:", error);
             toast({
                 variant: "destructive",
                 title: "Ritual Interrupted",

@@ -175,22 +175,11 @@ const Checkout = () => {
                 }
             }
 
-            // Create Push Notification for Admin via Edge Function
-            try {
-                // Trigger Edge Function for FCM
-                await supabase.functions.invoke('push-notifications', {
-                    body: {
-                        type: 'new_order',
-                        payload: {
-                            title: "New Order Alert",
-                            message: `Order #${newOrder?.id?.slice(0, 8)} - Rs. ${total.toFixed(0)}`,
-                            url: "/admin/orders"
-                        }
-                    }
-                });
-            } catch (notifyError) {
-                console.warn("Notification triggers completed with warnings:", notifyError);
-            }
+            // Database triggers on order creation will handle:
+            // 1. Stock updates
+            // 2. Creating a notification record
+            // 3. Triggering FCM push notification via handle_new_notification()
+
 
             // Send Confirmation Email
             try {

@@ -18,7 +18,7 @@ const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage((payload) => {
     console.log(
-        "[firebase-messaging-sw.js] Received background message ",
+        "[firebase-messaging-sw.js] Received background message:",
         payload
     );
 
@@ -37,7 +37,10 @@ messaging.onBackgroundMessage((payload) => {
         }
     };
 
-    self.registration.showNotification(title, notificationOptions);
+    console.log("[FCM SW] Attempting to showNotification:", title);
+    return self.registration.showNotification(title, notificationOptions)
+        .then(() => console.log("[FCM SW] Notification shown successfully"))
+        .catch(err => console.error("[FCM SW] Failed to show notification:", err));
 });
 
 // Handle notification click

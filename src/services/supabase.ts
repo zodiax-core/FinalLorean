@@ -1261,13 +1261,18 @@ export const profilesService = {
     },
 
     async updateFcmToken(id: string, token: string) {
-        // Update without select to avoid 406/PGRST116 errors
+        // 1. Save to admin_push_tokens (multi-device: upsert = idempotent)
+        await supabase
+            .from('admin_push_tokens')
+            .upsert(
+                { user_id: id, fcm_token: token, last_seen_at: new Date().toISOString() },
+                { onConflict: 'user_id,fcm_token' }
+            );
+
+        // 2. Also update profiles.fcm_token (legacy / single-device fallback)
         const { error } = await supabase
             .from('profiles')
-            .update({
-                fcm_token: token,
-                updated_at: new Date().toISOString()
-            })
+            .update({ fcm_token: token, updated_at: new Date().toISOString() })
             .eq('id', id);
 
         if (error) throw error;
@@ -1433,14 +1438,12 @@ export const contactsService = {
     },
 
     async create(message: { name: string, email: string, subject: string, message: string }) {
-        const { data, error } = await supabase
+        const { error } = await supabase
             .from('contact_messages')
-            .insert(message)
-            .select()
-            .single();
+            .insert({ ...message, status: 'unread' });
 
         if (error) throw error;
-        return data;
+        return true;
     },
 
     async updateStatus(id: string, status: 'read' | 'unread' | 'archived') {
