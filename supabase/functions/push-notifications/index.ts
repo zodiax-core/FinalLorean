@@ -113,10 +113,19 @@ async function sendToToken(
                         title: payload.title || "Lorean Alchemical Update",
                         body: payload.message || "New activity on your store."
                     },
+                    android: {
+                        priority: "high"
+                    },
                     webpush: {
+                        headers: {
+                            Urgency: "high"
+                        },
                         notification: {
                             icon: "https://lorean.online/favicon.png",
                             badge: "https://lorean.online/favicon.png",
+                            tag: "lorean-alert",
+                            renotify: true,
+                            requireInteraction: true,
                             click_action: clickUrl
                         },
                         fcm_options: { link: clickUrl }

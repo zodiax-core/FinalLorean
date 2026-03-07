@@ -102,10 +102,16 @@ export const AdminLayout = () => {
                                     }
                                 });
 
-                                if (Notification.permission === 'granted') {
-                                    new Notification(notificationTitle, {
-                                        body: notificationBody,
-                                        icon: "/favicon.png",
+                                // Use ServiceWorkerRegistration for reliable cross-platform notifications
+                                if (Notification.permission === 'granted' && 'serviceWorker' in navigator) {
+                                    navigator.serviceWorker.ready.then(registration => {
+                                        registration.showNotification(notificationTitle, {
+                                            body: notificationBody,
+                                            icon: "/favicon.png",
+                                            badge: "/favicon.png",
+                                            tag: 'lorean-foreground',
+                                            renotify: true
+                                        });
                                     });
                                 }
                             });
