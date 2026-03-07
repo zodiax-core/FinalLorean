@@ -72,7 +72,8 @@ export const requestNotificationPermission = async (userId: string) => {
         // Save to admin_push_tokens (multi-device support)
         // UPSERT: same user+token → update last_seen_at (idempotent)
         // ─────────────────────────────────────────────────────────────
-        const deviceInfo = `${navigator.userAgent.substring(0, 80)}`;
+        const domain = typeof window !== 'undefined' ? window.location.hostname : 'unknown';
+        const deviceInfo = `${domain} | ${navigator.userAgent.substring(0, 80)}`;
 
         const { error: tokenError } = await supabase
             .from('admin_push_tokens')
@@ -106,7 +107,12 @@ export const requestNotificationPermission = async (userId: string) => {
 
         return token;
     } catch (error: any) {
-        console.error("[FCM] Setup Error:", error);
+        console.error("[FCM] Setup Error on " + window.location.hostname + ":", {
+            message: error.message,
+            code: error.code,
+            stack: error.stack,
+            full: error
+        });
         throw error;
     }
 };

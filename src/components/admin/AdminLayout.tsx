@@ -70,29 +70,38 @@ export const AdminLayout = () => {
         if (user) {
             fetchStats();
 
-            // Request FCM & Browser Notification permission
-            requestNotificationPermission(user.id).catch(err => {
-                console.error("FCM Setup Failed:", err);
-            });
+            // Prevent repeated registration loops in the same session
+            const SESSION_KEY = `fcm_registered_${user.id}`;
+            const alreadyRegistered = sessionStorage.getItem(SESSION_KEY);
 
-            // Listen for FCM foreground messages
-            import("@/lib/firebase").then(({ messaging }) => {
-                if (messaging) {
-                    import("firebase/messaging").then(({ onMessage }) => {
-                        onMessage(messaging, (payload) => {
-                            console.log("[FCM] Foreground message received:", payload);
-                            const notificationTitle = payload.notification?.title || "Lorean Alchemical Alert";
-
-                            if (Notification.permission === 'granted') {
-                                new Notification(notificationTitle, {
-                                    body: payload.notification?.body,
-                                    icon: "/favicon.png",
-                                });
-                            }
-                        });
+            if (!alreadyRegistered) {
+                console.log("[FCM] Initiating registration ritual for domain:", window.location.hostname);
+                requestNotificationPermission(user.id)
+                    .then(() => {
+                        sessionStorage.setItem(SESSION_KEY, 'true');
+                    })
+                    .catch(err => {
+                        console.error("FCM Setup Failed:", err);
                     });
-                }
-            });
+
+                // Listen for FCM foreground messages
+                import("@/lib/firebase").then(({ messaging }) => {
+                    if (messaging) {
+                        import("firebase/messaging").then(({ onMessage }) => {
+                            onMessage(messaging, (payload) => {
+                                console.log("[FCM] Foreground message received:", payload);
+                                const notificationTitle = payload.notification?.title || "Lorean Alchemical Alert";
+                                if (Notification.permission === 'granted') {
+                                    new Notification(notificationTitle, {
+                                        body: payload.notification?.body,
+                                        icon: "/favicon.png",
+                                    });
+                                }
+                            });
+                        });
+                    }
+                });
+            }
 
             const channel = notificationService.subscribeToNotifications(undefined, (payload: any) => {
                 console.log("Admin Realm Real-time event:", payload);
@@ -102,7 +111,6 @@ export const AdminLayout = () => {
                     const notify = payload.new;
                     // Show toast if it's Global (user_id is null) or specifically for this Admin
                     if (!notify.user_id || notify.user_id === user.id) {
-                        console.log("Displaying notification toast:", notify.title);
                         sonnerToast(notify.title || "New Divine Alert", {
                             description: notify.message,
                             action: {
