@@ -397,7 +397,7 @@ export default function AdminNotifications() {
                                         {pushEnabled ? "Alerts Active" : "Enable Alerts"}
                                     </span>
                                 </Button>
-                                <Button variant="outline" size="sm" onClick={handleTestNotification} className="rounded-xl h-10 gap-2 boarder-primary/10">
+                                <Button variant="outline" size="sm" onClick={handleTestNotification} className="rounded-xl h-10 gap-2 border-primary/10">
                                     <Sparkles className="w-4 h-4 text-amber-500" />
                                     <span className="text-[10px] font-black uppercase tracking-widest">Test Ritual</span>
                                 </Button>
@@ -409,7 +409,7 @@ export default function AdminNotifications() {
 
             <AnimatePresence mode="popLayout">
                 <div className="md:hidden mb-6">
-                    <Card className="glass border-primary/20 bg-primary/5 rounded-3xl overflow-hidden overflow-hidden">
+                    <Card className="glass border-primary/20 bg-primary/5 rounded-3xl overflow-hidden">
                         <CardContent className="p-4 flex gap-4 items-center">
                             <Info className="w-5 h-5 text-primary shrink-0" />
                             <div className="text-[10px] leading-relaxed">
@@ -422,12 +422,14 @@ export default function AdminNotifications() {
 
                 <div className="grid gap-3">
                     {filteredNotifications.length === 0 ? (
-                        <Card className="glass border-border/10 rounded-[2.5rem] p-20 text-center">
-                            <div className="flex flex-col items-center gap-4 opacity-30">
-                                <BellOff className="w-12 h-12" />
-                                <p className="font-serif italic text-lg tracking-tight">The ritual chamber is empty.</p>
-                            </div>
-                        </CardContent>
+                        <Card className="glass border-border/10 rounded-[2.5rem] overflow-hidden">
+                            <CardContent className="p-20 text-center">
+                                <div className="flex flex-col items-center gap-4 opacity-30">
+                                    <BellOff className="w-12 h-12" />
+                                    <p className="font-serif italic text-lg tracking-tight">The ritual chamber is empty.</p>
+                                </div>
+                            </CardContent>
+                        </Card>
                     ) : (
                         filteredNotifications.map((n) => {
                             const TypeIcon = getTypeIcon(n.type);
@@ -442,7 +444,7 @@ export default function AdminNotifications() {
                                 >
                                     <Card
                                         onClick={() => handleNotificationClick(n)}
-                                        className={`glass border-border/10 rounded-[2rem] overflow-hidden cursor-pointer transition-all hover:shadow-xl hover:scale-[1.01] overflow-hidden ${!n.is_read ? 'bg-primary/[0.02] border-l-4 border-l-primary shadow-primary/5' : ''}`}
+                                        className={`glass border-border/10 rounded-[2rem] overflow-hidden cursor-pointer transition-all hover:shadow-xl hover:scale-[1.01] ${!n.is_read ? 'bg-primary/[0.02] border-l-4 border-l-primary shadow-primary/5' : ''}`}
                                     >
                                         <CardContent className="p-5 sm:p-6">
                                             <div className="flex items-start gap-4 sm:gap-6">
