@@ -279,6 +279,14 @@ const Navbar = () => {
                       My Rituals
                     </Button>
                   </Link>
+
+                  {isAdmin && (
+                    <Link to="/admin" onClick={() => setIsMobileMenuOpen(false)}>
+                      <Button className="w-full h-16 rounded-full text-lg uppercase font-black tracking-widest shadow-xl shadow-primary/20 bg-primary/10 text-primary border-primary/20 hover:bg-primary hover:text-white transition-all">
+                        Admin Portal
+                      </Button>
+                    </Link>
+                  )}
                   <Button
                     onClick={() => {
                       signOut();
