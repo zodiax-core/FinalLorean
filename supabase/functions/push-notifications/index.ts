@@ -92,7 +92,8 @@ async function getAccessToken() {
 async function sendToToken(
     accessToken: string,
     token: string,
-    payload: any
+    payload: any,
+    supabase: any
 ): Promise<{ token: string; success: boolean; error?: string }> {
     try {
         const fcmUrl = `https://fcm.googleapis.com/v1/projects/${serviceAccount.project_id}/messages:send`;
@@ -100,55 +101,82 @@ async function sendToToken(
             ? payload.url
             : `https://lorean.online${payload.url || '/dashboard'}`;
 
+        const title = payload.title || "Lorean Alchemical Update";
+        const body = payload.message || "New activity on your store.";
+
+        const messageBody = {
+            message: {
+                token,
+                notification: {
+                    title,
+                    body
+                },
+                android: {
+                    priority: "high",
+                    notification: {
+                        priority: "high",
+                        visibility: "public"
+                    }
+                },
+                webpush: {
+                    headers: {
+                        Urgency: "high"
+                    },
+                    notification: {
+                        title,
+                        body,
+                        icon: "https://lorean.online/favicon.png",
+                        badge: "https://lorean.online/favicon.png",
+                        tag: "lorean-alert",
+                        renotify: true,
+                        requireInteraction: true,
+                        click_action: clickUrl
+                    },
+                    fcm_options: { link: clickUrl }
+                },
+                data: {
+                    title,
+                    message: body,
+                    url: clickUrl,
+                    ...(payload.data ? Object.fromEntries(
+                        Object.entries(payload.data)
+                            .filter(([, v]) => v != null)
+                            .map(([k, v]) => [k, String(v)])
+                    ) : {})
+                }
+            }
+        };
+
         const response = await fetch(fcmUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${accessToken}`
             },
-            body: JSON.stringify({
-                message: {
-                    token,
-                    notification: {
-                        title: payload.title || "Lorean Alchemical Update",
-                        body: payload.message || "New activity on your store."
-                    },
-                    android: {
-                        priority: "high"
-                    },
-                    webpush: {
-                        headers: {
-                            Urgency: "high"
-                        },
-                        notification: {
-                            icon: "https://lorean.online/favicon.png",
-                            badge: "https://lorean.online/favicon.png",
-                            tag: "lorean-alert",
-                            renotify: true,
-                            requireInteraction: true,
-                            click_action: clickUrl
-                        },
-                        fcm_options: { link: clickUrl }
-                    },
-                    data: payload.data
-                        ? Object.fromEntries(
-                            Object.entries(payload.data)
-                                .filter(([, v]) => v != null)
-                                .map(([k, v]) => [k, String(v)])
-                        )
-                        : {}
-                }
-            })
+            body: JSON.stringify(messageBody)
         });
 
         const res = await response.json();
+        const shortToken = token.substring(0, 10) + '...';
+
         if (!response.ok) {
             const errCode = res?.error?.details?.[0]?.errorCode || res?.error?.status || 'UNKNOWN';
-            console.warn(`[FCM] Error for ${token.substring(0, 10)}...: ${errCode}`);
-            return { token: token.substring(0, 10) + '...', success: false, error: errCode };
+            console.warn(`[FCM] Error for ${shortToken}: ${errCode}`);
+
+            await supabase.from('debug_logs').insert({
+                message: `[FCM] Send error to ${shortToken}: ${errCode}`,
+                payload: { error: res.error, token: token.substring(0, 20) }
+            });
+
+            return { token: shortToken, success: false, error: errCode };
         }
 
-        return { token: token.substring(0, 10) + '...', success: true };
+        await supabase.from('debug_logs').insert({
+            message: `[FCM] Send success to ${shortToken}`,
+            payload: { res, token: token.substring(0, 20) }
+        });
+
+        return { token: shortToken, success: true };
     } catch (e: any) {
         console.error(`[FCM] Exception for ${token.substring(0, 10)}...:`, e.message);
         return { token: token.substring(0, 10) + '...', success: false, error: e.message };
@@ -256,7 +284,7 @@ serve(async (req) => {
         const accessToken = await getAccessToken();
 
         const results = await Promise.all(
-            tokens.map((token: string) => sendToToken(accessToken, token, payload))
+            tokens.map((token: string) => sendToToken(accessToken, token, payload, supabase))
         );
 
         // Clean up stale tokens

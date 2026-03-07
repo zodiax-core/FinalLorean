@@ -6,7 +6,8 @@ import {
     ShieldCheck, CheckCircle2, Facebook,
     Twitter, Instagram, ChevronRight, MessageSquare, Info,
     Package, Sparkles, Clock, CreditCard, Loader2, HelpCircle,
-    Copy, Check, Play, ExternalLink, Youtube
+    Check, Play, ExternalLink, Youtube, User, Video, Pause,
+    Volume2, VolumeX, RotateCcw, Copy
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/layout/Navbar";
@@ -165,6 +166,8 @@ const ProductDetail = () => {
     const [carouselIndex, setCarouselIndex] = useState(0);
     const [visionsIndex, setVisionsIndex] = useState(0);
     const [playingVideo, setPlayingVideo] = useState<string | null>(null);
+    const [isMuted, setIsMuted] = useState(true);
+    const [isPaused, setIsPaused] = useState(false);
     const [finishedVideos, setFinishedVideos] = useState<Set<string>>(new Set());
     const [tikTokSources, setTikTokSources] = useState<Record<string, string>>({});
     const [subscriberEmail, setSubscriberEmail] = useState("");
@@ -178,8 +181,9 @@ const ProductDetail = () => {
 
     useEffect(() => {
         if (product?.video_proofs) {
-            product.video_proofs.forEach(url => {
-                if (url.includes('tiktok.com') && !tikTokSources[url]) {
+            product.video_proofs.forEach((proof: any) => {
+                const url = typeof proof === 'string' ? proof : proof.url;
+                if (url && url.includes('tiktok.com') && !tikTokSources[url]) {
                     fetch(`https://www.tikwm.com/api/video/get?url=${encodeURIComponent(url)}`)
                         .then(res => res.json())
                         .then(data => {
@@ -207,6 +211,16 @@ const ProductDetail = () => {
         const all = [...formattedFake, ...realReviews];
         return all.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     }, [product?.reviews_list, realReviews]);
+
+    const displayReviewsCount = useMemo(() => {
+        return Math.max(mergedReviews.length, product?.reviews || 0);
+    }, [mergedReviews.length, product?.reviews]);
+
+    const displayRating = useMemo(() => {
+        if (mergedReviews.length === 0) return Number(product?.rating || 0);
+        const totalRating = mergedReviews.reduce((acc, r) => acc + (Number(r.rating) || 0), 0);
+        return Number((totalRating / mergedReviews.length).toFixed(1));
+    }, [mergedReviews, product?.rating]);
 
     useEffect(() => {
         if (product) {
@@ -460,11 +474,11 @@ const ProductDetail = () => {
                                 <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-muted/30 border border-border/10">
                                     <div className="flex gap-0.5">
                                         {[...Array(5)].map((_, i) => (
-                                            <Star key={i} className={`w-3 h-3 ${i < Math.floor(product.rating) ? "fill-primary text-primary" : "fill-muted text-muted"}`} />
+                                            <Star key={i} className={`w-3 h-3 ${i < Math.floor(displayRating) ? "fill-primary text-primary" : "fill-muted text-muted"}`} />
                                         ))}
                                     </div>
                                     <span className="text-[10px] font-black text-foreground uppercase tracking-wider">
-                                        {product.rating} <span className="text-muted-foreground/60">({Math.max(mergedReviews.length, product.reviews || 0)})</span>
+                                        {displayRating} <span className="text-muted-foreground/60">({displayReviewsCount})</span>
                                         {product.fake_sold_count ? <span className="ml-2 text-primary">| {product.fake_sold_count}+ vessels manifested</span> : null}
                                     </span>
                                 </div>
@@ -646,19 +660,117 @@ const ProductDetail = () => {
                                     }}
                                 >
                                     <div className="flex-none w-[5vw] md:w-[20vw]" /> {/* Centering padding */}
-                                    {product.video_proofs.map((url: string, i: number) => {
-                                        const { platform, embedUrl, thumb } = getVideoData(url);
-                                        const handle = getUsernameFromUrl(url);
+                                    {(product.video_proofs || []).map((proof: any, i: number) => {
+                                        const url = proof.url;
+                                        if (!url) return null;
+
+                                        const { platform: inferredPlatform, embedUrl, thumb } = getVideoData(url);
+                                        const platform = proof.platform || inferredPlatform;
+                                        const handle = proof.username || getUsernameFromUrl(url);
+                                        const redirectionLink = proof.redirection_link || url;
+
                                         const isPlaying = playingVideo === url;
                                         const isFinished = finishedVideos.has(url);
                                         const tiktokMp4 = tikTokSources[url];
+                                        const isUpload = platform === 'upload' || url.includes('supabase.co');
+                                        const redirectionLink = proof.redirection_link || url;
+
+                                        const liquidMorph = {
+                                            animate: {
+                                                borderRadius: [
+                                                    "60% 40% 30% 70% / 60% 30% 70% 40%",
+                                                    "30% 60% 70% 40% / 50% 60% 30% 60%",
+                                                    "60% 40% 30% 70% / 60% 30% 70% 40%"
+                                                ],
+                                            },
+                                            transition: {
+                                                duration: 8,
+                                                repeat: Infinity,
+                                                ease: "easeInOut"
+                                            }
+                                        };
 
                                         return (
                                             <div key={i} className="flex-none w-[280px] md:w-[320px] snap-start">
                                                 <div className="glass rounded-[3rem] overflow-hidden border-border/10 group/vid-card hover:shadow-2xl transition-all duration-700 relative h-full">
                                                     <div className="aspect-[9/16] bg-black relative overflow-hidden">
                                                         {isPlaying ? (
-                                                            platform === 'tiktok' && tiktokMp4 ? (
+                                                            isUpload ? (
+                                                                <div className="absolute inset-0 z-30">
+                                                                    <video
+                                                                        src={url}
+                                                                        className="w-full h-full object-cover"
+                                                                        autoPlay
+                                                                        playsInline
+                                                                        muted={isMuted}
+                                                                        ref={(el) => {
+                                                                            if (el) {
+                                                                                if (isPaused) el.pause();
+                                                                                else el.play().catch(() => { });
+                                                                            }
+                                                                        }}
+                                                                        onEnded={() => {
+                                                                            setPlayingVideo(null);
+                                                                            setFinishedVideos(prev => new Set(prev).add(url));
+                                                                            setIsPaused(false);
+                                                                        }}
+                                                                    />
+
+                                                                    {/* Custom Controls Overlay */}
+                                                                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent p-6 pt-12 flex items-center justify-between z-40 transition-opacity group-hover:opacity-100">
+                                                                        <div className="flex items-center gap-4">
+                                                                            <motion.button
+                                                                                {...liquidMorph}
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    setIsPaused(!isPaused);
+                                                                                }}
+                                                                                className="w-12 h-12 bg-white/10 backdrop-blur-md flex items-center justify-center text-white hover:bg-primary transition-all shadow-xl border border-white/20"
+                                                                            >
+                                                                                {isPaused ? <Play className="w-5 h-5 fill-white ml-0.5" /> : <Pause className="w-5 h-5 fill-white" />}
+                                                                            </motion.button>
+                                                                            <motion.button
+                                                                                {...liquidMorph}
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    setIsMuted(!isMuted);
+                                                                                }}
+                                                                                className="w-12 h-12 bg-white/10 backdrop-blur-md flex items-center justify-center text-white hover:bg-primary transition-all shadow-xl border border-white/20"
+                                                                            >
+                                                                                {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+                                                                            </motion.button>
+                                                                        </div>
+
+                                                                        <button
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                setPlayingVideo(null);
+                                                                                setTimeout(() => setPlayingVideo(url), 0);
+                                                                                setIsPaused(false);
+                                                                            }}
+                                                                            className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-white/60 hover:text-white transition-colors"
+                                                                        >
+                                                                            <RotateCcw className="w-3 h-3" /> Replay
+                                                                        </button>
+                                                                    </div>
+                                                                    <motion.div
+                                                                        initial={{ opacity: 0 }}
+                                                                        animate={{ opacity: 1 }}
+                                                                        className="absolute top-4 right-4 z-40"
+                                                                    >
+                                                                        <Button
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                window.open(redirectionLink, '_blank');
+                                                                            }}
+                                                                            size="icon"
+                                                                            className="rounded-full w-10 h-10 bg-white/20 backdrop-blur-md text-white hover:bg-primary transition-all shadow-xl"
+                                                                        >
+                                                                            <ExternalLink className="w-4 h-4" />
+                                                                        </Button>
+                                                                    </motion.div>
+                                                                </div>
+                                                            ) : platform === 'tiktok' && tiktokMp4 ? (
                                                                 <div className="absolute inset-0 z-30">
                                                                     <video
                                                                         src={tiktokMp4}
@@ -679,7 +791,7 @@ const ProductDetail = () => {
                                                                         <Button
                                                                             onClick={(e) => {
                                                                                 e.stopPropagation();
-                                                                                window.open(url, '_blank');
+                                                                                window.open(redirectionLink, '_blank');
                                                                             }}
                                                                             size="icon"
                                                                             className="rounded-full w-10 h-10 bg-white/20 backdrop-blur-md text-white hover:bg-primary transition-all shadow-xl"
@@ -698,8 +810,16 @@ const ProductDetail = () => {
                                                             )
                                                         ) : (
                                                             <>
-                                                                {thumb && (
-                                                                    <img src={thumb} className="w-full h-full object-cover grayscale-[0.2] group-hover/vid-card:grayscale-0 group-hover/vid-card:scale-105 transition-all duration-[2s]" alt="" />
+                                                                {thumb || isUpload ? (
+                                                                    isUpload ? (
+                                                                        <video src={url} className="w-full h-full object-cover grayscale-[0.2] opacity-50" />
+                                                                    ) : (
+                                                                        <img src={thumb} className="w-full h-full object-cover grayscale-[0.2] group-hover/vid-card:grayscale-0 group-hover/vid-card:scale-105 transition-all duration-[2s]" alt="" />
+                                                                    )
+                                                                ) : (
+                                                                    <div className="w-full h-full flex items-center justify-center bg-muted/20">
+                                                                        <Play className="w-12 h-12 text-primary opacity-20" />
+                                                                    </div>
                                                                 )}
                                                                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent z-10" />
 
@@ -710,15 +830,33 @@ const ProductDetail = () => {
                                                                         animate={{ opacity: 1, scale: 1 }}
                                                                         className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-40"
                                                                     >
-                                                                        <Button
-                                                                            onClick={(e) => {
-                                                                                e.stopPropagation();
-                                                                                window.open(url, '_blank');
-                                                                            }}
-                                                                            className="rounded-full px-8 h-14 bg-primary text-white font-black uppercase tracking-widest hover:scale-110 transition-all shadow-2xl"
-                                                                        >
-                                                                            Explore Source <ExternalLink className="ml-3 w-4 h-4" />
-                                                                        </Button>
+                                                                        <div className="flex flex-col items-center gap-6">
+                                                                            <Button
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    window.open(redirectionLink, '_blank');
+                                                                                }}
+                                                                                className="rounded-full px-8 h-14 bg-primary text-white font-black uppercase tracking-widest hover:scale-110 transition-all shadow-2xl"
+                                                                            >
+                                                                                Explore Source <ExternalLink className="ml-3 w-4 h-4" />
+                                                                            </Button>
+                                                                            <button
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    setPlayingVideo(null);
+                                                                                    setTimeout(() => setPlayingVideo(url), 10);
+                                                                                    setIsPaused(false);
+                                                                                    setFinishedVideos(prev => {
+                                                                                        const next = new Set(prev);
+                                                                                        next.delete(url);
+                                                                                        return next;
+                                                                                    });
+                                                                                }}
+                                                                                className="text-[10px] font-black uppercase tracking-[0.2em] text-white/60 hover:text-white transition-colors flex items-center gap-2"
+                                                                            >
+                                                                                <RotateCcw className="w-4 h-4" /> Replay Ritual
+                                                                            </button>
+                                                                        </div>
                                                                     </motion.div>
                                                                 )}
 
@@ -743,16 +881,16 @@ const ProductDetail = () => {
                                                         <div className="absolute bottom-8 left-8 right-8 z-20 space-y-4">
                                                             <div className="flex items-center justify-between">
                                                                 <div className="flex items-center gap-3">
-                                                                    <div className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white text-[10px] font-black uppercase">
-                                                                        {handle.charAt(0)}
+                                                                    <div className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white text-[10px] font-black uppercase overflow-hidden">
+                                                                        {isUpload ? <User className="w-5 h-5" /> : handle.charAt(0)}
                                                                     </div>
                                                                     <div className="min-w-0">
-                                                                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white truncate">@{handle}</p>
+                                                                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white truncate">{handle.startsWith('@') ? handle : `@${handle}`}</p>
                                                                         <p className="text-[8px] text-white/50 font-bold uppercase tracking-widest">Patron Testimony</p>
                                                                     </div>
                                                                 </div>
                                                                 <button
-                                                                    onClick={() => window.open(url, '_blank')}
+                                                                    onClick={() => window.open(redirectionLink, '_blank')}
                                                                     className="w-9 h-9 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white hover:bg-white hover:text-black transition-all duration-300"
                                                                     title="Open Ritual Source"
                                                                 >
@@ -762,9 +900,9 @@ const ProductDetail = () => {
                                                             <div className="flex items-center justify-between pt-5 border-t border-white/10">
                                                                 <div className="flex items-center gap-2">
                                                                     <div className="p-1.5 rounded-lg bg-white/5 backdrop-blur-sm">
-                                                                        {getPlatformIcon(platform)}
+                                                                        {isUpload ? <Video className="w-4 h-4 text-primary" /> : getPlatformIcon(platform)}
                                                                     </div>
-                                                                    <span className="text-[8px] font-black uppercase tracking-[0.2em] text-white/60">{platform}</span>
+                                                                    <span className="text-[8px] font-black uppercase tracking-[0.2em] text-white/60">{isUpload ? 'Ritual' : platform}</span>
                                                                 </div>
                                                                 <div className="flex gap-0.5">
                                                                     {[1, 2, 3, 4, 5].map(s => <Star key={s} className="w-2.5 h-2.5 fill-primary text-primary" />)}

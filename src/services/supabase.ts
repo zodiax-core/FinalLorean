@@ -27,7 +27,7 @@ export interface Product {
     vendor_id?: string;
     vessel_volume?: string;
     fake_sold_count?: number;
-    video_proofs?: string[];
+    video_proofs?: { url: string, username: string, redirection_link: string, platform?: string }[];
     tags?: string[];
     slug?: string;
 }
@@ -1464,5 +1464,48 @@ export const contactsService = {
 
         if (error) throw error;
         return true;
+    }
+};
+
+export const storageService = {
+    async uploadVideo(file: File, path: string) {
+        const { data, error } = await supabase.storage
+            .from('product-videos')
+            .upload(path, file, {
+                cacheControl: '3600',
+                upsert: true
+            });
+
+        if (error) throw error;
+
+        const { data: { publicUrl } } = supabase.storage
+            .from('product-videos')
+            .getPublicUrl(data.path);
+
+        return publicUrl;
+    },
+
+    async uploadImage(file: File, path: string) {
+        const { data, error } = await supabase.storage
+            .from('product-images')
+            .upload(path, file, {
+                cacheControl: '3600',
+                upsert: true
+            });
+
+        if (error) throw error;
+
+        const { data: { publicUrl } } = supabase.storage
+            .from('product-images')
+            .getPublicUrl(data.path);
+
+        return publicUrl;
+    },
+
+    async deleteVideo(path: string) {
+        const { error } = await supabase.storage
+            .from('product-videos')
+            .remove([path]);
+        if (error) throw error;
     }
 };

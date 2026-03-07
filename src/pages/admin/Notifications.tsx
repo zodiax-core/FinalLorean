@@ -77,7 +77,10 @@ export default function AdminNotifications() {
 
         const channel = notificationService.subscribeToNotifications(undefined, (payload) => {
             if (payload.eventType === 'INSERT') {
-                setNotifications(prev => [payload.new, ...prev]);
+                setNotifications(prev => {
+                    if (prev.some(n => n.id === payload.new.id)) return prev;
+                    return [payload.new, ...prev];
+                });
                 toast({ title: "New Notification", description: payload.new.title });
             } else if (payload.eventType === 'UPDATE') {
                 setNotifications(prev => prev.map(n => n.id === payload.new.id ? payload.new : n));
@@ -212,9 +215,36 @@ export default function AdminNotifications() {
         if (!userId) return;
         try {
             toast({ title: "Initiating Setup", description: "Requesting notification permission..." });
-            await requestNotificationPermission(userId);
+            const token = await requestNotificationPermission(userId);
             setPushEnabled(true);
-            toast({ title: "Success", description: "Device registered for notifications." });
+
+            // Verify SW version
+            if ('serviceWorker' in navigator) {
+                const registration = await navigator.serviceWorker.ready;
+                if (registration.active) {
+                    registration.active.postMessage({ type: 'PING' });
+
+                    const messageHandler = (event: MessageEvent) => {
+                        if (event.data?.type === 'PONG') {
+                            toast({
+                                title: "Ritual Synchronized",
+                                description: `Active version: ${event.data.version}. Ready for manifests.`
+                            });
+                            navigator.serviceWorker.removeEventListener('message', messageHandler);
+                        }
+                    };
+                    navigator.serviceWorker.addEventListener('message', messageHandler);
+
+                    // Fallback if no pong in 2s
+                    setTimeout(() => {
+                        navigator.serviceWorker.removeEventListener('message', messageHandler);
+                    }, 2000);
+                }
+            }
+
+            if (!token) {
+                toast({ variant: "destructive", title: "Setup Incomplete", description: "Token generation failed." });
+            }
         } catch (error: any) {
             console.error("FCM Setup Error:", error);
             let description = error.message || "Failed to enable notifications.";
@@ -408,7 +438,7 @@ export default function AdminNotifications() {
             </Card>
 
             <AnimatePresence mode="popLayout">
-                <div className="md:hidden mb-6">
+                <div key="mobile-guide" className="md:hidden mb-6">
                     <Card className="glass border-primary/20 bg-primary/5 rounded-3xl overflow-hidden">
                         <CardContent className="p-4 flex gap-4 items-center">
                             <Info className="w-5 h-5 text-primary shrink-0" />
@@ -420,9 +450,9 @@ export default function AdminNotifications() {
                     </Card>
                 </div>
 
-                <div className="grid gap-3">
+                <div key="notification-list" className="grid gap-3">
                     {filteredNotifications.length === 0 ? (
-                        <Card className="glass border-border/10 rounded-[2.5rem] overflow-hidden">
+                        <Card key="empty-state" className="glass border-border/10 rounded-[2.5rem] overflow-hidden">
                             <CardContent className="p-20 text-center">
                                 <div className="flex flex-col items-center gap-4 opacity-30">
                                     <BellOff className="w-12 h-12" />
@@ -431,11 +461,11 @@ export default function AdminNotifications() {
                             </CardContent>
                         </Card>
                     ) : (
-                        filteredNotifications.map((n) => {
+                        filteredNotifications.map((n, index) => {
                             const TypeIcon = getTypeIcon(n.type);
                             return (
                                 <motion.div
-                                    key={n.id}
+                                    key={n.id || `notif-${index}`}
                                     layout
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}

@@ -4,7 +4,7 @@ import {
     ChevronLeft, Save, Sparkles, Image as ImageIcon,
     List, Tag as TagIcon, Box, Info, Trash2, Plus,
     CheckCircle2, Loader2, Star, HelpCircle, MessageSquare,
-    Settings, Layout, X
+    Settings, Layout, X, Upload, Video, Globe, User
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,7 @@ import {
     SelectTrigger, SelectValue
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
-import { productsService, categoriesService, Product } from "@/services/supabase";
+import { productsService, categoriesService, Product, storageService } from "@/services/supabase";
 import { useProducts } from "@/context/ProductsContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
@@ -450,36 +450,118 @@ export default function ProductForm() {
                             </div>
                         </div>
 
-                        {/* Video Proofs Section */}
                         <div className="glass p-10 rounded-[3rem] space-y-8 shadow-sm lg:col-span-2">
-                            <SectionHeader icon={ImageIcon} title="Patron"
+                            <SectionHeader icon={Video} title="Patron"
                                 subtitle="Visions (Videos)" />
-                            <p className="text-xs text-muted-foreground ml-1">Add links from TikTok, Instagram Reels, or YouTube. These will be fetched and displayed on the product page.</p>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {(formData.video_proofs || []).map((url, i) => (
-                                    <div key={i} className="flex gap-4 items-center animate-in slide-in-from-left-2">
-                                        <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                                            <Sparkles className="w-5 h-5 text-primary" />
+                            <p className="text-xs text-muted-foreground ml-1">Upload actual ritual proofs or add platform links. For uploads, you can set the patron's name and ritual source link.</p>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                {(formData.video_proofs || []).map((proof, i) => (
+                                    <div key={i} className="glass p-6 rounded-[2rem] border border-border/10 space-y-4 relative group animate-in slide-in-from-bottom-2">
+                                        <div className="flex justify-between items-start gap-4">
+                                            <div className="flex-1 space-y-4">
+                                                {/* URL or Uploaded Video Preview */}
+                                                <div className="aspect-video rounded-xl bg-muted/30 overflow-hidden relative group/v">
+                                                    {proof.url ? (
+                                                        proof.url.includes('supabase.co') || proof.url.endsWith('.mp4') ? (
+                                                            <video src={proof.url} className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            <div className="w-full h-full flex items-center justify-center text-[10px] text-muted-foreground">
+                                                                External {proof.platform || 'Link'}
+                                                            </div>
+                                                        )
+                                                    ) : (
+                                                        <div className="w-full h-full flex items-center justify-center text-[10px] text-muted-foreground">No Video Yet</div>
+                                                    )}
+
+                                                    {/* Upload Action */}
+                                                    <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/v:opacity-100 cursor-pointer transition-all">
+                                                        <input
+                                                            type="file"
+                                                            className="hidden"
+                                                            accept="video/*"
+                                                            onChange={async (e) => {
+                                                                const file = e.target.files?.[0];
+                                                                if (file) {
+                                                                    setLoading(true);
+                                                                    try {
+                                                                        const path = `products/${formData.name || 'unnamed'}/${Date.now()}-${file.name}`;
+                                                                        const publicUrl = await storageService.uploadVideo(file, path);
+                                                                        updateNestedField('video_proofs', i, 'url', publicUrl);
+                                                                        updateNestedField('video_proofs', i, 'platform', 'upload');
+                                                                        toast({ title: "Video Manifested", description: "Ritual proof has been uploaded." });
+                                                                    } catch (err: any) {
+                                                                        toast({ variant: "destructive", title: "Ritual Failed", description: err.message });
+                                                                    } finally {
+                                                                        setLoading(false);
+                                                                    }
+                                                                }
+                                                            }}
+                                                        />
+                                                        <Upload className="w-6 h-6 text-white" />
+                                                    </label>
+                                                </div>
+
+                                                <div className="space-y-3">
+                                                    <div className="flex items-center gap-2">
+                                                        <User className="w-3 h-3 text-primary" />
+                                                        <Input
+                                                            value={proof.username || ""}
+                                                            onChange={(e) => updateNestedField('video_proofs', i, 'username', e.target.value)}
+                                                            placeholder="Patron's Name (e.g. @zodiax)"
+                                                            className="h-8 rounded-lg bg-background border-none text-[10px] font-black uppercase tracking-widest"
+                                                        />
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <Globe className="w-3 h-3 text-primary" />
+                                                        <Input
+                                                            value={proof.redirection_link || ""}
+                                                            onChange={(e) => updateNestedField('video_proofs', i, 'redirection_link', e.target.value)}
+                                                            placeholder="Redirection Link (TikTok/IG Source)"
+                                                            className="h-8 rounded-lg bg-background border-none text-[10px] font-black uppercase tracking-widest"
+                                                        />
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <Video className="w-3 h-3 text-primary" />
+                                                        <Input
+                                                            value={proof.url || ""}
+                                                            onChange={(e) => {
+                                                                const url = e.target.value;
+                                                                updateNestedField('video_proofs', i, 'url', url);
+                                                                if (url.includes('tiktok.com')) updateNestedField('video_proofs', i, 'platform', 'tiktok');
+                                                                else if (url.includes('instagram.com')) updateNestedField('video_proofs', i, 'platform', 'instagram');
+                                                                else if (url.includes('youtube.com')) updateNestedField('video_proofs', i, 'platform', 'youtube');
+                                                            }}
+                                                            placeholder="Custom Video URL (Optional)"
+                                                            className="h-8 rounded-lg bg-background border-none text-[10px] font-mono"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() => removeItem('video_proofs', i)}
+                                                className="text-destructive hover:bg-destructive/10"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </Button>
                                         </div>
-                                        <Input
-                                            value={url}
-                                            onChange={(e) => {
-                                                const newVideos = [...(formData.video_proofs || [])];
-                                                newVideos[i] = e.target.value;
-                                                setFormData({ ...formData, video_proofs: newVideos });
-                                            }}
-                                            placeholder="https://tiktok.com/@user/video/..."
-                                            className="h-12 rounded-xl bg-muted/20 border-none px-4 flex-1 font-mono text-[10px]"
-                                        />
-                                        <Button variant="ghost" size="icon" onClick={() => removeItem('video_proofs', i)} className="text-destructive"><Trash2 className="w-4 h-4" /></Button>
                                     </div>
                                 ))}
+
                                 <Button
                                     variant="outline"
-                                    className="h-12 rounded-2xl border-dashed border-2 gap-2"
-                                    onClick={() => addItem('video_proofs', "")}
+                                    className="h-full min-h-[250px] rounded-[2rem] border-dashed border-2 gap-4 flex flex-col items-center justify-center bg-muted/5 hover:bg-muted/10 transition-all border-border/10"
+                                    onClick={() => addItem('video_proofs', { url: "", username: "Patron", redirection_link: "", platform: "upload" })}
                                 >
-                                    <Plus className="w-4 h-4" /> Add Video Proof
+                                    <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                                        <Plus className="w-8 h-8 text-primary" />
+                                    </div>
+                                    <div className="text-center">
+                                        <p className="text-xs font-black uppercase tracking-widest">Add Ritual Proof</p>
+                                        <p className="text-[10px] text-muted-foreground mt-1">Upload or Link Vision</p>
+                                    </div>
                                 </Button>
                             </div>
                         </div>

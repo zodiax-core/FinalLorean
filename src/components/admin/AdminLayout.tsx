@@ -111,7 +111,7 @@ export const AdminLayout = () => {
                                             badge: "/favicon.png",
                                             tag: 'lorean-foreground',
                                             renotify: true
-                                        });
+                                        } as any);
                                     });
                                 }
                             });
