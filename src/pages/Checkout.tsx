@@ -217,11 +217,11 @@ const Checkout = () => {
         return (
             <div className="min-h-screen bg-background text-center py-40 px-4">
                 <Navbar />
-                <div className="max-w-md mx-auto glass p-12 rounded-[3rem] border-border/30">
+                <div className="max-w-md mx-auto glass p-10 rounded-[3rem] border-border/30">
                     <ShoppingBag className="w-16 h-16 mx-auto mb-8 text-muted-foreground/30" />
                     <h2 className="text-3xl font-serif mb-6">Your Cart is Empty</h2>
                     <p className="text-muted-foreground mb-10 font-light">You haven't added any items yet.</p>
-                    <Button onClick={() => navigate('/shop')} className="w-full h-14 rounded-full text-lg shadow-xl shadow-primary/20">Back to Shop</Button>
+                    <Button onClick={() => navigate('/shop')} className="w-full h-12 rounded-full text-lg shadow-xl shadow-primary/20">Back to Shop</Button>
                 </div>
                 <Footer />
             </div>
@@ -262,112 +262,112 @@ const Checkout = () => {
                                     exit={{ opacity: 0, x: 25 }}
                                     className="space-y-8"
                                 >
-                                    <div className="glass p-10 rounded-[3rem] border-border/20 shadow-xl">
-                                        <div className="flex items-center gap-4 mb-10">
-                                            <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
-                                                <Truck className="w-7 h-7 text-primary" />
+                                    <div className="glass p-8 rounded-[2.5rem] border-border/20 shadow-xl">
+                                        <div className="flex items-center gap-4 mb-8">
+                                            <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
+                                                <Truck className="w-6 h-6 text-primary" />
                                             </div>
-                                            <h2 className="text-3xl font-serif tracking-tight">Shipping <span className="text-primary italic">Intelligence</span></h2>
+                                            <h2 className="text-2xl font-serif tracking-tight">Shipping <span className="text-primary italic">Intelligence</span></h2>
                                         </div>
 
-                                        <div className="grid grid-cols-2 gap-6 mb-6">
-                                            <div className="space-y-2">
-                                                <Label className="text-[10px] font-black uppercase tracking-widest ml-1">First Identity</Label>
+                                        <div className="grid grid-cols-2 gap-4 mb-4">
+                                            <div className="space-y-1.5">
+                                                <Label className="text-[9px] font-black uppercase tracking-widest ml-1">First Identity</Label>
                                                 <Input
                                                     value={formData.firstName}
                                                     onChange={e => setFormData({ ...formData, firstName: e.target.value })}
                                                     placeholder="Jane"
-                                                    className="rounded-2xl h-14 bg-muted/30 border-none px-6 focus-visible:bg-background transition-all"
+                                                    className="rounded-xl h-11 bg-muted/30 border-none px-5 focus-visible:bg-background transition-all"
                                                 />
                                             </div>
-                                            <div className="space-y-2">
-                                                <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Last Identity</Label>
+                                            <div className="space-y-1.5">
+                                                <Label className="text-[9px] font-black uppercase tracking-widest ml-1">Last Identity</Label>
                                                 <Input
                                                     value={formData.lastName}
                                                     onChange={e => setFormData({ ...formData, lastName: e.target.value })}
                                                     placeholder="Doe"
-                                                    className="rounded-2xl h-14 bg-muted/30 border-none px-6 focus-visible:bg-background transition-all"
+                                                    className="rounded-xl h-11 bg-muted/30 border-none px-5 focus-visible:bg-background transition-all"
                                                 />
                                             </div>
                                         </div>
-                                        <div className="space-y-2 mb-6">
-                                            <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Communication Email</Label>
+                                        <div className="space-y-1.5 mb-4">
+                                            <Label className="text-[9px] font-black uppercase tracking-widest ml-1">Communication Email</Label>
                                             <Input
                                                 value={formData.email}
                                                 onChange={e => setFormData({ ...formData, email: e.target.value })}
                                                 placeholder="jane@lorean.com"
-                                                className="rounded-2xl h-14 bg-muted/30 border-none px-6 focus-visible:bg-background transition-all"
+                                                className="rounded-xl h-11 bg-muted/30 border-none px-5 focus-visible:bg-background transition-all"
                                             />
                                         </div>
-                                        <div className="space-y-2 mb-6">
-                                            <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Physical Location</Label>
+                                        <div className="space-y-1.5 mb-4">
+                                            <Label className="text-[9px] font-black uppercase tracking-widest ml-1">Physical Location</Label>
                                             <Input
                                                 value={formData.address}
                                                 onChange={e => setFormData({ ...formData, address: e.target.value })}
                                                 placeholder="123 Luxury Avenue"
-                                                className="rounded-2xl h-14 bg-muted/30 border-none px-6 focus-visible:bg-background transition-all"
+                                                className="rounded-xl h-11 bg-muted/30 border-none px-5 focus-visible:bg-background transition-all"
                                             />
                                         </div>
-                                        <div className="space-y-2 mb-6">
-                                            <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Nearest Famous Place (Landmark)</Label>
+                                        <div className="space-y-1.5 mb-4">
+                                            <Label className="text-[9px] font-black uppercase tracking-widest ml-1">Nearest Famous Place (Landmark)</Label>
                                             <Input
                                                 value={formData.nearestFamousPlace}
                                                 onChange={e => setFormData({ ...formData, nearestFamousPlace: e.target.value })}
                                                 placeholder="Near Eiffel Tower"
-                                                className="rounded-2xl h-14 bg-muted/30 border-none px-6 focus-visible:bg-background transition-all"
+                                                className="rounded-xl h-11 bg-muted/30 border-none px-5 focus-visible:bg-background transition-all"
                                             />
                                         </div>
-                                        <div className="grid grid-cols-2 gap-6 mb-6">
-                                            <div className="space-y-2">
-                                                <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Receiver's Name</Label>
+                                        <div className="grid grid-cols-2 gap-4 mb-4">
+                                            <div className="space-y-1.5">
+                                                <Label className="text-[9px] font-black uppercase tracking-widest ml-1">Receiver's Name</Label>
                                                 <Input
                                                     value={formData.receiverName}
                                                     onChange={e => setFormData({ ...formData, receiverName: e.target.value })}
                                                     placeholder="Receiver Name"
-                                                    className="rounded-2xl h-14 bg-muted/30 border-none px-6 focus-visible:bg-background transition-all"
+                                                    className="rounded-xl h-11 bg-muted/30 border-none px-5 focus-visible:bg-background transition-all"
                                                 />
                                             </div>
-                                            <div className="space-y-2">
-                                                <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Phone Number</Label>
+                                            <div className="space-y-1.5">
+                                                <Label className="text-[9px] font-black uppercase tracking-widest ml-1">Phone Number</Label>
                                                 <Input
                                                     value={formData.receiverPhone}
                                                     onChange={e => setFormData({ ...formData, receiverPhone: e.target.value })}
                                                     placeholder="+1 234 567 890"
-                                                    className="rounded-2xl h-14 bg-muted/30 border-none px-6 focus-visible:bg-background transition-all"
+                                                    className="rounded-xl h-11 bg-muted/30 border-none px-5 focus-visible:bg-background transition-all"
                                                 />
                                             </div>
                                         </div>
-                                        <div className="grid grid-cols-3 gap-6">
-                                            <div className="space-y-2">
-                                                <Label className="text-[10px] font-black uppercase tracking-widest ml-1">City</Label>
+                                        <div className="grid grid-cols-3 gap-4">
+                                            <div className="space-y-1.5">
+                                                <Label className="text-[9px] font-black uppercase tracking-widest ml-1">City</Label>
                                                 <Input
                                                     value={formData.city}
                                                     onChange={e => setFormData({ ...formData, city: e.target.value })}
                                                     placeholder="Paris"
-                                                    className="rounded-2xl h-14 bg-muted/30 border-none px-6 focus-visible:bg-background transition-all"
+                                                    className="rounded-xl h-11 bg-muted/30 border-none px-5 focus-visible:bg-background transition-all"
                                                 />
                                             </div>
-                                            <div className="space-y-2">
-                                                <Label className="text-[10px] font-black uppercase tracking-widest ml-1">State</Label>
+                                            <div className="space-y-1.5">
+                                                <Label className="text-[9px] font-black uppercase tracking-widest ml-1">State</Label>
                                                 <Input
                                                     value={formData.state}
                                                     onChange={e => setFormData({ ...formData, state: e.target.value })}
                                                     placeholder="ILE"
-                                                    className="rounded-2xl h-14 bg-muted/30 border-none px-6 focus-visible:bg-background transition-all"
+                                                    className="rounded-xl h-11 bg-muted/30 border-none px-5 focus-visible:bg-background transition-all"
                                                 />
                                             </div>
-                                            <div className="space-y-2">
-                                                <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Postal</Label>
+                                            <div className="space-y-1.5">
+                                                <Label className="text-[9px] font-black uppercase tracking-widest ml-1">Postal</Label>
                                                 <Input
                                                     value={formData.postalCode}
                                                     onChange={e => setFormData({ ...formData, postalCode: e.target.value })}
                                                     placeholder="75001"
-                                                    className="rounded-2xl h-14 bg-muted/30 border-none px-6 focus-visible:bg-background transition-all"
+                                                    className="rounded-xl h-11 bg-muted/30 border-none px-5 focus-visible:bg-background transition-all"
                                                 />
                                             </div>
                                         </div>
                                     </div>
-                                    <Button onClick={() => setStep(2)} className="h-16 w-full rounded-full text-lg font-black uppercase tracking-widest shadow-2xl shadow-primary/30 group">
+                                    <Button onClick={() => setStep(2)} className="h-14 w-full rounded-xl text-md font-black uppercase tracking-widest shadow-2xl shadow-primary/30 group">
                                         Next Phase <ChevronRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
                                     </Button>
                                 </motion.div>
@@ -381,27 +381,27 @@ const Checkout = () => {
                                     exit={{ opacity: 0, x: 25 }}
                                     className="space-y-8"
                                 >
-                                    <div className="glass p-10 rounded-[3rem] border-border/20 shadow-xl">
-                                        <div className="flex items-center gap-4 mb-10">
-                                            <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
-                                                <Lock className="w-7 h-7 text-primary" />
+                                    <div className="glass p-8 rounded-[2.5rem] border-border/20 shadow-xl">
+                                        <div className="flex items-center gap-4 mb-8">
+                                            <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
+                                                <Lock className="w-6 h-6 text-primary" />
                                             </div>
-                                            <h2 className="text-3xl font-serif tracking-tight">Secure <span className="text-primary italic">Investment</span></h2>
+                                            <h2 className="text-2xl font-serif tracking-tight">Secure <span className="text-primary italic">Investment</span></h2>
                                         </div>
 
-                                        <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="space-y-6">
-                                            <Label className={`flex items-center gap-6 p-8 rounded-[2rem] border-2 transition-all duration-500 cursor-pointer ${paymentMethod === 'cod' ? 'border-primary bg-primary/5' : 'border-border'}`}>
+                                        <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="space-y-4">
+                                            <Label className={`flex items-center gap-4 p-6 rounded-[1.5rem] border-2 transition-all duration-500 cursor-pointer ${paymentMethod === 'cod' ? 'border-primary bg-primary/5' : 'border-border'}`}>
                                                 <RadioGroupItem value="cod" />
-                                                <Banknote className="w-6 h-6 text-muted-foreground" />
-                                                <div className="flex-1 font-serif text-2xl">Cash on Delivery (COD)</div>
+                                                <Banknote className="w-5 h-5 text-muted-foreground" />
+                                                <div className="flex-1 font-serif text-xl">Cash on Delivery (COD)</div>
                                             </Label>
                                         </RadioGroup>
                                     </div>
                                     <div className="flex gap-4">
-                                        <Button variant="outline" onClick={() => setStep(1)} className="h-16 px-10 rounded-full border-2">
+                                        <Button variant="outline" onClick={() => setStep(1)} className="h-14 px-8 rounded-xl border-2">
                                             <ArrowLeft className="w-5 h-5 mr-3" /> Back
                                         </Button>
-                                        <Button onClick={() => setStep(3)} className="h-16 flex-1 rounded-full text-lg font-black uppercase tracking-widest shadow-2xl shadow-primary/30">
+                                        <Button onClick={() => setStep(3)} className="h-14 flex-1 rounded-xl text-md font-black uppercase tracking-widest shadow-2xl shadow-primary/30">
                                             Final Review
                                         </Button>
                                     </div>
@@ -416,15 +416,15 @@ const Checkout = () => {
                                     exit={{ opacity: 0, x: 25 }}
                                     className="space-y-8"
                                 >
-                                    <div className="glass p-10 rounded-[3rem] border-border/20 shadow-xl overflow-hidden relative">
+                                    <div className="glass p-8 rounded-[2.5rem] border-border/20 shadow-xl overflow-hidden relative">
                                         <div className="absolute top-0 right-0 p-8 opacity-5">
-                                            <ShoppingBag className="w-32 h-32 -rotate-12" />
+                                            <ShoppingBag className="w-24 h-24 -rotate-12" />
                                         </div>
-                                        <div className="flex items-center gap-4 mb-10 relative z-10">
-                                            <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
-                                                <Sparkles className="w-7 h-7 text-primary" />
+                                        <div className="flex items-center gap-4 mb-8 relative z-10">
+                                            <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
+                                                <Sparkles className="w-6 h-6 text-primary" />
                                             </div>
-                                            <h2 className="text-3xl font-serif tracking-tight">Final <span className="text-primary italic">Authentication</span></h2>
+                                            <h2 className="text-2xl font-serif tracking-tight">Final <span className="text-primary italic">Authentication</span></h2>
                                         </div>
 
                                         <div className="space-y-4 max-h-[400px] overflow-y-auto pr-4 custom-scrollbar">
@@ -449,13 +449,13 @@ const Checkout = () => {
                                     </div>
 
                                     <div className="flex gap-4">
-                                        <Button variant="outline" onClick={() => setStep(2)} className="h-16 px-10 rounded-full border-2">
+                                        <Button variant="outline" onClick={() => setStep(2)} className="h-14 px-8 rounded-xl border-2">
                                             <ArrowLeft className="w-5 h-5 mr-3" /> Back
                                         </Button>
                                         <Button
                                             disabled={submitting}
                                             onClick={handlePlaceOrder}
-                                            className="h-16 flex-1 rounded-full text-lg font-black uppercase tracking-widest shadow-2xl shadow-primary/30 bg-primary"
+                                            className="h-14 flex-1 rounded-xl text-md font-black uppercase tracking-widest shadow-2xl shadow-primary/30 bg-primary"
                                         >
                                             {submitting ? <Loader2 className="w-6 h-6 animate-spin mr-3" /> : <Lock className="w-5 h-5 mr-3" />}
                                             {submitting ? "Processing..." : `Complete - Rs. ${total.toFixed(0)}`}
@@ -469,53 +469,53 @@ const Checkout = () => {
                     {/* Right Column: Dynamic Summary */}
                     <div className="w-full lg:w-[450px]">
                         <div className="sticky top-32 space-y-8">
-                            <div className="glass p-10 rounded-[3rem] border-border/20 shadow-2xl relative overflow-hidden">
+                            <div className="glass p-8 rounded-[2.5rem] border-border/20 shadow-2xl relative overflow-hidden">
                                 <div className="absolute -top-10 -right-10 w-40 h-40 bg-primary/5 rounded-full blur-3xl" />
-                                <h3 className="text-2xl font-serif mb-10 tracking-tight">Order <span className="text-primary italic text-balance">Summary</span></h3>
+                                <h3 className="text-xl font-serif mb-8 tracking-tight">Order <span className="text-primary italic text-balance">Summary</span></h3>
 
-                                <div className="space-y-6 mb-10">
-                                    <div className="flex justify-between text-muted-foreground font-medium text-sm">
+                                <div className="space-y-4 mb-8">
+                                    <div className="flex justify-between text-muted-foreground font-medium text-xs">
                                         <span>Subtotal</span>
                                         <span className="text-foreground">Rs. {subtotal.toFixed(0)}</span>
                                     </div>
-                                    <div className="flex justify-between text-muted-foreground font-medium text-sm">
+                                    <div className="flex justify-between text-muted-foreground font-medium text-xs">
                                         <span>Shipping</span>
                                         <span className={shipping === 0 ? "text-primary font-bold" : "text-foreground"}>{shipping === 0 ? "Complimentary" : `Rs. ${shipping.toFixed(0)}`}</span>
                                     </div>
-                                    <div className="flex justify-between text-muted-foreground font-medium text-sm">
+                                    <div className="flex justify-between text-muted-foreground font-medium text-xs">
                                         <span>Tax (8%)</span>
                                         <span className="text-foreground">Rs. {tax.toFixed(0)}</span>
                                     </div>
                                     {isPromoApplied && appliedDiscount && (
-                                        <div className="flex justify-between text-green-600 font-black uppercase text-[10px] tracking-widest">
+                                        <div className="flex justify-between text-green-600 font-black uppercase text-[9px] tracking-widest">
                                             <span>Patron Discount ({appliedDiscount.discount_value}{appliedDiscount.discount_type === 'percentage' ? '%' : ' Rs.'})</span>
                                             <span>-Rs. {discountAmount.toFixed(0)}</span>
                                         </div>
                                     )}
                                     <Separator className="bg-border/30" />
-                                    <div className="flex justify-between items-end pt-4">
+                                    <div className="flex justify-between items-end pt-2">
                                         <div>
-                                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">Total</p>
-                                            <span className="text-xl font-serif italic">Order Total</span>
+                                            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-0.5">Total</p>
+                                            <span className="text-lg font-serif italic">Order Total</span>
                                         </div>
-                                        <span className="text-4xl font-serif font-black text-primary">Rs. {total.toFixed(0)}</span>
+                                        <span className="text-3xl font-serif font-black text-primary">Rs. {total.toFixed(0)}</span>
                                     </div>
                                 </div>
 
-                                <div className="space-y-3">
-                                    <Label className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground ml-1">Promo Code</Label>
+                                <div className="space-y-2">
+                                    <Label className="text-[8px] font-black uppercase tracking-[0.3em] text-muted-foreground ml-1">Promo Code</Label>
                                     <div className="flex gap-2">
                                         <Input
                                             placeholder="LOREAN15"
                                             value={promoCode}
                                             onChange={(e) => setPromoCode(e.target.value)}
-                                            className="rounded-2xl h-14 bg-muted/30 border-none px-6 uppercase font-bold tracking-widest"
+                                            className="rounded-xl h-11 bg-muted/30 border-none px-5 uppercase font-bold tracking-widest text-xs"
                                         />
                                         <Button
                                             variant="outline"
                                             onClick={handleApplyPromo}
                                             disabled={isApplyingPromo || isPromoApplied}
-                                            className="rounded-2xl h-14 px-8 border-2 hover:bg-primary hover:text-white transition-all"
+                                            className="rounded-xl h-11 px-6 border-2 hover:bg-primary hover:text-white transition-all text-xs"
                                         >
                                             {isApplyingPromo ? <Loader2 className="w-4 h-4 animate-spin" /> : (isPromoApplied ? <CheckCircle2 className="w-4 h-4" /> : "Apply")}
                                         </Button>

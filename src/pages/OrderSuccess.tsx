@@ -10,7 +10,7 @@ const OrderSuccess = () => {
     const orderData = location.state?.order;
 
     return (
-        <div className="min-h-screen bg-[#fafafa]">
+        <div className="min-h-screen bg-background">
             <Navbar />
 
             <main className="max-w-4xl mx-auto px-4 pt-44 pb-32 text-center">
@@ -19,17 +19,17 @@ const OrderSuccess = () => {
                     initial={{ scale: 0.9, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     transition={{ type: "spring", damping: 15 }}
-                    className="mb-16 relative"
+                    className="mb-12 relative"
                 >
                     <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-12 pointer-events-none opacity-20">
                         <Sparkles className="w-24 h-24 text-primary animate-pulse" />
                     </div>
 
-                    <div className="w-24 h-24 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-8 border border-primary/20 shadow-[0_0_50px_rgba(201,162,76,0.2)]">
-                        <CheckCircle2 className="w-12 h-12 text-primary" />
+                    <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-primary/20 shadow-[0_0_50px_rgba(201,162,76,0.2)]">
+                        <CheckCircle2 className="w-10 h-10 text-primary" />
                     </div>
 
-                    <h1 className="text-6xl md:text-8xl font-serif mb-6 uppercase tracking-tighter text-foreground">
+                    <h1 className="text-5xl md:text-7xl font-serif mb-6 uppercase tracking-tighter text-foreground">
                         Ritual <span className="text-primary italic">Manifested</span>
                     </h1>
 
@@ -39,7 +39,7 @@ const OrderSuccess = () => {
                         <div className="h-px w-12 bg-primary/30" />
                     </div>
 
-                    <p className="text-muted-foreground text-xl font-light max-w-lg mx-auto leading-relaxed font-serif italic">
+                    <p className="text-muted-foreground text-lg font-light max-w-lg mx-auto leading-relaxed font-serif italic">
                         "Your botanical selection has been heard by the guardians. The essence is now traveling toward your abode."
                     </p>
                 </motion.div>
@@ -50,17 +50,17 @@ const OrderSuccess = () => {
                         initial={{ x: -30, opacity: 0 }}
                         animate={{ x: 0, opacity: 1 }}
                         transition={{ delay: 0.3 }}
-                        className="lg:col-span-3 glass p-10 md:p-14 rounded-[3.5rem] border border-white/40 shadow-[0_30px_60px_rgba(0,0,0,0.04)] text-left relative overflow-hidden"
+                        className="lg:col-span-3 glass p-8 md:p-10 rounded-[3rem] border border-white/40 shadow-[0_30px_60px_rgba(0,0,0,0.04)] text-left relative overflow-hidden"
                     >
                         <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full -mr-32 -mt-32 blur-3xl" />
 
                         <div className="relative z-10">
                             <div className="flex items-center justify-between mb-12">
                                 <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                                        <Package className="w-5 h-5 text-primary" />
+                                    <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
+                                        <Package className="w-4 h-4 text-primary" />
                                     </div>
-                                    <h3 className="font-serif text-3xl tracking-tight">Order Receipt</h3>
+                                    <h3 className="font-serif text-2xl tracking-tight">Order Receipt</h3>
                                 </div>
                                 <div className="text-right">
                                     <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 mb-1">Ritual ID</p>
@@ -96,8 +96,8 @@ const OrderSuccess = () => {
                                 </div>
 
                                 <div className="pt-8 border-t border-border/10 flex items-center justify-between">
-                                    <span className="font-serif italic text-2xl">Sacred Total</span>
-                                    <span className="text-3xl font-serif font-black text-primary">
+                                    <span className="font-serif italic text-xl">Sacred Total</span>
+                                    <span className="text-2xl font-serif font-black text-primary">
                                         Rs. {Math.round(orderData?.total_amount || 0).toLocaleString()}
                                     </span>
                                 </div>
@@ -111,7 +111,7 @@ const OrderSuccess = () => {
                             initial={{ x: 30, opacity: 0 }}
                             animate={{ x: 0, opacity: 1 }}
                             transition={{ delay: 0.5 }}
-                            className="p-10 rounded-[3rem] bg-primary text-primary-foreground shadow-2xl shadow-primary/20 text-left relative overflow-hidden group"
+                            className="p-8 rounded-[2.5rem] bg-primary text-primary-foreground shadow-2xl shadow-primary/20 text-left relative overflow-hidden group"
                         >
                             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/natural-paper.png')] opacity-10" />
                             <Mail className="w-12 h-12 mb-6 opacity-30 group-hover:scale-110 transition-transform duration-500" />
@@ -127,12 +127,12 @@ const OrderSuccess = () => {
                             transition={{ delay: 0.7 }}
                             className="flex flex-col gap-4"
                         >
-                            <Button asChild size="lg" className="h-20 rounded-full text-xs font-black uppercase tracking-[0.3em] shadow-2xl shadow-primary/20 group">
+                            <Button asChild size="lg" className="h-16 rounded-full text-xs font-black uppercase tracking-[0.3em] shadow-2xl shadow-primary/20 group">
                                 <Link to="/shop">
-                                    Continue the Journey <ArrowRight className="ml-3 w-5 h-5 group-hover:translate-x-2 transition-transform" />
+                                    Continue the Journey <ArrowRight className="ml-3 w-4 h-4 group-hover:translate-x-2 transition-transform" />
                                 </Link>
                             </Button>
-                            <Button variant="outline" asChild size="lg" className="h-16 rounded-full text-xs font-black uppercase tracking-[0.2em] border-2 bg-white hover:bg-muted transition-colors">
+                            <Button variant="outline" asChild size="lg" className="h-14 rounded-full text-xs font-black uppercase tracking-[0.2em] border-2 bg-white hover:bg-muted transition-colors">
                                 <Link to="/">
                                     <Home className="mr-3 w-4 h-4" /> Return to Sanctuary
                                 </Link>
