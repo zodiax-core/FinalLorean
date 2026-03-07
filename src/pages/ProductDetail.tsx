@@ -673,7 +673,6 @@ const ProductDetail = () => {
                                         const isFinished = finishedVideos.has(url);
                                         const tiktokMp4 = tikTokSources[url];
                                         const isUpload = platform === 'upload' || url.includes('supabase.co');
-                                        const redirectionLink = proof.redirection_link || url;
 
                                         const liquidMorph = {
                                             animate: {
@@ -686,7 +685,7 @@ const ProductDetail = () => {
                                             transition: {
                                                 duration: 8,
                                                 repeat: Infinity,
-                                                ease: "easeInOut"
+                                                ease: "easeInOut" as const
                                             }
                                         };
 
