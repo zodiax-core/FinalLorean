@@ -39,8 +39,21 @@ export const requestNotificationPermission = async (userId: string) => {
     try {
         if (typeof window === 'undefined') return null;
 
+        const currentDomain = window.location.hostname;
+        console.log(`[FCM] Environment Check on ${currentDomain}:`, {
+            userAgent: navigator.userAgent,
+            hasServiceWorker: 'serviceWorker' in navigator,
+            hasPushManager: 'PushManager' in window,
+            hasNotification: 'Notification' in window,
+            permissionState: 'Notification' in window ? Notification.permission : 'n/a'
+        });
+
         if (!('serviceWorker' in navigator)) {
-            throw new Error("Service Workers are not supported in this browser.");
+            throw new Error("Service Workers are not supported in this browser realm.");
+        }
+
+        if (!('PushManager' in window)) {
+            throw new Error("This browser realm does not support the Ritual of Push.");
         }
 
         console.log("[FCM] Requesting permission...");
@@ -66,8 +79,7 @@ export const requestNotificationPermission = async (userId: string) => {
 
         console.log("[FCM] Token generated successfully.");
 
-        const domain = typeof window !== 'undefined' ? window.location.hostname : 'unknown';
-        const deviceInfo = `${domain} | ${navigator.userAgent.substring(0, 80)}`;
+        const deviceInfo = `${currentDomain} | ${navigator.userAgent.substring(0, 80)}`;
 
         const { error: tokenError } = await supabase
             .from('admin_push_tokens')
@@ -83,14 +95,10 @@ export const requestNotificationPermission = async (userId: string) => {
 
         if (tokenError) {
             console.error("[FCM] Failed to save to admin_push_tokens:", tokenError);
-            // Don't throw — fall through to legacy save
         } else {
             console.log("[FCM] Token upserted into admin_push_tokens.");
         }
 
-        // ─────────────────────────────────────────────────────────────
-        // Also update profiles.fcm_token (legacy fallback)
-        // ─────────────────────────────────────────────────────────────
         await supabase
             .from('profiles')
             .update({
