@@ -43,19 +43,16 @@ export const requestNotificationPermission = async (userId: string) => {
             throw new Error("Service Workers are not supported in this browser.");
         }
 
+        console.log("[FCM] Requesting permission...");
         const permission = await Notification.requestPermission();
         if (permission !== 'granted') {
             throw new Error("Notification permission denied. Please allow notifications in your browser settings.");
         }
 
-        // Wait for service worker to be ready
-        let registration = await navigator.serviceWorker.ready;
+        console.log("[FCM] Registering Service Worker...");
+        const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
 
-        // Ensure the correct SW is registered
-        if (!registration || !registration.active || !registration.scope.includes(window.location.origin)) {
-            registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-        }
-
+        console.log("[FCM] Fetching token with VAPID key...");
         const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY ||
             "BJl-tQwVr82P2JDI3oyvlS9SKCEYLqmRpVo-LHVYoOPtwzp-sjPToNQQ1s2Rumi_85k1b4XHfK_XFKzjWH9vOD8";
 
@@ -64,14 +61,10 @@ export const requestNotificationPermission = async (userId: string) => {
             serviceWorkerRegistration: registration
         });
 
-        if (!token) throw new Error("No registration token available. Request permission to generate one.");
+        if (!token) throw new Error("No registration token available.");
 
-        console.log("[FCM] Token generated:", token.substring(0, 15) + "...");
+        console.log("[FCM] Token generated successfully.");
 
-        // ─────────────────────────────────────────────────────────────
-        // Save to admin_push_tokens (multi-device support)
-        // UPSERT: same user+token → update last_seen_at (idempotent)
-        // ─────────────────────────────────────────────────────────────
         const domain = typeof window !== 'undefined' ? window.location.hostname : 'unknown';
         const deviceInfo = `${domain} | ${navigator.userAgent.substring(0, 80)}`;
 
