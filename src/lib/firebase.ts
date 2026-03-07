@@ -50,7 +50,8 @@ export const requestNotificationPermission = async (userId: string) => {
         }
 
         console.log("[FCM] Registering Service Worker...");
-        const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+        await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+        const registration = await navigator.serviceWorker.ready;
 
         console.log("[FCM] Fetching token with VAPID key...");
         const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY ||
