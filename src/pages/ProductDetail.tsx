@@ -678,14 +678,23 @@ const ProductDetail = () => {
                                             animate: {
                                                 borderRadius: [
                                                     "60% 40% 30% 70% / 60% 30% 70% 40%",
+                                                    "45% 55% 50% 50% / 45% 55% 50% 50%",
                                                     "30% 60% 70% 40% / 50% 60% 30% 60%",
                                                     "60% 40% 30% 70% / 60% 30% 70% 40%"
                                                 ],
+                                                scale: [1, 1.05, 0.98, 1.02, 1],
                                             },
                                             transition: {
-                                                duration: 8,
-                                                repeat: Infinity,
-                                                ease: "easeInOut" as const
+                                                borderRadius: {
+                                                    duration: 10,
+                                                    repeat: Infinity,
+                                                    ease: "easeInOut"
+                                                },
+                                                scale: {
+                                                    duration: 5,
+                                                    repeat: Infinity,
+                                                    ease: "anticipate"
+                                                }
                                             }
                                         };
 
