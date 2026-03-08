@@ -24,6 +24,7 @@ import {
     ChevronRight
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTheme } from "@/components/theme-provider";
 
 export const menuItems = [
     { icon: Store, label: "View Website", path: "/" },
@@ -54,6 +55,9 @@ interface AdminSidebarProps {
 export const AdminSidebar = ({ className = "" }: AdminSidebarProps) => {
     const location = useLocation();
     const { user } = useAuth();
+    const { theme } = useTheme();
+    const isDark = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches) || document.documentElement.classList.contains("dark");
+    const logoSrc = isDark ? "/logo-dark.png" : "/logo.png";
     const [unreadCount, setUnreadCount] = useState(0);
 
     useEffect(() => {
@@ -86,9 +90,9 @@ export const AdminSidebar = ({ className = "" }: AdminSidebarProps) => {
             <div className="p-8 pb-4">
                 <Link to="/admin" className="flex items-center gap-3">
                     <img
-                        src="/logo.png"
+                        src={logoSrc}
                         alt="Lorean Logo"
-                        className="h-6 w-auto object-contain dark:invert"
+                        className="h-5 w-auto object-contain"
                     />
                     <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground mt-1">Portal</span>
                 </Link>

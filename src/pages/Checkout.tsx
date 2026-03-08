@@ -15,10 +15,37 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import { ordersService, settingsService, discountsService, notificationService } from "@/services/supabase";
+import {
+    ordersService,
+    settingsService,
+    discountsService,
+    taxService
+} from "@/services/supabase";
 import { supabase } from "@/integrations/supabase/client";
 import { useCart } from "@/context/CartContext";
 import { emailService } from "@/services/email";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+
+const COUNTRIES = [
+    { code: "PK", name: "Pakistan" },
+    { code: "US", name: "United States" },
+    { code: "GB", name: "United Kingdom" },
+    { code: "CA", name: "Canada" },
+    { code: "AU", name: "Australia" },
+    { code: "DE", name: "Germany" },
+    { code: "FR", name: "France" },
+    { code: "IN", name: "India" },
+    { code: "JP", name: "Japan" },
+    { code: "CN", name: "China" },
+    { code: "BR", name: "Brazil" },
+    { code: "GLOBAL", name: "Global" }
+];
 
 const Checkout = () => {
     const navigate = useNavigate();
@@ -35,6 +62,8 @@ const Checkout = () => {
     const [shippingRates, setShippingRates] = useState({ flat_rate: 15, threshold: 150 });
     const [appliedDiscount, setAppliedDiscount] = useState<any>(null);
     const [isApplyingPromo, setIsApplyingPromo] = useState(false);
+    const [taxData, setTaxData] = useState({ amount: 0, name: "Tax", breakdown: [] });
+    const [isCalculatingTax, setIsCalculatingTax] = useState(false);
 
     // Form states
     const [formData, setFormData] = useState({
@@ -45,6 +74,7 @@ const Checkout = () => {
         city: "",
         state: "",
         postalCode: "",
+        country: "PK", // Default to Pakistan or from profile
         receiverName: "",
         receiverPhone: "",
         nearestFamousPlace: ""
@@ -55,7 +85,27 @@ const Checkout = () => {
             try {
                 const { data: { user } } = await supabase.auth.getUser();
                 if (user) {
-                    setFormData(prev => ({ ...prev, email: user.email || "" }));
+                    const { profilesService } = await import("@/services/supabase");
+                    const profile = await profilesService.getById(user.id);
+
+                    if (profile) {
+                        const names = (profile.full_name || "").split(" ");
+                        setFormData(prev => ({
+                            ...prev,
+                            email: user.email || "",
+                            firstName: names[0] || "",
+                            lastName: names.slice(1).join(" ") || "",
+                            address: profile.address || "",
+                            city: profile.city || "",
+                            state: profile.state || "",
+                            postalCode: profile.postal_code || "",
+                            country: profile.country || "PK",
+                            receiverName: profile.receiver_name || profile.full_name || "",
+                            receiverPhone: profile.receiver_phone || ""
+                        }));
+                    } else {
+                        setFormData(prev => ({ ...prev, email: user.email || "" }));
+                    }
                 }
 
                 const rates = await settingsService.getShipping();
@@ -73,7 +123,35 @@ const Checkout = () => {
     }, []);
 
     const shipping = useMemo(() => (subtotal > shippingRates.threshold ? 0 : shippingRates.flat_rate), [subtotal, shippingRates]);
-    const tax = useMemo(() => subtotal * 0.08, [subtotal]);
+
+    useEffect(() => {
+        const calculateTaxes = async () => {
+            if (subtotal <= 0) {
+                setTaxData({ amount: 0, name: "Tax", breakdown: [] });
+                return;
+            }
+
+            setIsCalculatingTax(true);
+            try {
+                const result = await taxService.calculateTax(subtotal, formData.country);
+                setTaxData({
+                    amount: result.taxAmount,
+                    name: result.taxName,
+                    breakdown: result.breakdown
+                });
+            } catch (error) {
+                console.error("Tax calculation error:", error);
+                // Fallback to 0 if tax calculation fails
+                setTaxData({ amount: 0, name: "Tax", breakdown: [] });
+            } finally {
+                setIsCalculatingTax(false);
+            }
+        };
+
+        calculateTaxes();
+    }, [subtotal, formData.country]);
+
+    const tax = taxData.amount;
 
     const discountAmount = useMemo(() => {
         if (!appliedDiscount) return 0;
@@ -151,9 +229,11 @@ const Checkout = () => {
                 subtotal_amount: subtotal,
                 shipping_amount: shipping,
                 tax_amount: tax,
+                tax_breakdown: taxData.breakdown,
                 discount_amount: discountAmount,
                 discount_code: appliedDiscount?.code || null,
                 total_amount: total,
+                country: formData.country,
                 status: 'pending', // All orders start as pending for manifest verification
                 payment_method: paymentMethod,
                 items: cartItems.map(item => ({
@@ -337,6 +417,33 @@ const Checkout = () => {
                                                 />
                                             </div>
                                         </div>
+
+                                        <div className="grid grid-cols-2 gap-4 mb-4">
+                                            <div className="space-y-1.5">
+                                                <Label className="text-[9px] font-black uppercase tracking-widest ml-1">Country</Label>
+                                                <Select
+                                                    value={formData.country}
+                                                    onValueChange={value => setFormData({ ...formData, country: value })}
+                                                >
+                                                    <SelectTrigger className="rounded-xl h-11 bg-muted/30 border-none px-5 focus:ring-0">
+                                                        <SelectValue placeholder="Select Country" />
+                                                    </SelectTrigger>
+                                                    <SelectContent className="rounded-2xl border-border/10">
+                                                        {COUNTRIES.map(country => (
+                                                            <SelectItem key={country.code} value={country.code} className="rounded-xl">
+                                                                {country.name}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            <div className="space-y-1.5 text-transparent select-none">
+                                                {/* Spacer for alignment */}
+                                                <Label className="text-[9px] font-black uppercase tracking-widest ml-1">Placeholder</Label>
+                                                <div className="h-11"></div>
+                                            </div>
+                                        </div>
+
                                         <div className="grid grid-cols-3 gap-4">
                                             <div className="space-y-1.5">
                                                 <Label className="text-[9px] font-black uppercase tracking-widest ml-1">City</Label>
@@ -483,8 +590,14 @@ const Checkout = () => {
                                         <span className={shipping === 0 ? "text-primary font-bold" : "text-foreground"}>{shipping === 0 ? "Complimentary" : `Rs. ${shipping.toFixed(0)}`}</span>
                                     </div>
                                     <div className="flex justify-between text-muted-foreground font-medium text-xs">
-                                        <span>Tax (8%)</span>
-                                        <span className="text-foreground">Rs. {tax.toFixed(0)}</span>
+                                        <span>{taxData.name || "Tax"}</span>
+                                        <span className="text-foreground">
+                                            {isCalculatingTax ? (
+                                                <Loader2 className="w-3 h-3 animate-spin border-none" />
+                                            ) : (
+                                                `Rs. ${tax.toFixed(0)}`
+                                            )}
+                                        </span>
                                     </div>
                                     {isPromoApplied && appliedDiscount && (
                                         <div className="flex justify-between text-green-600 font-black uppercase text-[9px] tracking-widest">

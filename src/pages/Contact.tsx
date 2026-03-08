@@ -7,8 +7,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Mail, Phone, MapPin, MessageSquare, Loader2, CheckCircle2 } from "lucide-react";
 import { useState } from "react";
 import { emailService } from "@/services/email";
-import { contactsService } from "@/services/supabase";
+import { contactsService, settingsService } from "@/services/supabase";
 import { useToast } from "@/components/ui/use-toast";
+import { Instagram, Facebook, Twitter, Youtube } from "lucide-react";
+import { useEffect } from "react";
+
+import { checkRateLimit, getRateLimitRemaining } from "@/utils/rateLimit";
 
 const Contact = () => {
     const { toast } = useToast();
@@ -21,8 +25,36 @@ const Contact = () => {
         message: ""
     });
 
+    const [socialLinks, setSocialLinks] = useState<any>(null);
+
+    useEffect(() => {
+        const fetchSocials = async () => {
+            try {
+                const configs = await settingsService.getAllConfigs();
+                if (configs?.marketing?.social_links) {
+                    setSocialLinks(configs.marketing.social_links);
+                }
+            } catch (err) {
+                console.error("Social links fetch failed", err);
+            }
+        };
+        fetchSocials();
+    }, []);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Anti-Spam Rate Limit: 1 message per 60 seconds
+        if (!checkRateLimit(`contact_${formData.email}`, 60000)) {
+            const remaining = getRateLimitRemaining(`contact_${formData.email}`, 60000);
+            toast({
+                variant: "destructive",
+                title: "Rate Limit Exceeded",
+                description: `The botanical spirits require a moment of peace. Please wait ${remaining} seconds before sending another message.`
+            });
+            return;
+        }
+
         setSubmitting(true);
 
         try {
@@ -97,16 +129,43 @@ const Contact = () => {
                                     <p className="text-muted-foreground">Mon - Fri, 9am - 6pm</p>
                                 </div>
                             </div>
-                            {/* <div className="flex gap-6">
-                                <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center shrink-0">
-                                    <MapPin className="w-6 h-6 text-primary" />
-                                </div>
-                                <div>
-                                    <h3 className="text-xl font-medium mb-1">Visit Us</h3>
-                                    <p className="text-muted-foreground">12 bis Place Royale</p>
-                                    <p className="text-muted-foreground">75001 Paris, France</p>
-                                </div>
-                            </div> */}
+                            {/* Social Links */}
+                            {socialLinks && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.4 }}
+                                    className="pt-8 border-t border-border/10"
+                                >
+                                    <h3 className="text-sm font-black uppercase tracking-widest text-primary mb-6">Find us on</h3>
+                                    <div className="flex flex-wrap gap-4">
+                                        {socialLinks.instagram && (
+                                            <a href={socialLinks.instagram} target="_blank" rel="noopener noreferrer"
+                                                className="w-12 h-12 bg-card border border-border/50 rounded-2xl flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary transition-all shadow-sm">
+                                                <Instagram className="w-5 h-5" />
+                                            </a>
+                                        )}
+                                        {socialLinks.facebook && (
+                                            <a href={socialLinks.facebook} target="_blank" rel="noopener noreferrer"
+                                                className="w-12 h-12 bg-card border border-border/50 rounded-2xl flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary transition-all shadow-sm">
+                                                <Facebook className="w-5 h-5" />
+                                            </a>
+                                        )}
+                                        {socialLinks.twitter && (
+                                            <a href={socialLinks.twitter} target="_blank" rel="noopener noreferrer"
+                                                className="w-12 h-12 bg-card border border-border/50 rounded-2xl flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary transition-all shadow-sm">
+                                                <Twitter className="w-5 h-5" />
+                                            </a>
+                                        )}
+                                        {socialLinks.youtube && (
+                                            <a href={socialLinks.youtube} target="_blank" rel="noopener noreferrer"
+                                                className="w-12 h-12 bg-card border border-border/50 rounded-2xl flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary transition-all shadow-sm">
+                                                <Youtube className="w-5 h-5" />
+                                            </a>
+                                        )}
+                                    </div>
+                                </motion.div>
+                            )}
                         </motion.div>
 
                         {/* Form */}

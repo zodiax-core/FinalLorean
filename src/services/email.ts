@@ -24,13 +24,13 @@ export const emailService = {
 
     async sendEmail(params: any, type: 'broadcast' | 'order_confirmation' | 'contact' = 'broadcast') {
         const config = await this.getConfig();
-        const apiKey = config?.public_key || 're_R7J4Krco_LVt9uQQEAAueihF7NYiRGYkS';
+        const apiKey = config?.public_key;
 
         if (!apiKey || apiKey === 're_xxxxxxxxx') {
             throw new Error('Resend API key is missing. Please set it in Admin Settings.');
         }
 
-        const logoUrl = params.logo_url || 'https://lorean.online/logo.png';
+        const logoUrl = params.logo_url || 'https://lorean.online/favicon.png';
         const heroUrl = params.hero_url || params.event_image || 'https://images.unsplash.com/photo-1557177324-56c5421653ce?q=80&w=1200&auto=format&fit=crop';
         let html = '';
 
@@ -277,7 +277,11 @@ ${itemsHtml}
 
     async addToAudience(email: string, firstName?: string, lastName?: string) {
         const config = await this.getConfig();
-        const apiKey = config?.public_key || 're_R7J4Krco_LVt9uQQEAAueihF7NYiRGYkS';
+        const apiKey = config?.public_key;
+
+        if (!apiKey) {
+            throw new Error('Resend API key is missing. Contact support.');
+        }
 
         // Use default General Audience ID discovered or allow override
         const audienceId = 'e18399b4-4d3d-4b09-a26f-c768d5f678ec';

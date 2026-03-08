@@ -23,6 +23,9 @@ deploys/.env.production
 *firebase-adminsdk*.json
 *service-account*.json
 service-account.json
+*.txt
+*.local
+.env*
 
 # Logs
 logs

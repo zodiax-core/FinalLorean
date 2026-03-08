@@ -7,11 +7,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+import { useTheme } from "@/components/theme-provider";
 
 const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
+  const { theme } = useTheme();
+  const isDark = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches) || document.documentElement.classList.contains("dark");
+  const logoSrc = isDark ? "/logo-dark.png" : "/logo.png";
 
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -105,7 +109,7 @@ const Login = () => {
               className="flex items-center gap-2"
               whileHover={{ scale: 1.05 }}
             >
-              <img src="/logo.png" alt="Lorean Logo" className="h-10 w-auto" />
+              <img src={logoSrc} alt="Lorean Logo" className="h-8 w-auto" />
               <h1 className="text-3xl font-serif uppercase tracking-tighter"></h1>
             </motion.div>
           </Link>

@@ -20,6 +20,8 @@ import { productsService, categoriesService, Product, storageService } from "@/s
 import { useProducts } from "@/context/ProductsContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
+import { Progress } from "@/components/ui/progress";
+import { useRef } from "react";
 
 const BADGES = [
     "Best Seller", "New Arrival", "Limited Edition", "Staff Pick", "Customer Favorite", "Organic"
@@ -38,6 +40,10 @@ export default function ProductForm() {
     const [categoriesList, setCategoriesList] = useState<string[]>([]);
     const [isAddingNewCategory, setIsAddingNewCategory] = useState(false);
     const [newCategoryName, setNewCategoryName] = useState("");
+
+    const [uploadProgress, setUploadProgress] = useState<Record<number, number>>({});
+    const [videoPreviews, setVideoPreviews] = useState<Record<number, string>>({});
+    const videoRefs = useRef<Record<number, HTMLVideoElement | null>>({});
 
     const [formData, setFormData] = useState<Partial<Product>>({
         name: "",
@@ -182,6 +188,31 @@ export default function ProductForm() {
         const newList = [...((formData[field] as any[]) || [])];
         newList[index] = { ...newList[index], [subfield]: value };
         setFormData(prev => ({ ...prev, [field]: newList }));
+    };
+
+    const handleCaptureThumbnail = async (index: number) => {
+        const video = videoRefs.current[index];
+        if (!video) return;
+
+        try {
+            const canvas = document.createElement("canvas");
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext("2d");
+            ctx?.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            canvas.toBlob(async (blob) => {
+                if (blob) {
+                    const file = new File([blob], `thumb-${Date.now()}.jpg`, { type: "image/jpeg" });
+                    const path = `products/${formData.name || 'unnamed'}/thumbnails/${Date.now()}.jpg`;
+                    const publicUrl = await storageService.uploadImage(file, path);
+                    updateNestedField('video_proofs', index, 'thumbnail', publicUrl);
+                    toast({ title: "Thumbnail Captured", description: "Image has been extracted from the timeline." });
+                }
+            }, "image/jpeg", 0.8);
+        } catch (err) {
+            toast({ variant: "destructive", title: "Capture Failed" });
+        }
     };
 
     if (loading) {
@@ -462,20 +493,39 @@ export default function ProductForm() {
                                             <div className="flex-1 space-y-4">
                                                 {/* URL or Uploaded Video Preview */}
                                                 <div className="aspect-video rounded-xl bg-muted/30 overflow-hidden relative group/v">
-                                                    {proof.url ? (
-                                                        proof.url.includes('supabase.co') || proof.url.endsWith('.mp4') ? (
-                                                            <video src={proof.url} className="w-full h-full object-cover" />
+                                                    {videoPreviews[i] || proof.url ? (
+                                                        (videoPreviews[i] || proof.url || "").includes('supabase.co') || (videoPreviews[i] || proof.url || "").endsWith('.mp4') || videoPreviews[i] ? (
+                                                            <div className="relative w-full h-full">
+                                                                <video
+                                                                    ref={(el) => videoRefs.current[i] = el}
+                                                                    src={videoPreviews[i] || proof.url}
+                                                                    className="w-full h-full object-cover"
+                                                                    controls
+                                                                    crossOrigin="anonymous"
+                                                                />
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="secondary"
+                                                                    className="absolute bottom-4 right-4 h-8 px-3 rounded-full text-[8px] font-black uppercase tracking-widest bg-white/90 text-black hover:bg-white"
+                                                                    onClick={() => handleCaptureThumbnail(i)}
+                                                                >
+                                                                    Set as Thumbnail
+                                                                </Button>
+                                                            </div>
                                                         ) : (
                                                             <div className="w-full h-full flex items-center justify-center text-[10px] text-muted-foreground">
                                                                 External {proof.platform || 'Link'}
                                                             </div>
                                                         )
                                                     ) : (
-                                                        <div className="w-full h-full flex items-center justify-center text-[10px] text-muted-foreground">No Video Yet</div>
+                                                        <div className="w-full h-full flex items-center justify-center text-[10px] text-muted-foreground flex-col gap-2">
+                                                            <Video className="w-8 h-8 opacity-20" />
+                                                            <span>No Video Ritual</span>
+                                                        </div>
                                                     )}
 
                                                     {/* Upload Action */}
-                                                    <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/v:opacity-100 cursor-pointer transition-all">
+                                                    <label className="absolute top-4 right-4 w-10 h-10 bg-primary/80 hover:bg-primary flex items-center justify-center rounded-full cursor-pointer transition-all opacity-0 group-hover/v:opacity-100 shadow-xl">
                                                         <input
                                                             type="file"
                                                             className="hidden"
@@ -483,42 +533,103 @@ export default function ProductForm() {
                                                             onChange={async (e) => {
                                                                 const file = e.target.files?.[0];
                                                                 if (file) {
-                                                                    setLoading(true);
+                                                                    const localUrl = URL.createObjectURL(file);
+                                                                    setVideoPreviews(prev => ({ ...prev, [i]: localUrl }));
+                                                                    setUploadProgress(prev => ({ ...prev, [i]: 0 }));
                                                                     try {
                                                                         const path = `products/${formData.name || 'unnamed'}/${Date.now()}-${file.name}`;
-                                                                        const publicUrl = await storageService.uploadVideo(file, path);
+                                                                        const publicUrl = await (storageService as any).uploadVideo(file, path, (progress: number) => {
+                                                                            setUploadProgress(prev => ({ ...prev, [i]: progress }));
+                                                                        });
                                                                         updateNestedField('video_proofs', i, 'url', publicUrl);
                                                                         updateNestedField('video_proofs', i, 'platform', 'upload');
                                                                         toast({ title: "Video Manifested", description: "Ritual proof has been uploaded." });
                                                                     } catch (err: any) {
                                                                         toast({ variant: "destructive", title: "Ritual Failed", description: err.message });
                                                                     } finally {
-                                                                        setLoading(false);
+                                                                        setUploadProgress(prev => {
+                                                                            const next = { ...prev };
+                                                                            delete next[i];
+                                                                            return next;
+                                                                        });
                                                                     }
                                                                 }
                                                             }}
                                                         />
-                                                        <Upload className="w-6 h-6 text-white" />
+                                                        <Upload className="w-4 h-4 text-white" />
                                                     </label>
+
+                                                    {/* Progress Overlay */}
+                                                    {uploadProgress[i] !== undefined && (
+                                                        <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center p-8 backdrop-blur-sm">
+                                                            <Progress value={uploadProgress[i]} className="h-1 mb-4" />
+                                                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white animate-pulse">
+                                                                Uploading: {Math.round(uploadProgress[i])}%
+                                                            </p>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div className="space-y-4">
+                                                        <div className="space-y-2">
+                                                            <Label className="text-[8px] font-black uppercase tracking-widest opacity-60">Thumbnail Link / Upload</Label>
+                                                            <div className="flex gap-2">
+                                                                <Input
+                                                                    value={proof.thumbnail || ""}
+                                                                    onChange={(e) => updateNestedField('video_proofs', i, 'thumbnail', e.target.value)}
+                                                                    placeholder="JPG/PNG URL"
+                                                                    className="h-8 rounded-lg bg-background border-none text-[10px] font-mono flex-1"
+                                                                />
+                                                                <label className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center cursor-pointer hover:bg-primary/20 transition-colors">
+                                                                    <input type="file" className="hidden" accept="image/*" onChange={async (e) => {
+                                                                        const file = e.target.files?.[0];
+                                                                        if (file) {
+                                                                            const path = `products/${formData.name || 'unnamed'}/thumbnails/${Date.now()}-${file.name}`;
+                                                                            const url = await storageService.uploadImage(file, path);
+                                                                            updateNestedField('video_proofs', i, 'thumbnail', url);
+                                                                        }
+                                                                    }} />
+                                                                    <ImageIcon className="w-3 h-3 text-primary" />
+                                                                </label>
+                                                            </div>
+                                                        </div>
+                                                        {proof.thumbnail && (
+                                                            <div className="aspect-video w-24 rounded-lg bg-muted overflow-hidden border border-border/10">
+                                                                <img src={proof.thumbnail} className="w-full h-full object-cover" alt="Preview" />
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div className="space-y-4">
+                                                        <div className="space-y-2">
+                                                            <Label className="text-[8px] font-black uppercase tracking-widest opacity-60">Icon Link (Platform)</Label>
+                                                            <Input
+                                                                value={proof.icon_img || ""}
+                                                                onChange={(e) => updateNestedField('video_proofs', i, 'icon_img', e.target.value)}
+                                                                placeholder="Icon URL (TikTok/IG)"
+                                                                className="h-8 rounded-lg bg-background border-none text-[10px] font-mono"
+                                                            />
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            <User className="w-3 h-3 text-primary" />
+                                                            <Input
+                                                                value={proof.username || ""}
+                                                                onChange={(e) => updateNestedField('video_proofs', i, 'username', e.target.value)}
+                                                                placeholder="Patron's Name"
+                                                                className="h-8 rounded-lg bg-background border-none text-[10px] font-black uppercase tracking-widest flex-1"
+                                                            />
+                                                        </div>
+                                                    </div>
                                                 </div>
 
                                                 <div className="space-y-3">
-                                                    <div className="flex items-center gap-2">
-                                                        <User className="w-3 h-3 text-primary" />
-                                                        <Input
-                                                            value={proof.username || ""}
-                                                            onChange={(e) => updateNestedField('video_proofs', i, 'username', e.target.value)}
-                                                            placeholder="Patron's Name (e.g. @zodiax)"
-                                                            className="h-8 rounded-lg bg-background border-none text-[10px] font-black uppercase tracking-widest"
-                                                        />
-                                                    </div>
                                                     <div className="flex items-center gap-2">
                                                         <Globe className="w-3 h-3 text-primary" />
                                                         <Input
                                                             value={proof.redirection_link || ""}
                                                             onChange={(e) => updateNestedField('video_proofs', i, 'redirection_link', e.target.value)}
                                                             placeholder="Redirection Link (TikTok/IG Source)"
-                                                            className="h-8 rounded-lg bg-background border-none text-[10px] font-black uppercase tracking-widest"
+                                                            className="h-8 rounded-lg bg-background border-none text-[10px] font-black uppercase tracking-widest flex-1"
                                                         />
                                                     </div>
                                                     <div className="flex items-center gap-2">
@@ -533,7 +644,7 @@ export default function ProductForm() {
                                                                 else if (url.includes('youtube.com')) updateNestedField('video_proofs', i, 'platform', 'youtube');
                                                             }}
                                                             placeholder="Custom Video URL (Optional)"
-                                                            className="h-8 rounded-lg bg-background border-none text-[10px] font-mono"
+                                                            className="h-8 rounded-lg bg-background border-none text-[10px] font-mono flex-1"
                                                         />
                                                     </div>
                                                 </div>

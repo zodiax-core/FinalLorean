@@ -1,8 +1,12 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { Instagram, Twitter, Facebook, Youtube } from "lucide-react";
+import { useTheme } from "@/components/theme-provider";
 
 const Footer = () => {
+  const { theme } = useTheme();
+  const isDark = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches) || document.documentElement.classList.contains("dark");
+  const logoSrc = isDark ? "/logo-dark.png" : "/logo.png";
   const footerLinks = {
     shop: [
       { name: "All Products", path: "/shop" },
@@ -40,9 +44,9 @@ const Footer = () => {
           <div className="lg:col-span-2 space-y-8">
             <Link to="/" className="inline-block group">
               <img
-                src="/logo.png"
+                src={logoSrc}
                 alt="Lorean Logo"
-                className="h-12 md:h-16 w-auto object-contain transition-transform duration-700 group-hover:scale-105"
+                className="h-6 md:h-8 w-auto object-contain transition-transform duration-700 group-hover:scale-105"
               />
             </Link>
             <p className="text-muted-foreground/80 text-lg md:text-base leading-relaxed max-w-sm font-light">

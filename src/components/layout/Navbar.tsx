@@ -20,9 +20,13 @@ import CartDrawer from "@/components/shop/CartDrawer";
 import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
 import { useAuth } from "@/context/AuthContext";
+import { useTheme } from "@/components/theme-provider";
 
 const Navbar = () => {
   const { user, isAdmin, signOut } = useAuth();
+  const { theme } = useTheme();
+  const isDark = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches) || document.documentElement.classList.contains("dark");
+  const logoSrc = isDark ? "/logo-dark.png" : "/logo.png";
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -64,9 +68,9 @@ const Navbar = () => {
             {/* Logo */}
             <Link to="/" className="flex items-center shrink-0">
               <motion.img
-                src="/logo.png"
+                src={logoSrc}
                 alt="Lorean Logo"
-                className="h-9 md:h-14 w-auto object-contain"
+                className="h-5 md:h-6 w-auto object-contain"
                 whileHover={{ scale: 1.05 }}
                 transition={{ type: "spring", stiffness: 400, damping: 10 }}
               />
@@ -177,8 +181,8 @@ const Navbar = () => {
                         size="sm"
                         className="rounded-full gap-3 text-foreground hover:bg-primary/5 px-4 pr-2 group"
                       >
-                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all">
-                          <User className="w-4 h-4" />
+                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all overflow-hidden p-1.5">
+                          <img src="/favicon.png" className="w-full h-full object-contain" alt="Patron" />
                         </div>
                         <span className="text-[10px] font-black uppercase tracking-widest max-w-[80px] truncate">
                           {user.user_metadata?.full_name?.split(' ')[0] || "Patron"}
@@ -240,7 +244,7 @@ const Navbar = () => {
             className="fixed inset-0 z-50 bg-background/95 backdrop-blur-lg md:hidden flex flex-col"
           >
             <div className="p-8 flex justify-between items-center border-b border-border/50">
-              <img src="/logo.png" alt="Lorean Logo" className="h-10 w-auto" />
+              <img src={logoSrc} alt="Lorean Logo" className="h-8 w-auto" />
               <Button variant="ghost" size="icon" onClick={() => setIsMobileMenuOpen(false)}>
                 <X className="w-6 h-6" />
               </Button>

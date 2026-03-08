@@ -3,70 +3,60 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import * as jose from 'https://deno.land/x/jose@v4.14.4/index.ts';
 
+/**
+ * Normalizes a private key string for use with jose.
+ */
 function normalizePrivateKey(raw: string | undefined): string {
     if (!raw) return '';
 
-    // Step 1: Strip surrounding quotes (single or double)
+    // 1. Remove quotes
     let key = raw.trim().replace(/^["']|["']$/g, '');
 
-    // Step 2: Replace ALL variants of encoded newlines with real newlines
-    // Handles: literal \n text, double-escaped \\n, URL-encoded %0A
+    // 2. Fix escaped newlines
     key = key.replace(/\\n/g, '\n').replace(/%0A/gi, '\n');
 
-    // Step 3: Extract just the base64 body with a proper CAPTURE GROUP
-    // (the capture group parentheses are critical — without them match[1] is undefined)
-    const match = key.match(/-----BEGIN PRIVATE KEY-----\s*([\s\S]+?)\s*-----END PRIVATE KEY-----/);
-    if (!match || !match[1]) {
-        console.error('[FCM] Could not parse PEM structure from private key');
-        return key; // return as-is, let jose produce a clear error
+    // 3. Ensure PEM headers
+    if (!key.includes("-----BEGIN PRIVATE KEY-----")) {
+        // If it's just raw base64, wrap it
+        const rawBody = key.replace(/\s+/g, '');
+        const chunked = (rawBody.match(/.{1,64}/g) || []).join('\n');
+        return `-----BEGIN PRIVATE KEY-----\n${chunked}\n-----END PRIVATE KEY-----\n`;
     }
 
-    // Step 4: Strip ALL whitespace from the raw base64 body
-    const rawBody = match[1].replace(/\s+/g, '');
+    // 4. Clean PEM structure
+    const match = key.match(/-----BEGIN PRIVATE KEY-----\s*([\s\S]+?)\s*-----END PRIVATE KEY-----/);
+    if (match && match[1]) {
+        const rawBody = match[1].replace(/\s+/g, '');
+        const chunked = (rawBody.match(/.{1,64}/g) || []).join('\n');
+        return `-----BEGIN PRIVATE KEY-----\n${chunked}\n-----END PRIVATE KEY-----\n`;
+    }
 
-    // Step 5: Rechunk into standard 64-char lines and rebuild a proper PEM string
-    const chunked = (rawBody.match(/.{1,64}/g) || []).join('\n');
-    return `-----BEGIN PRIVATE KEY-----\n${chunked}\n-----END PRIVATE KEY-----\n`;
+    return key;
 }
-
-const serviceAccount = {
-    "type": "service_account",
-    "project_id": Deno.env.get("FIREBASE_PROJECT_ID"),
-    "private_key_id": Deno.env.get("FIREBASE_PRIVATE_KEY_ID"),
-    "private_key": normalizePrivateKey(Deno.env.get("FIREBASE_PRIVATE_KEY")),
-    "client_email": Deno.env.get("FIREBASE_CLIENT_EMAIL"),
-    "client_id": Deno.env.get("FIREBASE_CLIENT_ID"),
-    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-    "token_uri": "https://oauth2.googleapis.com/token",
-    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-    "client_x509_cert_url": `https://www.googleapis.com/robot/v1/metadata/x509/${encodeURIComponent(Deno.env.get("FIREBASE_CLIENT_EMAIL") || "")}`,
-    "universe_domain": "googleapis.com"
-};
 
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-async function getAccessToken() {
+async function getAccessToken(sa: any) {
     try {
-        console.log("[FCM] Preparing JWT for:", serviceAccount.client_email);
-        const privateKey = serviceAccount.private_key;
-        if (typeof privateKey !== 'string' || !privateKey) {
-            throw new Error("Private key is missing from service account");
-        }
+        console.log("[FCM] Obtaining access token...");
+        const privateKey = normalizePrivateKey(sa.private_key);
+
+        if (!privateKey) throw new Error("Private key is missing. Check SUPABASE SECRETS for FIREBASE_PRIVATE_KEY.");
 
         const jwt = await new jose.SignJWT({
             scope: 'https://www.googleapis.com/auth/firebase.messaging'
         })
             .setProtectedHeader({ alg: 'RS256' })
-            .setIssuer(serviceAccount.client_email)
-            .setAudience(serviceAccount.token_uri)
+            .setIssuer(sa.client_email)
+            .setAudience(sa.token_uri)
             .setExpirationTime('1h')
             .setIssuedAt()
             .sign(await jose.importPKCS8(privateKey, 'RS256'));
 
-        const response = await fetch(serviceAccount.token_uri, {
+        const response = await fetch(sa.token_uri, {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: new URLSearchParams({
@@ -77,246 +67,189 @@ async function getAccessToken() {
 
         const data = await response.json();
         if (!response.ok) {
-            console.error("[FCM] Google Auth Error:", JSON.stringify(data));
-            throw new Error(data.error_description || data.error || "Unknown Auth Error");
+            console.error("[FCM] Google Auth Failed:", data);
+            throw new Error(data.error_description || data.error || "Token fetch failed");
         }
-
-        console.log("[FCM] Access token obtained.");
         return data.access_token;
-    } catch (error: any) {
-        console.error("[FCM] Error generating access token:", error.message || error);
-        throw new Error(`Auth Error: ${error.message || error}`);
+    } catch (err: any) {
+        console.error("[FCM] Auth Error:", err.message);
+        throw err;
     }
 }
 
-async function sendToToken(
-    accessToken: string,
-    token: string,
-    payload: any,
-    supabase: any
-): Promise<{ token: string; success: boolean; error?: string }> {
-    try {
-        const fcmUrl = `https://fcm.googleapis.com/v1/projects/${serviceAccount.project_id}/messages:send`;
-        const clickUrl = payload.url?.startsWith('http')
-            ? payload.url
-            : `https://lorean.online${payload.url || '/dashboard'}`;
+async function sendToToken(accessToken: string, token: string, payload: any, projectId: string) {
+    const fcmUrl = `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`;
 
-        const title = payload.title || "Lorean Alchemical Update";
-        const body = payload.message || "New activity on your store.";
+    // Determine click action URL
+    const clickUrl = payload.url?.startsWith('http')
+        ? payload.url
+        : `https://lorean.online${payload.url || '/dashboard'}`;
 
-        const messageBody = {
-            message: {
-                token,
+    const title = payload.title || "Lorean Notification";
+    const body = payload.message || "New activity on your store.";
+
+    const message = {
+        message: {
+            token,
+            notification: { title, body },
+            android: {
+                priority: "high",
+                notification: { priority: "high", visibility: "public" }
+            },
+            webpush: {
+                headers: {
+                    Urgency: "high"
+                },
                 notification: {
                     title,
-                    body
+                    body,
+                    icon: "https://lorean.online/favicon.png",
+                    badge: "https://lorean.online/favicon.png",
+                    click_action: clickUrl
                 },
-                android: {
-                    priority: "high",
-                    notification: {
-                        priority: "high",
-                        visibility: "public"
-                    }
-                },
-                webpush: {
-                    headers: {
-                        Urgency: "high"
-                    },
-                    notification: {
-                        title,
-                        body,
-                        icon: "https://lorean.online/favicon.png",
-                        badge: "https://lorean.online/favicon.png",
-                        tag: "lorean-alert",
-                        renotify: true,
-                        requireInteraction: true,
-                        click_action: clickUrl
-                    },
-                    fcm_options: { link: clickUrl }
-                },
-                data: {
-                    title,
-                    message: body,
-                    url: clickUrl,
-                    ...(payload.data ? Object.fromEntries(
-                        Object.entries(payload.data)
-                            .filter(([, v]) => v != null)
-                            .map(([k, v]) => [k, String(v)])
-                    ) : {})
-                }
-            }
-        };
-
-        const response = await fetch(fcmUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${accessToken}`
+                fcm_options: { link: clickUrl }
             },
-            body: JSON.stringify(messageBody)
-        });
-
-        const res = await response.json();
-        const shortToken = token.substring(0, 10) + '...';
-
-        if (!response.ok) {
-            const errCode = res?.error?.details?.[0]?.errorCode || res?.error?.status || 'UNKNOWN';
-            console.warn(`[FCM] Error for ${shortToken}: ${errCode}`);
-
-            await supabase.from('debug_logs').insert({
-                message: `[FCM] Send error to ${shortToken}: ${errCode}`,
-                payload: { error: res.error, token: token.substring(0, 20) }
-            });
-
-            return { token: shortToken, success: false, error: errCode };
+            data: {
+                title,
+                message: body,
+                url: clickUrl,
+                ...(payload.data ? Object.fromEntries(
+                    Object.entries(payload.data)
+                        .filter(([_, v]) => v != null)
+                        .map(([k, v]) => [k, String(v)])
+                ) : {})
+            }
         }
+    };
 
-        await supabase.from('debug_logs').insert({
-            message: `[FCM] Send success to ${shortToken}`,
-            payload: { res, token: token.substring(0, 20) }
-        });
+    const res = await fetch(fcmUrl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`
+        },
+        body: JSON.stringify(message)
+    });
 
-        return { token: shortToken, success: true };
-    } catch (e: any) {
-        console.error(`[FCM] Exception for ${token.substring(0, 10)}...:`, e.message);
-        return { token: token.substring(0, 10) + '...', success: false, error: e.message };
-    }
+    const data = await res.json();
+    return { success: res.ok, data, token };
 }
 
 serve(async (req) => {
-    if (req.method === 'OPTIONS') {
-        return new Response('ok', { headers: corsHeaders });
-    }
+    // Handle CORS
+    if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
     try {
-        const body = await req.json();
-        const type: string = body.type || 'system';
+        // 1. Get body safely
+        let body;
+        try {
+            body = await req.json();
+        } catch (e) {
+            console.error("[FCM] Invalid JSON body");
+            return new Response(JSON.stringify({ error: "Invalid JSON" }), { status: 400, headers: corsHeaders });
+        }
+
+        const type = body.type || 'system';
         const payload = body.payload || body.notification;
 
-        console.log(`[FCM] Received: type=${type}`);
+        console.log(`[FCM] New request: type=${type}`);
 
-        if (!payload) throw new Error("Missing notification payload");
-
-        // Supabase client (service role - bypasses RLS)
-        const supabaseUrl = Deno.env.get("SUPABASE_URL");
-        const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-        if (!supabaseUrl || !supabaseServiceKey) {
-            throw new Error("Missing Supabase environment variables");
+        if (!payload) {
+            console.warn("[FCM] Missing payload");
+            return new Response(JSON.stringify({ error: "Missing payload" }), { status: 400, headers: corsHeaders });
         }
-        const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-        // Collect FCM tokens
+        // 2. Environment Setup (with hardcoded fallbacks to lorean-4b059 if secrets are missing)
+        const FIREBASE_PROJECT_ID = Deno.env.get("FIREBASE_PROJECT_ID") || "lorean-4b059";
+        const FIREBASE_CLIENT_EMAIL = Deno.env.get("FIREBASE_CLIENT_EMAIL") || "firebase-adminsdk-fbsvc@lorean-4b059.iam.gserviceaccount.com";
+        const FIREBASE_PRIVATE_KEY = Deno.env.get("FIREBASE_PRIVATE_KEY");
+
+        const sa = {
+            project_id: FIREBASE_PROJECT_ID,
+            client_email: FIREBASE_CLIENT_EMAIL,
+            private_key: FIREBASE_PRIVATE_KEY,
+            token_uri: "https://oauth2.googleapis.com/token"
+        };
+
+        const supabase = createClient(
+            Deno.env.get("SUPABASE_URL") || "",
+            Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""
+        );
+
+        // 3. Resolve Tokens
         const tokenSet = new Set<string>();
 
+        // If type is for admins, fetch admin tokens
         const ADMIN_TYPES = ['new_order', 'order', 'system', 'contact', 'refund', 'inventory', 'review', 'vendor'];
-        const isCustomerOrderUpdate = type === 'order'
-            && payload?.url === '/dashboard'
-            && payload?.user_id;
+        const isCustomerSpecific = type === 'order' && payload.url === '/dashboard' && payload.user_id;
 
-        if (ADMIN_TYPES.includes(type) && !isCustomerOrderUpdate) {
-            const { data: adminProfiles, error: profilesError } = await supabase
+        if (ADMIN_TYPES.includes(type) && !isCustomerSpecific) {
+            const { data: admins } = await supabase
                 .from('profiles')
                 .select('id, fcm_token')
                 .in('role', ['admin', 'super_admin']);
 
-            if (profilesError) {
-                console.error('[FCM] Error fetching admin profiles:', profilesError);
-            } else if (adminProfiles && adminProfiles.length > 0) {
-                const adminIds = adminProfiles.map((p: any) => p.id);
+            if (admins) {
+                const adminIds = admins.map(a => a.id);
+                admins.forEach(a => { if (a.fcm_token) tokenSet.add(a.fcm_token); });
 
-                // Legacy tokens from profiles
-                for (const p of adminProfiles) {
-                    if (p.fcm_token) tokenSet.add(p.fcm_token);
-                }
-
-                // Multi-device tokens from admin_push_tokens
-                const { data: pushTokenRows, error: pushTokenError } = await supabase
+                const { data: devices } = await supabase
                     .from('admin_push_tokens')
                     .select('fcm_token')
                     .in('user_id', adminIds);
 
-                if (pushTokenError) {
-                    console.error('[FCM] Error fetching admin_push_tokens:', pushTokenError);
-                } else if (pushTokenRows) {
-                    for (const row of pushTokenRows) {
-                        if (row.fcm_token) tokenSet.add(row.fcm_token);
-                    }
-                    console.log(`[FCM] admin_push_tokens contributed ${pushTokenRows.length} rows`);
+                if (devices) {
+                    devices.forEach(d => { if (d.fcm_token) tokenSet.add(d.fcm_token); });
                 }
             }
-
-            console.log(`[FCM] Admin tokens after dedup: ${tokenSet.size}`);
         }
 
-        // User-specific tokens
-        if (payload?.user_id) {
-            const { data: userPushRows } = await supabase
+        // Add user-specific token if provided
+        if (payload.user_id) {
+            const { data: userTokens } = await supabase
                 .from('admin_push_tokens')
                 .select('fcm_token')
                 .eq('user_id', payload.user_id);
 
-            if (userPushRows && userPushRows.length > 0) {
-                for (const row of userPushRows) {
-                    if (row.fcm_token) tokenSet.add(row.fcm_token);
-                }
+            if (userTokens && userTokens.length > 0) {
+                userTokens.forEach(t => { if (t.fcm_token) tokenSet.add(t.fcm_token); });
             } else {
-                const { data: profile } = await supabase
-                    .from('profiles')
-                    .select('fcm_token')
-                    .eq('id', payload.user_id)
-                    .maybeSingle();
+                const { data: profile } = await supabase.from('profiles').select('fcm_token').eq('id', payload.user_id).maybeSingle();
                 if (profile?.fcm_token) tokenSet.add(profile.fcm_token);
             }
         }
 
-        const tokens = Array.from(tokenSet).filter((t: any) => t && t.length > 20);
+        const tokens = Array.from(tokenSet).filter(t => t && t.length > 30);
+        console.log(`[FCM] Targets identified: ${tokens.length}`);
 
         if (tokens.length === 0) {
-            console.log("[FCM] No valid FCM tokens found. Skipping push.");
-            return new Response(
-                JSON.stringify({ message: "No targets found", success: true }),
-                { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-            );
+            console.warn("[FCM] No valid tokens found for this request");
+            return new Response(JSON.stringify({ success: true, message: "No targets" }), { headers: corsHeaders });
         }
 
-        console.log(`[FCM] Sending to ${tokens.length} unique device(s)...`);
+        // 4. Send
+        const accessToken = await getAccessToken(sa);
+        const results = await Promise.all(tokens.map(t => sendToToken(accessToken, t, payload, sa.project_id)));
 
-        const accessToken = await getAccessToken();
-
-        const results = await Promise.all(
-            tokens.map((token: string) => sendToToken(accessToken, token, payload, supabase))
-        );
-
-        // Clean up stale tokens
-        const STALE_ERRORS = ['UNREGISTERED', 'INVALID_ARGUMENT'];
-        const staleTokens: string[] = [];
-        for (let i = 0; i < results.length; i++) {
-            if (!results[i].success && results[i].error && STALE_ERRORS.some(e => results[i].error?.includes(e))) {
-                staleTokens.push(tokens[i] as string);
-            }
-        }
-
-        if (staleTokens.length > 0) {
-            console.log(`[FCM] Cleaning ${staleTokens.length} stale token(s)...`);
-            await Promise.all([
-                supabase.from('admin_push_tokens').delete().in('fcm_token', staleTokens),
-                supabase.from('profiles').update({ fcm_token: null }).in('fcm_token', staleTokens)
-            ]);
+        // 5. Cleanup Stale
+        const stale = results.filter(r => !r.success && (r.data?.error?.status === 'UNREGISTERED' || r.data?.error?.status === 'INVALID_ARGUMENT')).map(r => r.token);
+        if (stale.length > 0) {
+            console.log(`[FCM] Cleaning ${stale.length} stale token(s)...`);
+            await supabase.from('admin_push_tokens').delete().in('fcm_token', stale);
         }
 
         const successCount = results.filter(r => r.success).length;
-        console.log(`[FCM] Complete: ${successCount}/${tokens.length} sent.`);
+        console.log(`[FCM] Broadcast complete: ${successCount}/${tokens.length} successful`);
 
-        return new Response(
-            JSON.stringify({ success: true, sent: successCount, total: tokens.length, results }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({
+            success: true,
+            sent: successCount,
+            total: tokens.length,
+            details: results.map(r => ({ success: r.success, token: r.token.substring(0, 10) + "...", error: r.success ? null : r.data }))
+        }), { headers: corsHeaders });
 
     } catch (err: any) {
-        console.error("[FCM] Fatal:", err.message || err);
-        return new Response(
-            JSON.stringify({ error: err.message || "Internal Server Error" }),
-            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        console.error("[FCM] ERROR:", err.message);
+        return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: corsHeaders });
     }
 });

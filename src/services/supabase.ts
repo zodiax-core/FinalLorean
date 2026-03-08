@@ -27,7 +27,7 @@ export interface Product {
     vendor_id?: string;
     vessel_volume?: string;
     fake_sold_count?: number;
-    video_proofs?: { url: string, username: string, redirection_link: string, platform?: string }[];
+    video_proofs?: { url: string, username: string, redirection_link: string, icon_img?: string, thumbnail?: string, platform?: string }[];
     tags?: string[];
     slug?: string;
 }
@@ -189,11 +189,29 @@ export const productsService = {
             .select();
 
         if (error) throw error;
-        // If data is empty, it means no row was deleted (likely RLS or wrong ID)
         if (!data || data.length === 0) {
             throw new Error("Product not found or permission denied.");
         }
         return true;
+    },
+
+    async incrementStats(productId: number, newRating: number) {
+        // Fetch current values
+        const product = await this.getById(productId);
+        if (!product) return;
+
+        const currentReviews = Number(product.reviews || 0);
+        const currentRating = Number(product.rating || 5.0);
+
+        // Calculate new weighted average
+        const totalWeight = currentReviews + 1;
+        const totalRatingPoints = (currentRating * currentReviews) + newRating;
+        const finalRating = Number((totalRatingPoints / totalWeight).toFixed(1));
+
+        return await this.update(productId, {
+            reviews: totalWeight,
+            rating: finalRating
+        });
     }
 };
 
@@ -783,7 +801,7 @@ export const taxService = {
         const { data, error } = await supabase
             .from('tax_rules')
             .select('*')
-            .eq('country', country)
+            .or(`country.eq.${country},country.eq.GLOBAL`)
             .eq('is_active', true)
             .order('priority', { ascending: true });
 
@@ -1259,6 +1277,17 @@ export const profilesService = {
         return data;
     },
 
+    async getById(id: string) {
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', id)
+            .maybeSingle();
+
+        if (error) throw error;
+        return data;
+    },
+
     async update(id: string, updates: any) {
         const { data, error } = await supabase
             .from('profiles')
@@ -1479,12 +1508,19 @@ export const contactsService = {
 };
 
 export const storageService = {
-    async uploadVideo(file: File, path: string) {
+    async uploadVideo(file: File, path: string, onProgress?: (progress: number) => void) {
         const { data, error } = await supabase.storage
             .from('product-videos')
             .upload(path, file, {
                 cacheControl: '3600',
-                upsert: true
+                upsert: true,
+                // @ts-ignore
+                onUploadProgress: (progress) => {
+                    if (onProgress) {
+                        const percent = (progress.loaded / progress.total) * 100;
+                        onProgress(percent);
+                    }
+                }
             });
 
         if (error) throw error;

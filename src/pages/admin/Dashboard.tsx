@@ -45,22 +45,37 @@ export default function AdminDashboard() {
     }, []);
 
     const totalRevenue = orders
-        .filter(order => order.status === 'delivered')
+        .filter(order => order.status !== 'cancelled' && order.status !== 'payment_failed')
         .reduce((sum, order) => sum + (Number(order.total_amount) || 0), 0);
     const totalOrders = orders.length;
     const lowStockAlerts = products.filter(p => (p.stock || 0) <= (p.min_stock_level || 5));
     const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
-    // Dummy chart data
-    const salesData = [
-        { name: "Mon", revenue: 4000 },
-        { name: "Tue", revenue: 3000 },
-        { name: "Wed", revenue: 2000 },
-        { name: "Thu", revenue: 2780 },
-        { name: "Fri", revenue: 1890 },
-        { name: "Sat", revenue: totalRevenue / 10 },
-        { name: "Sun", revenue: totalRevenue / 5 },
-    ];
+    // Dynamic chart data from actual orders
+    const salesData = (() => {
+        const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+        const now = new Date();
+        const last7Days = Array.from({ length: 7 }, (_, i) => {
+            const d = new Date();
+            d.setDate(now.getDate() - (6 - i));
+            return {
+                name: days[d.getDay()],
+                dateStr: d.toISOString().split('T')[0],
+                revenue: 0
+            };
+        });
+
+        orders.forEach(order => {
+            const orderDate = new Date(order.created_at).toISOString().split('T')[0];
+            const dayMatch = last7Days.find(d => d.dateStr === orderDate);
+            const isRevenue = order.status !== 'cancelled' && order.status !== 'payment_failed';
+            if (dayMatch && isRevenue) {
+                dayMatch.revenue += (Number(order.total_amount) || 0);
+            }
+        });
+
+        return last7Days;
+    })();
 
     if (loading) {
         return (

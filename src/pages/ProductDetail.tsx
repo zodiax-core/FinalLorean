@@ -7,7 +7,7 @@ import {
     Twitter, Instagram, ChevronRight, MessageSquare, Info,
     Package, Sparkles, Clock, CreditCard, Loader2, HelpCircle,
     Check, Play, ExternalLink, Youtube, User, Video, Pause,
-    Volume2, VolumeX, RotateCcw, Copy
+    Volume2, VolumeX, RotateCcw, Copy, Truck
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/layout/Navbar";
@@ -25,7 +25,13 @@ import { Badge } from "@/components/ui/badge";
 import { useProducts } from "@/context/ProductsContext";
 import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
-import { Product, reviewsService, productsService, marketingService } from "@/services/supabase";
+import {
+    Product,
+    reviewsService,
+    productsService,
+    marketingService,
+    settingsService
+} from "@/services/supabase";
 import { emailService } from "@/services/email";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/context/AuthContext";
@@ -192,8 +198,33 @@ const ProductDetail = () => {
     const [isReviewSubmitted, setIsReviewSubmitted] = useState(false);
     const reviewCarouselRef = useRef<HTMLDivElement>(null);
     const visionsCarouselRef = useRef<HTMLDivElement>(null);
-    const { user } = useAuth();
     const buySectionRef = useRef<HTMLDivElement>(null);
+    const { user } = useAuth();
+    const [shippingSettings, setShippingSettings] = useState({ flat_rate: 15, threshold: 150 });
+    const [loadingShipping, setLoadingShipping] = useState(true);
+
+    useEffect(() => {
+        const fetchShipping = async () => {
+            try {
+                const data = await settingsService.getShipping();
+                setShippingSettings({
+                    flat_rate: Number(data.flat_rate),
+                    threshold: Number(data.threshold)
+                });
+            } catch (error) {
+                console.error("Error fetching shipping settings:", error);
+            } finally {
+                setLoadingShipping(false);
+            }
+        };
+        fetchShipping();
+    }, []);
+
+    const isFreeShipping = useMemo(() => {
+        if (!product) return false;
+        if (shippingSettings.flat_rate === 0) return true;
+        return Number(product.price) >= shippingSettings.threshold;
+    }, [product, shippingSettings]);
 
     useEffect(() => {
         if (product?.video_proofs) {
@@ -229,25 +260,29 @@ const ProductDetail = () => {
     }, [product?.reviews_list, realReviews]);
 
     const displayReviewsCount = useMemo(() => {
-        // If admin set an explicit count, prefer it if it's higher than real reviews
-        const adminCount = Number(product?.reviews || 0);
-        return Math.max(mergedReviews.length, adminCount);
+        // Admin's "reviews" field is the seed count. 
+        // We add the count of real/active reviews to it.
+        const seedCount = Number(product?.reviews || 0);
+        const activeReviewsCount = mergedReviews.length;
+        return seedCount + activeReviewsCount;
     }, [mergedReviews.length, product?.reviews]);
 
     const displayRating = useMemo(() => {
-        // If there are no real reviews yet, use the admin's preset rating
-        if (realReviews.length === 0 && (product?.reviews_list?.length || 0) === 0) {
-            return Number(product?.rating || 5.0);
+        const adminRating = Number(product?.rating || 5.0);
+        const seedWeight = Math.max(1, Number(product?.reviews || 0)); // Treat admin seed as weight
+
+        // If there are no DETAILED reviews (fake list or real DB)
+        if (mergedReviews.length === 0) {
+            return adminRating;
         }
 
-        // Use admin's explicit rating if it's set to something specific (like a solid 5)
-        if (Number(product?.rating) === 5 && mergedReviews.length > 0) {
-            return 5.0;
-        }
+        // Calculation: (Admin Rating * Seed Weight + Sum of Review Ratings) / (Seed Weight + Detailed Review Count)
+        const reviewsSum = mergedReviews.reduce((acc, r) => acc + (Number(r.rating) || 0), 0);
+        const totalWeight = seedWeight + mergedReviews.length;
+        const weightedRating = (adminRating * seedWeight + reviewsSum) / totalWeight;
 
-        const totalRating = mergedReviews.reduce((acc, r) => acc + (Number(r.rating) || 0), 0);
-        return Number((totalRating / mergedReviews.length).toFixed(1));
-    }, [mergedReviews, product?.rating, product?.reviews_list, realReviews.length]);
+        return Number(weightedRating.toFixed(1));
+    }, [mergedReviews, product?.rating, product?.reviews]);
 
     useEffect(() => {
         if (product) {
@@ -529,9 +564,18 @@ const ProductDetail = () => {
                                     </div>
                                 )}
 
-                                <div className="flex items-end justify-center lg:justify-start gap-4">
-                                    <span className="text-4xl font-bold font-serif text-primary tracking-tighter">Rs. {product.price}</span>
-                                    {oldPrice > 0 && <span className="text-xl text-muted-foreground line-through mb-1.5 font-light tracking-tighter">Rs. {oldPrice}</span>}
+                                <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4">
+                                    <div className="flex items-end gap-3">
+                                        <span className="text-4xl font-bold font-serif text-primary tracking-tighter">Rs. {product.price}</span>
+                                        {oldPrice > 0 && <span className="text-xl text-muted-foreground line-through mb-1.5 font-light tracking-tighter">Rs. {oldPrice}</span>}
+                                    </div>
+
+                                    {isFreeShipping && (
+                                        <Badge className="bg-emerald-500/10 text-emerald-600 border-none px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] animate-in fade-in slide-in-from-left-4 duration-1000">
+                                            <Truck className="w-3 h-3 mr-2" />
+                                            Free Shipping
+                                        </Badge>
+                                    )}
                                 </div>
                             </div>
 
@@ -691,17 +735,22 @@ const ProductDetail = () => {
                                         const url = proof.url;
                                         if (!url) return null;
 
-                                        const { platform: inferredPlatform, embedUrl, thumb } = getVideoData(url);
+                                        const { platform: inferredPlatform, embedUrl, thumb: inferredThumb } = getVideoData(url);
+                                        const thumb = proof.thumbnail || inferredThumb;
                                         const platform = proof.platform || inferredPlatform;
                                         const handle = proof.username || getUsernameFromUrl(url);
-                                        const redirectionLink = proof.redirection_link || url;
+                                        let redirectionLink = proof.redirection_link || url;
+                                        if (redirectionLink && !redirectionLink.startsWith('http://') && !redirectionLink.startsWith('https://')) {
+                                            redirectionLink = `https://${redirectionLink}`;
+                                        }
+                                        const iconImg = proof.icon_img;
 
                                         const isPlaying = playingVideo === url;
                                         const isFinished = finishedVideos.has(url);
                                         const tiktokMp4 = tikTokSources[url];
                                         const isUpload = platform === 'upload' || url.includes('supabase.co');
 
-                                        const liquidMorph = {
+                                        const liquidMorph: any = {
                                             animate: {
                                                 borderRadius: [
                                                     "60% 40% 30% 70% / 60% 30% 70% 40%",
@@ -721,7 +770,7 @@ const ProductDetail = () => {
                                                     repeat: Infinity,
                                                 }
                                             }
-                                        } as any;
+                                        };
 
                                         return (
                                             <div key={i} className="flex-none w-[280px] md:w-[320px] snap-start">
@@ -915,7 +964,11 @@ const ProductDetail = () => {
                                                             <div className="flex items-center justify-between">
                                                                 <div className="flex items-center gap-3">
                                                                     <div className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white text-[10px] font-black uppercase overflow-hidden">
-                                                                        {isUpload ? <User className="w-5 h-5" /> : handle.charAt(0)}
+                                                                        {iconImg ? (
+                                                                            <img src={iconImg} className="w-full h-full object-cover" alt={handle} />
+                                                                        ) : (
+                                                                            <img src="/favicon.png" className="w-full h-full object-cover" alt="Lorean" />
+                                                                        )}
                                                                     </div>
                                                                     <div className="min-w-0">
                                                                         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white truncate">{handle.startsWith('@') ? handle : `@${handle}`}</p>

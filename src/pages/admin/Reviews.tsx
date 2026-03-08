@@ -88,9 +88,15 @@ export default function AdminReviews() {
         }
     };
 
-    const handleUpdateStatus = async (id: string, status: string) => {
+    const handleUpdateStatus = async (review: any, status: string) => {
         try {
-            await reviewsService.update(id, { status });
+            await reviewsService.update(review.id, { status });
+
+            // If we just approved it, increment the product stats
+            if (status === 'approved') {
+                await productsService.incrementStats(review.product_id, review.rating);
+            }
+
             toast({ title: "Status Updated", description: `Review is now ${status}.` });
             fetchData();
         } catch (error) {
@@ -143,13 +149,18 @@ export default function AdminReviews() {
 
         setIsSubmitting(true);
         try {
-            await reviewsService.create({
+            const reviewId = await reviewsService.create({
                 ...newReview,
                 product_id: parseInt(newReview.product_id),
                 is_featured: false,
                 is_flagged: false,
                 created_at: new Date().toISOString()
             });
+
+            // If it's already approved (default for manual), increment the product stats
+            if (newReview.status === 'approved') {
+                await productsService.incrementStats(parseInt(newReview.product_id), newReview.rating);
+            }
             toast({ title: "Review Manifested", description: "Anonymous review has been added to the archives." });
             setIsAddReviewOpen(false);
             setNewReview({
@@ -421,10 +432,10 @@ export default function AdminReviews() {
                                                     <Activity className="w-3 h-3" /> Actions
                                                 </DropdownMenuLabel>
                                                 <DropdownMenuSeparator />
-                                                <DropdownMenuItem className="rounded-xl h-10 gap-3" onClick={() => handleUpdateStatus(review.id, 'approved')}>
+                                                <DropdownMenuItem className="rounded-xl h-10 gap-3" onClick={() => handleUpdateStatus(review, 'approved')}>
                                                     <CheckCircle className="w-4 h-4 text-emerald-500" /> Approve Review
                                                 </DropdownMenuItem>
-                                                <DropdownMenuItem className="rounded-xl h-10 gap-3" onClick={() => handleUpdateStatus(review.id, 'hidden')}>
+                                                <DropdownMenuItem className="rounded-xl h-10 gap-3" onClick={() => handleUpdateStatus(review, 'hidden')}>
                                                     <EyeOff className="w-4 h-4 text-amber-500" /> Hide Review
                                                 </DropdownMenuItem>
                                                 <DropdownMenuItem className="rounded-xl h-10 gap-3" onClick={() => {
