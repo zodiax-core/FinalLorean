@@ -1396,7 +1396,7 @@ export const marketingService = {
         return data?.settings || {
             popup_product_id: null,
             hero_bar: { enabled: false, text: "SALE SALE SALE", bg_color: "#000000", text_color: "#ffffff" },
-            social_links: { instagram: "", twitter: "", facebook: "", youtube: "" }
+            custom_social_links: []
         };
     },
 

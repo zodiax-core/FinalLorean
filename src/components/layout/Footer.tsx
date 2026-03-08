@@ -1,12 +1,31 @@
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { Instagram, Twitter, Facebook, Youtube } from "lucide-react";
 import { useTheme } from "@/components/theme-provider";
+import { settingsService } from "@/services/supabase";
 
 const Footer = () => {
   const { theme } = useTheme();
   const isDark = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches) || document.documentElement.classList.contains("dark");
   const logoSrc = isDark ? "/logo-dark.png" : "/logo.png";
+
+  const [socialLinksData, setSocialLinksData] = useState<string[]>([]);
+
+  useEffect(() => {
+    const fetchSocials = async () => {
+      try {
+        const configs = await settingsService.getAllConfigs();
+        if (configs?.marketing?.custom_social_links) {
+          setSocialLinksData(configs.marketing.custom_social_links);
+        }
+      } catch (err) {
+        console.error("Social links fetch failed", err);
+      }
+    };
+    fetchSocials();
+  }, []);
+
   const footerLinks = {
     shop: [
       { name: "All Products", path: "/shop" },
@@ -28,13 +47,6 @@ const Footer = () => {
     ],
   };
 
-  const socialLinks = [
-    { icon: Instagram, href: "#" },
-    { icon: Twitter, href: "#" },
-    { icon: Facebook, href: "#" },
-    { icon: Youtube, href: "#" },
-  ];
-
   return (
     <footer className="bg-card border-t border-border/50 relative overflow-hidden">
       <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
@@ -46,26 +58,34 @@ const Footer = () => {
               <img
                 src={logoSrc}
                 alt="Lorean Logo"
-                className="h-6 md:h-8 w-auto object-contain transition-transform duration-700 group-hover:scale-105"
+                className="h-auto w-auto max-h-12 max-w-[160px] object-contain transition-transform duration-700 group-hover:scale-105"
               />
             </Link>
             <p className="text-muted-foreground/80 text-lg md:text-base leading-relaxed max-w-sm font-light">
               Premium herbal hair oils crafted with ancient Ayurvedic wisdom.
               Your journey to thick, healthy, and radiant hair begins here.
             </p>
-            <div className="flex gap-4">
-              {socialLinks.map((social, index) => (
-                <motion.a
-                  key={index}
-                  href={social.href}
-                  whileHover={{ scale: 1.1, y: -2 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="w-12 h-12 rounded-full bg-muted/50 border border-border/10 flex items-center justify-center text-muted-foreground hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all duration-300"
-                >
-                  <social.icon className="w-5 h-5" />
-                </motion.a>
-              ))}
-            </div>
+            {socialLinksData && socialLinksData.length > 0 && (
+              <div className="flex gap-4">
+                {socialLinksData.map((url, i) => {
+                  let hostname = "";
+                  try { hostname = new URL(url).hostname; } catch (e) { }
+                  if (!hostname) return null;
+
+                  return (
+                    <motion.a key={i} href={url} target="_blank" rel="noopener noreferrer" whileHover={{ scale: 1.1, y: -2 }} whileTap={{ scale: 0.95 }}
+                      className="w-12 h-12 rounded-full bg-muted/50 border border-border/10 flex items-center justify-center hover:bg-primary transition-all duration-300 group overflow-hidden">
+                      <img
+                        src={`https://www.google.com/s2/favicons?domain=${hostname}&sz=64`}
+                        alt={hostname}
+                        className="w-5 h-5 object-contain opacity-70 group-hover:opacity-100 transition-all filter grayscale group-hover:grayscale-0 group-hover:invert"
+                        onError={(e) => { (e.target as HTMLImageElement).style.visibility = 'hidden'; }}
+                      />
+                    </motion.a>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Links */}

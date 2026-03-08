@@ -25,14 +25,14 @@ const Contact = () => {
         message: ""
     });
 
-    const [socialLinks, setSocialLinks] = useState<any>(null);
+    const [socialLinks, setSocialLinks] = useState<string[]>([]);
 
     useEffect(() => {
         const fetchSocials = async () => {
             try {
                 const configs = await settingsService.getAllConfigs();
-                if (configs?.marketing?.social_links) {
-                    setSocialLinks(configs.marketing.social_links);
+                if (configs?.marketing?.custom_social_links) {
+                    setSocialLinks(configs.marketing.custom_social_links);
                 }
             } catch (err) {
                 console.error("Social links fetch failed", err);
@@ -130,7 +130,7 @@ const Contact = () => {
                                 </div>
                             </div>
                             {/* Social Links */}
-                            {socialLinks && (
+                            {socialLinks && socialLinks.length > 0 && (
                                 <motion.div
                                     initial={{ opacity: 0, y: 10 }}
                                     animate={{ opacity: 1, y: 0 }}
@@ -139,30 +139,23 @@ const Contact = () => {
                                 >
                                     <h3 className="text-sm font-black uppercase tracking-widest text-primary mb-6">Find us on</h3>
                                     <div className="flex flex-wrap gap-4">
-                                        {socialLinks.instagram && (
-                                            <a href={socialLinks.instagram} target="_blank" rel="noopener noreferrer"
-                                                className="w-12 h-12 bg-card border border-border/50 rounded-2xl flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary transition-all shadow-sm">
-                                                <Instagram className="w-5 h-5" />
-                                            </a>
-                                        )}
-                                        {socialLinks.facebook && (
-                                            <a href={socialLinks.facebook} target="_blank" rel="noopener noreferrer"
-                                                className="w-12 h-12 bg-card border border-border/50 rounded-2xl flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary transition-all shadow-sm">
-                                                <Facebook className="w-5 h-5" />
-                                            </a>
-                                        )}
-                                        {socialLinks.twitter && (
-                                            <a href={socialLinks.twitter} target="_blank" rel="noopener noreferrer"
-                                                className="w-12 h-12 bg-card border border-border/50 rounded-2xl flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary transition-all shadow-sm">
-                                                <Twitter className="w-5 h-5" />
-                                            </a>
-                                        )}
-                                        {socialLinks.youtube && (
-                                            <a href={socialLinks.youtube} target="_blank" rel="noopener noreferrer"
-                                                className="w-12 h-12 bg-card border border-border/50 rounded-2xl flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary transition-all shadow-sm">
-                                                <Youtube className="w-5 h-5" />
-                                            </a>
-                                        )}
+                                        {socialLinks.map((url, i) => {
+                                            let hostname = "";
+                                            try { hostname = new URL(url).hostname; } catch (e) { }
+                                            if (!hostname) return null;
+
+                                            return (
+                                                <a key={i} href={url} target="_blank" rel="noopener noreferrer"
+                                                    className="w-12 h-12 bg-card border border-border/50 rounded-2xl flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary transition-all shadow-sm group">
+                                                    <img
+                                                        src={`https://www.google.com/s2/favicons?domain=${hostname}&sz=64`}
+                                                        alt={hostname}
+                                                        className="w-5 h-5 object-contain opacity-60 group-hover:opacity-100 transition-all filter grayscale group-hover:grayscale-0 group-hover:invert-100 dark:invert"
+                                                        onError={(e) => { (e.target as HTMLImageElement).style.visibility = 'hidden'; }}
+                                                    />
+                                                </a>
+                                            );
+                                        })}
                                     </div>
                                 </motion.div>
                             )}

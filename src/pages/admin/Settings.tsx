@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import {
-    Bell, Save, Loader2, Trash2, Key, Mail, ShieldAlert, Sparkles, Layout
+    Bell, Save, Loader2, Trash2, Key, Mail, ShieldAlert, Sparkles, Layout, Plus
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -280,61 +280,89 @@ export default function AdminSettings() {
                             </CardContent>
                         </Card>
 
-                        {/* Social Links (Moved from Marketing) */}
+                        {/* Custom Social Connections */}
                         <Card className="glass border-border/10 shadow-2xl rounded-[3.5rem] overflow-hidden border-2">
                             <CardHeader className="p-10 pb-6 flex flex-row items-center gap-6 border-b border-border/5">
                                 <div className="w-16 h-16 rounded-[2rem] bg-primary/10 flex items-center justify-center text-primary">
                                     <Sparkles className="w-8 h-8" />
                                 </div>
-                                <div>
+                                <div className="flex-1">
                                     <CardTitle className="text-3xl font-serif italic">Social Connections</CardTitle>
-                                    <CardDescription className="text-xs font-medium uppercase tracking-widest opacity-50">Links displayed in footer and product sharing</CardDescription>
+                                    <CardDescription className="text-xs font-medium uppercase tracking-widest opacity-50">Manage dynamic links pointing to your outward domains</CardDescription>
                                 </div>
+                                <Button
+                                    onClick={() => {
+                                        const urls = configs.marketing?.custom_social_links || [];
+                                        setConfigs((prev: any) => ({
+                                            ...prev,
+                                            marketing: {
+                                                ...prev.marketing,
+                                                custom_social_links: [...urls, "https://"]
+                                            }
+                                        }));
+                                    }}
+                                    className="rounded-full w-12 h-12 p-0 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all"
+                                >
+                                    <Plus className="w-5 h-5" />
+                                </Button>
                             </CardHeader>
-                            <CardContent className="p-10 grid grid-cols-1 md:grid-cols-2 gap-8">
-                                <div className="space-y-3">
-                                    <Label className="text-[10px] font-black uppercase tracking-widest ml-1 flex items-center gap-2">
-                                        <Sparkles className="w-3 h-3" /> Instagram
-                                    </Label>
-                                    <Input
-                                        value={configs.marketing?.social_links?.instagram || ""}
-                                        onChange={(e) => updateSocialLinks('instagram', e.target.value)}
-                                        placeholder="https://instagram.com/lorean"
-                                        className="h-12 rounded-[1.5rem] bg-muted/20 border-none px-6"
-                                    />
-                                </div>
-                                <div className="space-y-3">
-                                    <Label className="text-[10px] font-black uppercase tracking-widest ml-1 flex items-center gap-2">
-                                        <Sparkles className="w-3 h-3" /> Twitter / X
-                                    </Label>
-                                    <Input
-                                        value={configs.marketing?.social_links?.twitter || ""}
-                                        onChange={(e) => updateSocialLinks('twitter', e.target.value)}
-                                        placeholder="https://twitter.com/lorean"
-                                        className="h-12 rounded-[1.5rem] bg-muted/20 border-none px-6"
-                                    />
-                                </div>
-                                <div className="space-y-3">
-                                    <Label className="text-[10px] font-black uppercase tracking-widest ml-1 flex items-center gap-2">
-                                        <Sparkles className="w-3 h-3" /> Facebook
-                                    </Label>
-                                    <Input
-                                        value={configs.marketing?.social_links?.facebook || ""}
-                                        onChange={(e) => updateSocialLinks('facebook', e.target.value)}
-                                        placeholder="https://facebook.com/lorean"
-                                        className="h-12 rounded-[1.5rem] bg-muted/20 border-none px-6"
-                                    />
-                                </div>
-                                <div className="space-y-3">
-                                    <Label className="text-[10px] font-black uppercase tracking-widest ml-1 flex items-center gap-2">
-                                        <Sparkles className="w-3 h-3" /> YouTube
-                                    </Label>
-                                    <Input
-                                        value={configs.marketing?.social_links?.youtube || ""}
-                                        onChange={(e) => updateSocialLinks('youtube', e.target.value)}
-                                        placeholder="https://youtube.com/@lorean"
-                                        className="h-12 rounded-[1.5rem] bg-muted/20 border-none px-6"
-                                    />
+                            <CardContent className="p-10">
+                                <div className="space-y-4">
+                                    {(!configs.marketing?.custom_social_links || configs.marketing.custom_social_links.length === 0) ? (
+                                        <p className="text-center py-6 text-muted-foreground italic">No custom social links added. Click the + icon to add one.</p>
+                                    ) : (
+                                        configs.marketing.custom_social_links.map((url: string, index: number) => {
+                                            // Extract domain for favicon preview
+                                            let hostname = "";
+                                            try { hostname = new URL(url).hostname; } catch (e) { }
+
+                                            return (
+                                                <div key={index} className="flex items-center gap-4 bg-muted/20 p-2 pl-4 border border-border/10 rounded-2xl">
+                                                    {hostname ? (
+                                                        <img
+                                                            src={`https://www.google.com/s2/favicons?domain=${hostname}&sz=64`}
+                                                            alt={hostname}
+                                                            className="w-8 h-8 rounded-full border border-border/5 bg-background object-contain p-1"
+                                                            onError={(e) => { (e.target as HTMLImageElement).style.visibility = 'hidden'; }}
+                                                        />
+                                                    ) : (
+                                                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                                                            <Sparkles className="w-4 h-4 text-primary" />
+                                                        </div>
+                                                    )}
+
+                                                    <Input
+                                                        value={url}
+                                                        onChange={(e) => {
+                                                            const newLinks = [...configs.marketing.custom_social_links];
+                                                            newLinks[index] = e.target.value;
+                                                            setConfigs((prev: any) => ({
+                                                                ...prev,
+                                                                marketing: { ...prev.marketing, custom_social_links: newLinks }
+                                                            }));
+                                                        }}
+                                                        placeholder="https://example.com/yourbrand"
+                                                        className="flex-1 h-12 bg-transparent border-none px-2 focus-visible:ring-0"
+                                                    />
+
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => {
+                                                            const newLinks = configs.marketing.custom_social_links.filter((_: any, i: number) => i !== index);
+                                                            setConfigs((prev: any) => ({
+                                                                ...prev,
+                                                                marketing: { ...prev.marketing, custom_social_links: newLinks }
+                                                            }));
+                                                        }}
+                                                        className="w-12 h-12 rounded-xl text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10"
+                                                    >
+                                                        <Trash2 className="w-5 h-5" />
+                                                    </Button>
+                                                </div>
+                                            );
+                                        })
+                                    )}
                                 </div>
                             </CardContent>
                         </Card>

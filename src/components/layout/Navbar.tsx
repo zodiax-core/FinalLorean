@@ -70,7 +70,7 @@ const Navbar = () => {
               <motion.img
                 src={logoSrc}
                 alt="Lorean Logo"
-                className="h-5 md:h-6 w-auto object-contain"
+                className="h-auto w-auto max-h-8 md:max-h-10 max-w-[140px] object-contain"
                 whileHover={{ scale: 1.05 }}
                 transition={{ type: "spring", stiffness: 400, damping: 10 }}
               />
