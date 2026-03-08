@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import {
-    Bell, Save, Loader2, Sparkles, Plus, Trash2, Star, Edit2, Check, X, Mail, Send
+    Bell, Save, Loader2, Sparkles, Plus, Trash2, Star, Edit2, Check, X, Mail, Send, Link
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -36,7 +36,13 @@ export default function AdminMarketing() {
     const [configs, setConfigs] = useState<any>({
         marketing: {
             popup_product_id: null,
-            testimonials: []
+            testimonials: [],
+            social_links: {
+                instagram: "",
+                facebook: "",
+                twitter: "",
+                youtube: ""
+            }
         }
     });
     const [products, setProducts] = useState<Product[]>([]);
@@ -638,6 +644,84 @@ export default function AdminMarketing() {
                         )}
                     </CardContent>
                 </Card>
+
+                {/* Social Links Configurator */}
+                <Card className="glass border-border/10 shadow-2xl rounded-[3.5rem] overflow-hidden border-2">
+                    <CardHeader className="p-10 pb-6 flex flex-row items-center gap-6 border-b border-border/5">
+                        <div className="w-16 h-16 rounded-[2rem] bg-primary/10 flex items-center justify-center text-primary">
+                            <Link className="w-8 h-8" />
+                        </div>
+                        <div>
+                            <CardTitle className="text-3xl font-serif italic">Social Profiles</CardTitle>
+                            <CardDescription className="text-xs font-medium uppercase tracking-widest opacity-50">Manage Links pointing to your outward domains</CardDescription>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="p-10">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className="space-y-3">
+                                <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Instagram URL</Label>
+                                <Input
+                                    value={configs.marketing?.social_links?.instagram || ""}
+                                    onChange={e => setConfigs((prev: any) => ({
+                                        ...prev,
+                                        marketing: {
+                                            ...prev.marketing,
+                                            social_links: { ...prev.marketing.social_links, instagram: e.target.value }
+                                        }
+                                    }))}
+                                    placeholder="https://instagram.com/yourbrand"
+                                    className="h-14 rounded-[1.5rem] bg-muted/20 border-none px-6"
+                                />
+                            </div>
+                            <div className="space-y-3">
+                                <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Facebook URL</Label>
+                                <Input
+                                    value={configs.marketing?.social_links?.facebook || ""}
+                                    onChange={e => setConfigs((prev: any) => ({
+                                        ...prev,
+                                        marketing: {
+                                            ...prev.marketing,
+                                            social_links: { ...prev.marketing.social_links, facebook: e.target.value }
+                                        }
+                                    }))}
+                                    placeholder="https://facebook.com/yourbrand"
+                                    className="h-14 rounded-[1.5rem] bg-muted/20 border-none px-6"
+                                />
+                            </div>
+                            <div className="space-y-3">
+                                <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Twitter / X URL</Label>
+                                <Input
+                                    value={configs.marketing?.social_links?.twitter || ""}
+                                    onChange={e => setConfigs((prev: any) => ({
+                                        ...prev,
+                                        marketing: {
+                                            ...prev.marketing,
+                                            social_links: { ...prev.marketing.social_links, twitter: e.target.value }
+                                        }
+                                    }))}
+                                    placeholder="https://x.com/yourbrand"
+                                    className="h-14 rounded-[1.5rem] bg-muted/20 border-none px-6"
+                                />
+                            </div>
+                            <div className="space-y-3">
+                                <Label className="text-[10px] font-black uppercase tracking-widest ml-1">YouTube URL</Label>
+                                <Input
+                                    value={configs.marketing?.social_links?.youtube || ""}
+                                    onChange={e => setConfigs((prev: any) => ({
+                                        ...prev,
+                                        marketing: {
+                                            ...prev.marketing,
+                                            social_links: { ...prev.marketing.social_links, youtube: e.target.value }
+                                        }
+                                    }))}
+                                    placeholder="https://youtube.com/@yourbrand"
+                                    className="h-14 rounded-[1.5rem] bg-muted/20 border-none px-6"
+                                />
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
             </motion.div>
         </div>
     );

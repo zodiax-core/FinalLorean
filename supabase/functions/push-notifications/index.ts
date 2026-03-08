@@ -93,26 +93,19 @@ async function sendToToken(accessToken: string, token: string, payload: any, pro
             token,
             notification: { title, body },
             android: {
-                priority: "high",
-                notification: { priority: "high", visibility: "public" }
+                priority: "high"
             },
             webpush: {
                 headers: {
                     Urgency: "high"
                 },
                 notification: {
-                    title,
-                    body,
-                    icon: "https://lorean.online/favicon.png",
-                    badge: "https://lorean.online/favicon.png",
-                    click_action: clickUrl
+                    icon: "https://lorean.online/favicon.png"
                 },
                 fcm_options: { link: clickUrl }
             },
             data: {
-                title,
-                message: body,
-                url: clickUrl,
+                url: String(clickUrl),
                 ...(payload.data ? Object.fromEntries(
                     Object.entries(payload.data)
                         .filter(([_, v]) => v != null)
