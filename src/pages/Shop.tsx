@@ -172,7 +172,7 @@ const Shop = () => {
                   transition={{ delay: index * 0.05, duration: 0.6 }}
                   className={`group ${viewMode === "list" ? "flex gap-8 items-center bg-card p-6 rounded-[2rem] border border-border/50 hover:shadow-xl transition-all" : ""}`}
                 >
-                  <Link to={`/product/${product.id}`} className={`block relative overflow-hidden rounded-[2.5rem] bg-card shadow-lg flex-shrink-0 border border-border/30 ${viewMode === "list" ? "w-64" : ""}`}>
+                  <Link to={`/product/${product.slug || product.id}`} className={`block relative overflow-hidden rounded-[2.5rem] bg-card shadow-lg flex-shrink-0 border border-border/30 ${viewMode === "list" ? "w-64" : ""}`}>
                     <div className={`relative overflow-hidden ${viewMode === "list" ? "aspect-square" : "aspect-[4/5]"}`}>
                       <motion.img
                         src={product.image}
@@ -229,7 +229,7 @@ const Shop = () => {
                       ))}
                       <span className="text-xs font-bold text-muted-foreground ml-1">({product.reviews})</span>
                     </div>
-                    <Link to={`/product/${product.id}`}>
+                    <Link to={`/product/${product.slug || product.id}`}>
                       <h3
                         className="text-xl font-medium mb-3 group-hover:text-primary transition-colors line-clamp-1"
                         style={{ fontFamily: "'Cormorant Garamond', serif" }}

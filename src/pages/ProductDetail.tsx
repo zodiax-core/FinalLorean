@@ -108,7 +108,7 @@ const RecentlyViewedProducts = ({ currentId, products }: { currentId: number, pr
             <h2 className="text-2xl sm:text-4xl font-serif mb-6 sm:mb-12">Your <span className="text-primary italic">Stalker List</span> </h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-8">
                 {viewed.map(p => (
-                    <Link to={`/product/${p.id}`} key={p.id} className="group glass p-2 sm:p-4 rounded-[1.5rem] sm:rounded-[2rem] hover:shadow-2xl transition-all border-border/30">
+                    <Link to={`/product/${p.slug || p.id}`} key={p.id} className="group glass p-2 sm:p-4 rounded-[1.5rem] sm:rounded-[2rem] hover:shadow-2xl transition-all border-border/30">
                         <div className="aspect-[4/5] rounded-[1.2rem] sm:rounded-[1.5rem] overflow-hidden bg-muted mb-2 sm:mb-4 relative">
                             <img src={p.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" alt="" />
                             <div className="absolute inset-0 bg-primary/5 group-hover:bg-transparent transition-colors" />
@@ -123,26 +123,42 @@ const RecentlyViewedProducts = ({ currentId, products }: { currentId: number, pr
 };
 
 const ProductDetail = () => {
-    const { id } = useParams();
+    const { idOrSlug } = useParams();
     const navigate = useNavigate();
     const { toast } = useToast();
     const { products, loading, getProductById } = useProducts();
     const { addToCart } = useCart();
     const { addToWishlist, isInWishlist } = useWishlist();
 
-    const productId = useMemo(() => {
-        const num = Number(id);
-        return isNaN(num) ? null : num;
-    }, [id]);
-
-    const contextProduct = useMemo(() => productId ? getProductById(productId) : null, [productId, products]);
     const [directProduct, setDirectProduct] = useState<Product | null>(null);
     const [directLoading, setDirectLoading] = useState(false);
 
+    // Context Search: Find by ID or Slug
+    const contextProduct = useMemo(() => {
+        if (!idOrSlug) return null;
+
+        // Try ID first if it's numeric
+        const idNum = Number(idOrSlug);
+        if (!isNaN(idNum)) {
+            const found = getProductById(idNum);
+            if (found) return found;
+        }
+
+        // Try searching by slug in the context
+        return products.find(p => p.slug === idOrSlug) || null;
+    }, [idOrSlug, products, getProductById]);
+
     useEffect(() => {
-        if (!loading && !contextProduct && productId) {
+        if (!loading && !contextProduct && idOrSlug) {
             setDirectLoading(true);
-            productsService.getById(productId).then(data => {
+
+            // Try fetching by ID first if numeric
+            const idNum = Number(idOrSlug);
+            const fetchPromise = !isNaN(idNum)
+                ? productsService.getById(idNum)
+                : productsService.getBySlug(idOrSlug);
+
+            fetchPromise.then(data => {
                 setDirectProduct(data);
             }).catch(err => {
                 console.error("Direct fetch failed:", err);
@@ -150,7 +166,7 @@ const ProductDetail = () => {
                 setDirectLoading(false);
             });
         }
-    }, [loading, contextProduct, productId]);
+    }, [loading, contextProduct, idOrSlug]);
 
     const product = contextProduct || directProduct;
     const isActuallyLoading = loading || (directLoading && !product);
@@ -213,14 +229,25 @@ const ProductDetail = () => {
     }, [product?.reviews_list, realReviews]);
 
     const displayReviewsCount = useMemo(() => {
-        return Math.max(mergedReviews.length, product?.reviews || 0);
+        // If admin set an explicit count, prefer it if it's higher than real reviews
+        const adminCount = Number(product?.reviews || 0);
+        return Math.max(mergedReviews.length, adminCount);
     }, [mergedReviews.length, product?.reviews]);
 
     const displayRating = useMemo(() => {
-        if (mergedReviews.length === 0) return Number(product?.rating || 0);
+        // If there are no real reviews yet, use the admin's preset rating
+        if (realReviews.length === 0 && (product?.reviews_list?.length || 0) === 0) {
+            return Number(product?.rating || 5.0);
+        }
+
+        // Use admin's explicit rating if it's set to something specific (like a solid 5)
+        if (Number(product?.rating) === 5 && mergedReviews.length > 0) {
+            return 5.0;
+        }
+
         const totalRating = mergedReviews.reduce((acc, r) => acc + (Number(r.rating) || 0), 0);
         return Number((totalRating / mergedReviews.length).toFixed(1));
-    }, [mergedReviews, product?.rating]);
+    }, [mergedReviews, product?.rating, product?.reviews_list, realReviews.length]);
 
     useEffect(() => {
         if (product) {
@@ -688,15 +715,13 @@ const ProductDetail = () => {
                                                 borderRadius: {
                                                     duration: 10,
                                                     repeat: Infinity,
-                                                    ease: "easeInOut"
                                                 },
                                                 scale: {
                                                     duration: 5,
                                                     repeat: Infinity,
-                                                    ease: "anticipate"
                                                 }
                                             }
-                                        };
+                                        } as any;
 
                                         return (
                                             <div key={i} className="flex-none w-[280px] md:w-[320px] snap-start">
@@ -1046,113 +1071,22 @@ const ProductDetail = () => {
                             </div>
                         )}
 
-                        {/* Review Submission Form — AFTER reviews */}
-                        <div className="max-w-3xl mx-auto glass p-10 rounded-[3rem] border-border/10 space-y-6">
-                            <h3 className="font-serif italic text-2xl text-center">Share your Botanical Experience</h3>
-                            {user ? (
-                                isReviewSubmitted ? (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        className="text-center py-10 space-y-4"
-                                    >
-                                        <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
-                                            <CheckCircle2 className="w-10 h-10 text-primary" />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <p className="font-serif italic text-2xl text-foreground">Insight Manifested</p>
-                                            <p className="text-muted-foreground text-sm uppercase tracking-widest">Your Patron Proof has been added to the collective.</p>
-                                        </div>
-                                        <Button
-                                            variant="outline"
-                                            onClick={() => setIsReviewSubmitted(false)}
-                                            className="rounded-full px-8 h-12 border-primary/20 text-primary"
-                                        >
-                                            Submit Another Insight
-                                        </Button>
-                                    </motion.div>
-                                ) : (
-                                    <form className="space-y-6" onSubmit={async (e) => {
-                                        e.preventDefault();
-                                        const formData = new FormData(e.currentTarget);
-                                        const comment = formData.get('comment') as string;
-                                        const rating = Number(formData.get('rating'));
-
-                                        if (!comment || !rating) {
-                                            toast({ title: "Ritual Incomplete", description: "Please provide both rating and insight.", variant: "destructive" });
-                                            return;
-                                        }
-
-                                        try {
-                                            setSubmittingReview(true);
-                                            await reviewsService.create({
-                                                product_id: product.id,
-                                                user_id: user.id,
-                                                user_name: user.user_metadata?.full_name || user.email?.split('@')[0],
-                                                rating,
-                                                comment,
-                                                status: 'approved'
-                                            });
-                                            // Optimistically prepend the new review so it shows instantly
-                                            const newReview = {
-                                                id: `new-${Date.now()}`,
-                                                user_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Patron',
-                                                rating,
-                                                comment,
-                                                is_fake: false,
-                                                created_at: new Date().toISOString(),
-                                                verified: true,
-                                            };
-                                            setRealReviews(prev => [newReview, ...prev]);
-                                            setCarouselIndex(0);
-                                            setIsReviewSubmitted(true);
-                                            toast({ title: "Insight Manifested", description: "Your Patron Proof has been added to the collective." });
-                                            (e.target as HTMLFormElement).reset();
-                                        } catch (err) {
-                                            toast({ title: "Manifestation Failed", description: "Could not post review.", variant: "destructive" });
-                                        } finally {
-                                            setSubmittingReview(false);
-                                        }
-                                    }}>
-                                        <div className="flex flex-col items-center gap-3">
-                                            <div className="flex gap-2">
-                                                {[1, 2, 3, 4, 5].map((s) => (
-                                                    <div key={s} className="relative group">
-                                                        <input type="radio" name="rating" value={s} id={`star-${s}`} className="peer absolute opacity-0 cursor-pointer" required />
-                                                        <label htmlFor={`star-${s}`} className="cursor-pointer text-muted-foreground peer-checked:text-primary hover:text-primary transition-colors">
-                                                            <Star className="w-10 h-10 fill-current" />
-                                                        </label>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Select Alignment Rating</p>
-                                        </div>
-                                        <div className="space-y-4">
-                                            <textarea
-                                                name="comment"
-                                                placeholder="Describe your ritual experience with this essence..."
-                                                className="w-full h-36 bg-muted/20 rounded-[2rem] p-6 border border-border/10 focus:border-primary/30 focus:ring-0 outline-none font-light italic text-base transition-all resize-none"
-                                                required
-                                            />
-                                            <Button
-                                                type="submit"
-                                                disabled={submittingReview}
-                                                className="w-full h-14 rounded-full bg-primary font-black uppercase tracking-widest shadow-xl shadow-primary/10 disabled:opacity-60"
-                                            >
-                                                {submittingReview ? (
-                                                    <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Manifesting...</span>
-                                                ) : 'Submit Insight'}
-                                            </Button>
-                                        </div>
-                                    </form>
-                                )
-                            ) : (
-                                <div className="text-center py-8 space-y-6">
-                                    <Info className="w-12 h-12 mx-auto text-primary/40" />
-                                    <p className="text-muted-foreground font-light text-lg">You must be logged in to share your botanical experience.</p>
-                                    <Button onClick={() => navigate('/auth')} variant="outline" className="rounded-full px-10 h-12 border-primary/20 text-primary hover:bg-primary hover:text-white transition-all">Sign In to Manifest</Button>
+                        {/* Review Submission Notice — AFTER reviews */}
+                        <div className="max-w-3xl mx-auto glass p-10 rounded-[3rem] border-border/10 space-y-6 text-center">
+                            <h3 className="font-serif italic text-2xl">Share your Botanical Experience</h3>
+                            <div className="space-y-4">
+                                <p className="text-muted-foreground font-light text-lg">
+                                    Insights are precious. We now invite Patrons to share their proof after successful manifestation.
+                                </p>
+                                <div className="p-6 rounded-2xl bg-primary/5 border border-primary/10 inline-block mx-auto">
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center justify-center gap-2">
+                                        <Sparkles className="w-4 h-4" /> Received your vessel? Head to your dashboard to submit an insight.
+                                    </p>
                                 </div>
-                            )}
+                                <div className="pt-4">
+                                    <Button onClick={() => navigate('/dashboard')} className="rounded-full px-12 h-14 bg-primary shadow-xl shadow-primary/20">Go to Dashboard</Button>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -1235,7 +1169,7 @@ const ProductDetail = () => {
                     </div>
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
                         {products.filter(p => p.id !== product.id).slice(0, 4).map(p => (
-                            <Link to={`/product/${p.id}`} key={p.id} className="group glass p-4 rounded-[2.5rem] hover:shadow-2xl transition-all border-border/30">
+                            <Link to={`/product/${p.slug || p.id}`} key={p.id} className="group glass p-4 rounded-[2.5rem] hover:shadow-2xl transition-all border-border/30">
                                 <div className="aspect-[4/5] rounded-[2rem] overflow-hidden bg-muted mb-6">
                                     <img src={p.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" alt="" />
                                 </div>

@@ -76,23 +76,21 @@ export default function PatronDashboard() {
         setIsSubmittingFeedback(true);
 
         try {
-            // In a more complex app, we'd loop through all items in the order
-            // For now, we'll review the first item as a representation of the ritual
             const firstItem = selectedOrderForFeedback.items?.[0];
 
             await reviewsService.create({
-                product_id: firstItem?.id || null, // Assuming item id corresponds to product id
+                product_id: firstItem?.id || null,
                 user_id: user.id,
                 user_name: user.user_metadata?.full_name || "Lorean Patron",
                 user_email: user.email,
                 rating: feedbackRating,
                 comment: feedbackComment,
-                status: 'pending' // Admin must approve
+                status: 'pending'
             });
 
             toast({
                 title: "Insights Received",
-                description: "Your botanical feedback has been successfully archived and is awaiting guardian verification."
+                description: "Your botanical feedback has been successfully archived."
             });
 
             setSelectedOrderForFeedback(null);
@@ -103,7 +101,7 @@ export default function PatronDashboard() {
             toast({
                 variant: "destructive",
                 title: "Critique Failed",
-                description: "The botanical archives could not store your insights. Please try again."
+                description: "The botanical archives could not store your insights."
             });
         } finally {
             setIsSubmittingFeedback(false);
@@ -127,7 +125,7 @@ export default function PatronDashboard() {
 
             toast({
                 title: "Reversal Initiated",
-                description: "Your request for ritual reversal has been broadcast to the guardians."
+                description: "Your request for ritual reversal has been broadcast."
             });
 
             setSelectedOrderForReturn(null);
@@ -138,7 +136,7 @@ export default function PatronDashboard() {
             toast({
                 variant: "destructive",
                 title: "Reversal Failed",
-                description: "The botanical portal rejected your return request. Please try again later."
+                description: "The botanical portal rejected your request."
             });
         } finally {
             setIsSubmittingReturn(false);
@@ -164,279 +162,212 @@ export default function PatronDashboard() {
     if (authLoading || loading) {
         return (
             <div className="min-h-screen bg-background flex flex-col items-center justify-center p-20 gap-4">
-                <RefreshCcw className="w-10 h-10 text-primary animate-spin" />
-                <p className="font-serif italic text-muted-foreground animate-pulse">Consulting the botanical archives...</p>
+                <RefreshCcw className="w-8 h-8 text-primary animate-spin" />
+                <p className="font-serif italic text-muted-foreground/60">Consulting archives...</p>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-background">
+        <div className="min-h-screen bg-[#fafafa]">
             <Navbar />
 
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-20">
-                <header className="mb-16 flex flex-col md:flex-row md:items-end justify-between gap-8">
-                    <div className="space-y-4">
-                        <div className="flex items-center gap-3 text-primary">
-                            <ShieldCheck className="w-6 h-6" />
-                            <span className="text-[10px] font-black uppercase tracking-[0.3em]">Verified Patron Portal</span>
+            <main className="max-w-5xl mx-auto px-4 sm:px-6 pt-32 pb-20">
+                <header className="mb-20">
+                    <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-primary/60 mb-2">
+                            <div className="w-1 h-1 rounded-full bg-primary" />
+                            <span className="text-[10px] font-black uppercase tracking-[0.2em]">Private Portal</span>
                         </div>
-                        <h1 className="text-5xl md:text-6xl font-serif tracking-tight">
-                            Welcome, <span className="text-primary italic">{user?.user_metadata?.full_name?.split(' ')[0] || "Patron"}</span>
+                        <h1 className="text-4xl md:text-5xl font-serif tracking-tight">
+                            Identity: <span className="text-primary italic">{user?.user_metadata?.full_name || "Patron"}</span>
                         </h1>
-                        <p className="text-muted-foreground font-light text-xl">Review your botanical lineage and active rituals.</p>
-                    </div>
-                    <div className="flex gap-4">
-                        <Button variant="outline" className="h-14 px-8 rounded-full border-2 gap-2" onClick={fetchOrders}>
-                            <RefreshCcw className="w-4 h-4" /> Refresh Status
-                        </Button>
+                        <p className="text-muted-foreground/60 font-light text-base max-w-lg">Manage your botanical lineage and ritual history in one minimalist space.</p>
                     </div>
                 </header>
 
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-12">
-                    {/* Left Rail: Patron Intel */}
-                    <div className="lg:col-span-1 space-y-8">
-                        <div className="glass p-8 rounded-[3rem] border-border/10 shadow-sm space-y-8">
-                            <div className="space-y-2">
-                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Patron Identity</Label>
-                                <div className="p-4 rounded-2xl bg-muted/30 flex items-center gap-4">
-                                    <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold">
-                                        <User className="w-6 h-6" />
-                                    </div>
-                                    <div className="overflow-hidden">
-                                        <p className="font-serif font-bold truncate">{user?.user_metadata?.full_name || "Lorean Patron"}</p>
-                                        <p className="text-[10px] text-muted-foreground truncate">{user?.email}</p>
-                                    </div>
-                                </div>
-                            </div>
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-16">
+                    {/* Simplified Stats/Shortcuts */}
+                    <div className="lg:col-span-4 space-y-12">
+                        <section className="space-y-6">
+                            <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground ml-1">Archive Links</h3>
+                            <nav className="flex flex-col gap-1">
+                                {[
+                                    { icon: Calendar, label: "Schedule Routine" },
+                                    { icon: MapPin, label: "Locations" },
+                                    { icon: CreditCard, label: "Artifacts & Payments" },
+                                    { icon: MessageSquare, label: "Support Rituals" }
+                                ].map((item, i) => (
+                                    <button key={i} className="flex items-center gap-4 p-4 rounded-2xl hover:bg-white hover:shadow-sm border border-transparent hover:border-border/50 transition-all text-sm font-medium text-foreground group">
+                                        <item.icon className="w-4 h-4 text-muted-foreground/40 group-hover:text-primary transition-colors" />
+                                        {item.label}
+                                    </button>
+                                ))}
+                            </nav>
+                        </section>
 
-                            <div className="space-y-4">
-                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Ritual Shortcuts</Label>
-                                <nav className="space-y-2">
-                                    <Button variant="ghost" className="w-full justify-start h-12 rounded-xl text-xs gap-3 font-bold uppercase tracking-widest hover:bg-primary/10 hover:text-primary transition-all">
-                                        <Calendar className="w-4 h-4" /> Schedule Routine
-                                    </Button>
-                                    <Button variant="ghost" className="w-full justify-start h-12 rounded-xl text-xs gap-3 font-bold uppercase tracking-widest hover:bg-primary/10 hover:text-primary transition-all">
-                                        <MapPin className="w-4 h-4" /> Manage Locations
-                                    </Button>
-                                    <Button variant="ghost" className="w-full justify-start h-12 rounded-xl text-xs gap-3 font-bold uppercase tracking-widest hover:bg-primary/10 hover:text-primary transition-all">
-                                        <CreditCard className="w-4 h-4" /> Payment Artifacts
-                                    </Button>
-                                </nav>
-                            </div>
-                        </div>
-
-                        <div className="bg-primary rounded-[2.5rem] p-8 text-primary-foreground space-y-6 shadow-2xl shadow-primary/20">
-                            <Clock className="w-8 h-8 opacity-50" />
-                            <h3 className="text-2xl font-serif italic">The Inner Circle</h3>
-                            <p className="text-xs font-light leading-relaxed opacity-80 uppercase tracking-widest">
-                                Patrons receive priority manifestation on upcoming seasonal botanical collections.
+                        <div className="p-8 rounded-[2.5rem] bg-black text-white space-y-4">
+                            <Sparkles className="w-6 h-6 text-primary" />
+                            <h3 className="text-xl font-serif italic text-primary">Inner Circle Access</h3>
+                            <p className="text-xs font-light leading-relaxed opacity-60 uppercase tracking-widest">
+                                Your Patron status grants priority manifestation on upcoming seasonal botanical collections.
                             </p>
                         </div>
                     </div>
 
-                    {/* Right Rail: Orders History */}
-                    <div className="lg:col-span-3 space-y-10">
-                        <div className="flex items-center justify-between">
-                            <h2 className="text-3xl font-serif">Ritual <span className="text-primary italic">History</span></h2>
-                            <Badge className="bg-muted text-foreground px-4 py-1.5 rounded-full text-[10px] uppercase font-black tracking-widest border-none">{orders.length} Records</Badge>
+                    {/* Clean Orders History */}
+                    <div className="lg:col-span-8 space-y-12">
+                        <div className="flex items-center justify-between border-b border-border/10 pb-6">
+                            <h2 className="text-2xl font-serif">Ritual History</h2>
+                            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">{orders.length} Manifestations</span>
                         </div>
 
                         {orders.length === 0 ? (
-                            <div className="glass p-20 rounded-[4rem] text-center space-y-8 border-border/10">
-                                <div className="w-24 h-24 bg-muted/50 rounded-full flex items-center justify-center mx-auto">
-                                    <Package className="w-10 h-10 text-muted-foreground/30" />
-                                </div>
+                            <div className="py-20 text-center space-y-8">
+                                <Package className="w-12 h-12 text-muted-foreground/20 mx-auto" />
                                 <div className="space-y-2">
-                                    <h3 className="text-2xl font-serif">No Active Rituals</h3>
-                                    <p className="text-muted-foreground font-light">Your botanical selection is currently empty.</p>
+                                    <p className="font-serif italic text-xl">The archives are empty.</p>
+                                    <p className="text-muted-foreground text-sm uppercase tracking-widest">Begin your botanical journey today.</p>
                                 </div>
-                                <Button onClick={() => navigate("/shop")} className="h-14 px-10 rounded-full text-lg shadow-xl shadow-primary/20 bg-primary">Begin Journey</Button>
+                                <Button onClick={() => navigate("/shop")} className="h-12 px-10 rounded-full bg-primary text-xs font-black uppercase tracking-widest">Shop Collection</Button>
                             </div>
                         ) : (
-                            <div className="space-y-6">
+                            <div className="space-y-10">
                                 {orders.map((order) => (
-                                    <motion.div
-                                        key={order.id}
-                                        initial={{ opacity: 0, y: 20 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        className="glass rounded-[3rem] border-border/10 overflow-hidden hover:shadow-2xl transition-all duration-500 group"
-                                    >
-                                        <div className="p-8 md:p-10 flex flex-col md:flex-row justify-between gap-8">
+                                    <div key={order.id} className="group relative">
+                                        <div className="flex flex-col md:flex-row justify-between gap-8 pb-10 border-b border-border/10">
                                             <div className="space-y-6 flex-1">
-                                                <div className="flex flex-wrap items-center gap-4">
-                                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Ritual Ref: {order.short_id || "LRN-" + order.id.slice(0, 8)}</span>
-                                                    <Badge className="bg-emerald-500/10 text-emerald-500 border-none px-4 py-1.5 rounded-full text-[10px] uppercase font-black tracking-widest">
+                                                <div className="flex items-center gap-4">
+                                                    <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">#{order.short_id || order.id.slice(0, 8)}</span>
+                                                    <div className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${order.status === 'delivered' ? 'bg-emerald-50 text-emerald-600' : 'bg-primary/5 text-primary'
+                                                        }`}>
                                                         {order.status}
-                                                    </Badge>
-                                                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50">{new Date(order.created_at).toLocaleDateString()}</span>
+                                                    </div>
+                                                    <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">{new Date(order.created_at).toLocaleDateString()}</span>
                                                 </div>
 
-                                                <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-                                                    {order.items?.slice(0, 4).map((item: any) => (
-                                                        <div key={item.id} className="group/item">
-                                                            <div className="aspect-square rounded-2xl bg-muted/50 overflow-hidden mb-2 border border-border/10">
-                                                                <div className="w-full h-full flex items-center justify-center text-[10px] font-serif p-2 text-center opacity-40 italic">{item.name}</div>
+                                                <div className="flex flex-wrap gap-4">
+                                                    {order.items?.slice(0, 3).map((item: any, idx: number) => (
+                                                        <div key={idx} className="flex flex-col gap-1 w-24">
+                                                            <div className="aspect-square rounded-xl bg-white border border-border/10 overflow-hidden flex items-center justify-center p-2">
+                                                                <img src={item.image || '/placeholder.png'} className="w-full h-full object-contain opacity-80" alt="" />
                                                             </div>
-                                                            <p className="text-[10px] font-black uppercase tracking-widest truncate">{item.name}</p>
-                                                            <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Qty: {item.quantity}</p>
+                                                            <p className="text-[8px] font-black uppercase tracking-widest truncate">{item.name}</p>
                                                         </div>
                                                     ))}
+                                                    {order.items?.length > 3 && (
+                                                        <div className="w-24 aspect-square rounded-xl bg-muted/20 flex items-center justify-center text-[10px] font-black text-muted-foreground">
+                                                            +{order.items.length - 3}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
 
-                                            <div className="flex flex-col justify-between items-end gap-6 text-right">
-                                                <div>
-                                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">Total Ritual Value</p>
-                                                    <p className="text-4xl font-serif font-black text-primary">Rs. {order.total_amount}</p>
+                                            <div className="flex flex-col justify-between items-end gap-6">
+                                                <div className="text-right">
+                                                    <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 mb-1">Value</p>
+                                                    <p className="text-3xl font-serif italic text-primary">Rs. {order.total_amount}</p>
                                                 </div>
                                                 <div className="flex flex-col gap-2 w-full md:w-auto">
                                                     <Button
+                                                        variant="outline"
                                                         onClick={() => navigate(`/track/${order.short_id || order.id.slice(0, 8)}`)}
-                                                        className="h-12 px-8 rounded-full gap-2 shadow-lg shadow-primary/20"
+                                                        className="h-10 px-6 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 hover:bg-black hover:text-white hover:border-black transition-all"
                                                     >
-                                                        <Truck className="w-4 h-4" /> Track Manifestation
+                                                        Track
                                                     </Button>
                                                     {order.status === 'delivered' && (
                                                         <Button
-                                                            variant="outline"
-                                                            className="h-12 px-8 rounded-full gap-2 border-2 border-primary/20 text-primary hover:bg-primary hover:text-white transition-all"
+                                                            variant="link"
+                                                            className="h-8 p-0 text-[9px] font-black uppercase tracking-widest text-primary hover:text-primary/70 transition-all justify-end"
                                                             onClick={() => setSelectedOrderForFeedback(order)}
                                                         >
-                                                            <MessageSquare className="w-4 h-4" /> Share Ritual Feedback
-                                                        </Button>
-                                                    )}
-                                                    {order.status === 'delivered' && (
-                                                        <Button
-                                                            variant="ghost"
-                                                            className="h-12 px-8 rounded-full gap-2 text-muted-foreground hover:text-rose-500 hover:bg-rose-500/5 transition-all"
-                                                            onClick={() => setSelectedOrderForReturn(order)}
-                                                        >
-                                                            <RotateCcw className="w-4 h-4" /> Request Return
+                                                            Submit Insight
                                                         </Button>
                                                     )}
                                                 </div>
                                             </div>
                                         </div>
-                                    </motion.div>
+                                    </div>
                                 ))}
                             </div>
                         )}
                     </div>
                 </div>
 
-                {/* Feedback Dialog Portal */}
+                {/* Simplified Feedback Dialog */}
                 <Dialog open={!!selectedOrderForFeedback} onOpenChange={() => !isSubmittingFeedback && setSelectedOrderForFeedback(null)}>
-                    <DialogContent className="max-w-xl rounded-[3.5rem] p-12 overflow-hidden bg-background/95 backdrop-blur-2xl border-border/10">
+                    <DialogContent className="max-w-md rounded-[2.5rem] p-10 bg-white border-none shadow-2xl">
                         <DialogHeader className="text-center space-y-4">
-                            <div className="w-16 h-16 rounded-3xl bg-primary/10 flex items-center justify-center mx-auto">
-                                <Sparkles className="w-8 h-8 text-primary" />
-                            </div>
-                            <DialogTitle className="text-3xl font-serif">Share Your <span className="text-primary italic">Experience</span></DialogTitle>
-                            <DialogDescription className="text-muted-foreground font-light text-base">
-                                Your insights help us refine the botanical rituals for seluruh humanity.
+                            <DialogTitle className="text-2xl font-serif italic">Patron Insight</DialogTitle>
+                            <DialogDescription className="text-xs uppercase tracking-widest font-bold text-muted-foreground/60">
+                                Share the manifestation of this essence.
                             </DialogDescription>
                         </DialogHeader>
 
-                        <div className="space-y-10 py-6">
-                            <div className="space-y-4">
-                                <UILabel className="text-[10px] font-black uppercase tracking-[0.2em] ml-1">Experiential Accuracy</UILabel>
-                                <div className="flex justify-center gap-3">
-                                    {[1, 2, 3, 4, 5].map((star) => (
-                                        <button
-                                            key={star}
-                                            onClick={() => setFeedbackRating(star)}
-                                            className="transition-transform active:scale-95"
-                                        >
-                                            <Star
-                                                className={`w-10 h-10 transition-colors ${feedbackRating >= star ? "fill-primary text-primary shadow-xl shadow-primary/20" : "text-muted/30"}`}
-                                            />
-                                        </button>
-                                    ))}
-                                </div>
+                        <div className="space-y-8 py-4">
+                            <div className="flex justify-center gap-2">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                    <button key={star} onClick={() => setFeedbackRating(star)} className="transition-transform active:scale-90">
+                                        <Star className={`w-8 h-8 transition-colors ${feedbackRating >= star ? "fill-primary text-primary" : "text-border"}`} />
+                                    </button>
+                                ))}
                             </div>
 
-                            <div className="space-y-4">
-                                <UILabel className="text-[10px] font-black uppercase tracking-[0.2em] ml-1">Observational Comment</UILabel>
-                                <Textarea
-                                    placeholder="Describe the sensations and outcomes of this botanical essence..."
-                                    className="min-h-[150px] rounded-3xl bg-muted/20 border-border/10 focus:bg-background transition-all p-6 font-light leading-relaxed"
-                                    value={feedbackComment}
-                                    onChange={(e) => setFeedbackComment(e.target.value)}
-                                />
-                            </div>
+                            <Textarea
+                                placeholder="Describe the ritual outcome..."
+                                className="min-h-[120px] rounded-2xl bg-muted/30 border-none p-5 text-sm font-light italic"
+                                value={feedbackComment}
+                                onChange={(e) => setFeedbackComment(e.target.value)}
+                            />
 
                             <Button
-                                className="w-full h-16 rounded-full bg-primary text-white text-sm font-black uppercase tracking-[0.2em] shadow-2xl shadow-primary/20 group"
+                                className="w-full h-14 rounded-full bg-primary text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/10"
                                 onClick={submitFeedback}
                                 disabled={isSubmittingFeedback || !feedbackComment.trim()}
                             >
-                                {isSubmittingFeedback ? (
-                                    <RefreshCcw className="w-5 h-5 animate-spin" />
-                                ) : (
-                                    <>
-                                        Archive Insights
-                                        <Send className="ml-3 w-4 h-4 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
-                                    </>
-                                )}
+                                {isSubmittingFeedback ? <RefreshCcw className="w-4 h-4 animate-spin" /> : "Archive Insight"}
                             </Button>
                         </div>
                     </DialogContent>
                 </Dialog>
 
-                {/* Return Request Portal */}
+                {/* Minimal Return Dialog */}
                 <Dialog open={!!selectedOrderForReturn} onOpenChange={() => !isSubmittingReturn && setSelectedOrderForReturn(null)}>
-                    <DialogContent className="max-w-xl rounded-[3.5rem] p-12 overflow-hidden bg-background/95 backdrop-blur-2xl border-border/10">
-                        <DialogHeader className="text-center space-y-4">
-                            <div className="w-16 h-16 rounded-3xl bg-rose-500/10 flex items-center justify-center mx-auto">
-                                <RotateCcw className="w-8 h-8 text-rose-500" />
-                            </div>
-                            <DialogTitle className="text-3xl font-serif">Ritual <span className="text-rose-500 italic">Reversal</span></DialogTitle>
-                            <DialogDescription className="text-muted-foreground font-light text-base">
-                                We regret that the botanical ritual did not align with your destiny.
+                    <DialogContent className="max-w-md rounded-[2.5rem] p-10 bg-white border-none shadow-2xl">
+                        <DialogHeader className="text-center space-y-2">
+                            <DialogTitle className="text-2xl font-serif italic">Ritual Reversal</DialogTitle>
+                            <DialogDescription className="text-[8px] uppercase tracking-[0.3em] font-black text-rose-400">
+                                Dissolving the manifestation.
                             </DialogDescription>
                         </DialogHeader>
 
-                        <div className="space-y-8 py-6">
-                            <div className="space-y-4">
-                                <UILabel className="text-[10px] font-black uppercase tracking-[0.2em] ml-1">Dissolution Reason</UILabel>
-                                <Select value={returnReason} onValueChange={setReturnReason}>
-                                    <SelectTrigger className="h-14 rounded-2xl bg-muted/20 border-none px-6">
-                                        <SelectValue placeholder="Select reason for reversal" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="Scent mismatch">Scent mismatch</SelectItem>
-                                        <SelectItem value="Allergic reaction">Allergic interaction</SelectItem>
-                                        <SelectItem value="Vessel damage">Vessel damage</SelectItem>
-                                        <SelectItem value="Delayed manifestation">Delayed manifestation</SelectItem>
-                                        <SelectItem value="Other path">Other mystical reasons</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
+                        <div className="space-y-6 py-4">
+                            <Select value={returnReason} onValueChange={setReturnReason}>
+                                <SelectTrigger className="h-12 rounded-xl bg-muted/30 border-none px-5 text-xs">
+                                    <SelectValue placeholder="Reason" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Scent mismatch">Scent mismatch</SelectItem>
+                                    <SelectItem value="Allergic reaction">Allergic reaction</SelectItem>
+                                    <SelectItem value="Vessel damage">Vessel damage</SelectItem>
+                                    <SelectItem value="Other">Other</SelectItem>
+                                </SelectContent>
+                            </Select>
 
-                            <div className="space-y-4">
-                                <UILabel className="text-[10px] font-black uppercase tracking-[0.2em] ml-1">Narrative Details</UILabel>
-                                <Textarea
-                                    placeholder="Describe the misalignment..."
-                                    className="min-h-[120px] rounded-3xl bg-muted/20 border-none p-6 text-sm font-light leading-relaxed"
-                                    value={returnDetails}
-                                    onChange={(e) => setReturnDetails(e.target.value)}
-                                />
-                            </div>
+                            <Textarea
+                                placeholder="Reason details..."
+                                className="min-h-[100px] rounded-2xl bg-muted/30 border-none p-5 text-xs font-light"
+                                value={returnDetails}
+                                onChange={(e) => setReturnDetails(e.target.value)}
+                            />
 
                             <Button
-                                className="w-full h-16 rounded-full bg-rose-500 text-white text-sm font-black uppercase tracking-[0.2em] shadow-2xl shadow-rose-500/20 group"
+                                className="w-full h-14 rounded-full bg-black text-white text-[10px] font-black uppercase tracking-widest"
                                 onClick={submitReturnRequest}
                                 disabled={isSubmittingReturn || !returnReason}
                             >
-                                {isSubmittingReturn ? (
-                                    <RefreshCcw className="w-5 h-5 animate-spin" />
-                                ) : (
-                                    <>
-                                        Consign Reversal
-                                        <Send className="ml-3 w-4 h-4 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
-                                    </>
-                                )}
+                                {isSubmittingReturn ? <RefreshCcw className="w-4 h-4 animate-spin" /> : "Initiate Reversal"}
                             </Button>
                         </div>
                     </DialogContent>

@@ -148,7 +148,18 @@ export const productsService = {
             .maybeSingle();
 
         if (error) throw error;
-        return data;
+        return data as Product | null;
+    },
+
+    async getBySlug(slug: string) {
+        const { data, error } = await supabase
+            .from('products')
+            .select('*')
+            .eq('slug', slug)
+            .maybeSingle();
+
+        if (error) throw error;
+        return data as Product | null;
     },
 
     async create(product: Partial<Product>) {
