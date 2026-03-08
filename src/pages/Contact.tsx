@@ -141,16 +141,19 @@ const Contact = () => {
                                     <div className="flex flex-wrap gap-4">
                                         {socialLinks.map((url, i) => {
                                             let hostname = "";
-                                            try { hostname = new URL(url).hostname; } catch (e) { }
+                                            try {
+                                                const validUrl = url.startsWith('http') ? url : `https://${url}`;
+                                                hostname = new URL(validUrl).hostname;
+                                            } catch (e) { }
                                             if (!hostname) return null;
 
                                             return (
-                                                <a key={i} href={url} target="_blank" rel="noopener noreferrer"
+                                                <a key={i} href={url.startsWith('http') ? url : `https://${url}`} target="_blank" rel="noopener noreferrer"
                                                     className="w-12 h-12 bg-card border border-border/50 rounded-2xl flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary transition-all shadow-sm group">
                                                     <img
                                                         src={`https://www.google.com/s2/favicons?domain=${hostname}&sz=64`}
                                                         alt={hostname}
-                                                        className="w-5 h-5 object-contain opacity-60 group-hover:opacity-100 transition-all filter grayscale group-hover:grayscale-0 group-hover:invert-100 dark:invert"
+                                                        className="w-5 h-5 object-contain opacity-60 group-hover:opacity-100 transition-all filter grayscale group-hover:grayscale-0 group-hover:invert dark:invert"
                                                         onError={(e) => { (e.target as HTMLImageElement).style.visibility = 'hidden'; }}
                                                     />
                                                 </a>

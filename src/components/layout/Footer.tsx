@@ -69,11 +69,14 @@ const Footer = () => {
               <div className="flex gap-4">
                 {socialLinksData.map((url, i) => {
                   let hostname = "";
-                  try { hostname = new URL(url).hostname; } catch (e) { }
+                  try {
+                    const validUrl = url.startsWith('http') ? url : `https://${url}`;
+                    hostname = new URL(validUrl).hostname;
+                  } catch (e) { }
                   if (!hostname) return null;
 
                   return (
-                    <motion.a key={i} href={url} target="_blank" rel="noopener noreferrer" whileHover={{ scale: 1.1, y: -2 }} whileTap={{ scale: 0.95 }}
+                    <motion.a key={i} href={url.startsWith('http') ? url : `https://${url}`} target="_blank" rel="noopener noreferrer" whileHover={{ scale: 1.1, y: -2 }} whileTap={{ scale: 0.95 }}
                       className="w-12 h-12 rounded-full bg-muted/50 border border-border/10 flex items-center justify-center hover:bg-primary transition-all duration-300 group overflow-hidden">
                       <img
                         src={`https://www.google.com/s2/favicons?domain=${hostname}&sz=64`}

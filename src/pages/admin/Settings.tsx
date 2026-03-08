@@ -314,7 +314,10 @@ export default function AdminSettings() {
                                         configs.marketing.custom_social_links.map((url: string, index: number) => {
                                             // Extract domain for favicon preview
                                             let hostname = "";
-                                            try { hostname = new URL(url).hostname; } catch (e) { }
+                                            try {
+                                                const validUrl = url.startsWith('http') ? url : `https://${url}`;
+                                                hostname = new URL(validUrl).hostname;
+                                            } catch (e) { }
 
                                             return (
                                                 <div key={index} className="flex items-center gap-4 bg-muted/20 p-2 pl-4 border border-border/10 rounded-2xl">
