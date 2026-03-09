@@ -15,7 +15,7 @@ const Login = () => {
   const { toast } = useToast();
   const { theme } = useTheme();
   const isDark = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches) || document.documentElement.classList.contains("dark");
-  const logoSrc = isDark ? "/logo-dark.png" : "/logo.png";
+  const logoSrc = isDark ? "/logo-dark.png?v=2" : "/logo.png?v=2";
 
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
