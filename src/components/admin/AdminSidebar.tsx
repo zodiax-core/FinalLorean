@@ -90,11 +90,11 @@ export const AdminSidebar = ({ className = "" }: AdminSidebarProps) => {
             <div className="p-8 pb-4">
                 <Link to="/admin" className="flex items-center gap-3">
                     <img
-                        src={logoSrc}
-                        alt="Lorean Logo"
-                        className="h-5 w-auto object-contain"
+                        src="/favicon.png"
+                        alt="Lorean Admin"
+                        className="h-6 w-6 object-contain"
                     />
-                    <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground mt-1">Portal</span>
+                    <span className="text-sm font-black uppercase tracking-widest text-foreground mt-1">Admin</span>
                 </Link>
             </div>
 
