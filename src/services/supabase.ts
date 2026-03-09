@@ -162,6 +162,14 @@ export const productsService = {
         return data as Product | null;
     },
 
+    async getByIdOrSlug(idOrSlug: string | number) {
+        const isNumeric = !isNaN(Number(idOrSlug)) && /^\d+$/.test(String(idOrSlug));
+        if (isNumeric) {
+            return this.getById(Number(idOrSlug));
+        }
+        return this.getBySlug(String(idOrSlug));
+    },
+
     async create(product: Partial<Product>) {
         const { error } = await supabase
             .from('products')
@@ -1534,7 +1542,7 @@ export const storageService = {
 
     async uploadImage(file: File, path: string) {
         const { data, error } = await supabase.storage
-            .from('product-images')
+            .from('prodpics')
             .upload(path, file, {
                 cacheControl: '3600',
                 upsert: true
@@ -1543,7 +1551,7 @@ export const storageService = {
         if (error) throw error;
 
         const { data: { publicUrl } } = supabase.storage
-            .from('product-images')
+            .from('prodpics')
             .getPublicUrl(data.path);
 
         return publicUrl;

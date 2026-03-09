@@ -6,6 +6,7 @@ interface SEOProps {
     description?: string;
     image?: string;
     article?: boolean;
+    canonicalUrl?: string;
 }
 
 const SEO = ({
@@ -13,6 +14,7 @@ const SEO = ({
     description,
     image,
     article = false,
+    canonicalUrl,
 }: SEOProps) => {
     const { pathname } = useLocation();
     const siteName = "Lorean | Ancient Herbal Hair Rituals";
@@ -26,8 +28,8 @@ const SEO = ({
     const seo = {
         title: title ? `${title} | Lorean` : siteName,
         description: description || defaultDescription,
-        image: `${siteUrl}${image || defaultImage}`,
-        url: `${siteUrl}${cleanPathname}`,
+        image: image ? (image.startsWith('http') ? image : `${siteUrl}${image}`) : `${siteUrl}${defaultImage}`,
+        url: canonicalUrl ? `${siteUrl}${canonicalUrl}` : `${siteUrl}${cleanPathname}`,
     };
 
     useEffect(() => {

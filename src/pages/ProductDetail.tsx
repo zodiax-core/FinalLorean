@@ -414,6 +414,7 @@ const ProductDetail = () => {
                 title={product.name}
                 description={product.description}
                 image={product.image}
+                canonicalUrl={`/product/${product.slug || product.id}`}
             />
             <Navbar />
 
@@ -775,13 +776,14 @@ const ProductDetail = () => {
                                         return (
                                             <div key={i} className="flex-none w-[280px] md:w-[320px] snap-start">
                                                 <div className="glass rounded-[3rem] overflow-hidden border-border/10 group/vid-card hover:shadow-2xl transition-all duration-700 relative h-full">
-                                                    <div className="aspect-[9/16] bg-black relative overflow-hidden">
+                                                    <div className="bg-black relative overflow-hidden flex items-center justify-center w-full h-[480px] md:h-[560px]">
                                                         {isPlaying ? (
                                                             isUpload ? (
                                                                 <div className="absolute inset-0 z-30">
                                                                     <video
                                                                         src={url}
-                                                                        className="w-full h-full object-cover"
+                                                                        poster={thumb}
+                                                                        className="w-full h-full object-contain"
                                                                         autoPlay
                                                                         playsInline
                                                                         muted={isMuted}
@@ -856,6 +858,7 @@ const ProductDetail = () => {
                                                                 <div className="absolute inset-0 z-30">
                                                                     <video
                                                                         src={tiktokMp4}
+                                                                        poster={thumb}
                                                                         className="w-full h-full object-cover"
                                                                         controls
                                                                         autoPlay
@@ -892,12 +895,10 @@ const ProductDetail = () => {
                                                             )
                                                         ) : (
                                                             <>
-                                                                {thumb || isUpload ? (
-                                                                    isUpload ? (
-                                                                        <video src={url} className="w-full h-full object-cover grayscale-[0.2] opacity-50" />
-                                                                    ) : (
-                                                                        <img src={thumb} className="w-full h-full object-cover grayscale-[0.2] group-hover/vid-card:grayscale-0 group-hover/vid-card:scale-105 transition-all duration-[2s]" alt="" />
-                                                                    )
+                                                                {thumb ? (
+                                                                    <img src={thumb} className="w-full h-full object-cover grayscale-[0.2] group-hover/vid-card:grayscale-0 group-hover/vid-card:scale-105 transition-all duration-[2s]" alt="Ritual Proof" />
+                                                                ) : isUpload ? (
+                                                                    <video src={url} className="w-full h-full object-cover grayscale-[0.2] opacity-50" />
                                                                 ) : (
                                                                     <div className="w-full h-full flex items-center justify-center bg-muted/20">
                                                                         <Play className="w-12 h-12 text-primary opacity-20" />

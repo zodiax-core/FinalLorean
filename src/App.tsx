@@ -134,7 +134,7 @@ const App = () => (
                             <Route index element={<AdminDashboard />} />
                             <Route path="products" element={<AdminProducts />} />
                             <Route path="products/new" element={<AdminProductForm />} />
-                            <Route path="products/edit/:id" element={<AdminProductForm />} />
+                            <Route path="products/edit/:idOrSlug" element={<AdminProductForm />} />
                             <Route path="categories" element={<AdminCategories />} />
                             <Route path="inventory" element={<AdminInventory />} />
                             <Route path="customers" element={<AdminCustomers />} />
