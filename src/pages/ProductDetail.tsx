@@ -724,14 +724,14 @@ const ProductDetail = () => {
 
                                 <motion.div
                                     ref={visionsCarouselRef}
-                                    className="flex gap-6 overflow-x-auto pb-12 snap-x snap-mandatory px-4 md:px-0 scroll-smooth cursor-default scrollbar-hide [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]"
+                                    className="flex gap-6 overflow-x-auto pb-12 snap-x snap-mandatory scroll-smooth cursor-default scrollbar-hide [mask-image:linear-gradient(to_right,transparent,black_15%,black_85%,transparent)]"
                                     onScroll={(e) => {
                                         const el = e.currentTarget;
                                         const index = Math.round(el.scrollLeft / (el.scrollWidth / product.video_proofs.length));
                                         if (index !== visionsIndex) setVisionsIndex(index);
                                     }}
                                 >
-                                    <div className="flex-none w-[5vw] md:w-[20vw]" /> {/* Centering padding */}
+                                    <div className="flex-none w-[calc(50vw-140px)] md:w-[calc(50vw-160px)]" /> {/* Dynamic Centering Padding */}
                                     {(product.video_proofs || []).map((proof: any, i: number) => {
                                         const url = proof.url;
                                         if (!url) return null;
@@ -774,7 +774,7 @@ const ProductDetail = () => {
                                         };
 
                                         return (
-                                            <div key={i} className="flex-none w-[280px] md:w-[320px] snap-start">
+                                            <div key={i} className="flex-none w-[280px] md:w-[320px] snap-center">
                                                 <div className="glass rounded-[3rem] overflow-hidden border-border/10 group/vid-card hover:shadow-2xl transition-all duration-700 relative h-full">
                                                     <div className="bg-black relative overflow-hidden flex items-center justify-center w-full h-[480px] md:h-[560px]">
                                                         {isPlaying ? (
@@ -1001,7 +1001,7 @@ const ProductDetail = () => {
                                             </div>
                                         );
                                     })}
-                                    <div className="flex-none w-[5vw] md:w-[20vw]" /> {/* Centering padding */}
+                                    <div className="flex-none w-[calc(50vw-140px)] md:w-[calc(50vw-160px)]" /> {/* Dynamic Centering Padding */}
                                 </motion.div>
                             </div>
                         </div>
