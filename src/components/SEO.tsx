@@ -20,11 +20,14 @@ const SEO = ({
     const siteUrl = "https://lorean.online";
     const defaultImage = "/og-image.png";
 
+    // Strip trailing slash to match sitemap format (except for root path)
+    const cleanPathname = pathname === '/' ? pathname : pathname.replace(/\/$/, '');
+
     const seo = {
         title: title ? `${title} | Lorean` : siteName,
         description: description || defaultDescription,
         image: `${siteUrl}${image || defaultImage}`,
-        url: `${siteUrl}${pathname}`,
+        url: `${siteUrl}${cleanPathname}`,
     };
 
     useEffect(() => {
