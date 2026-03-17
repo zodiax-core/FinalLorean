@@ -22,6 +22,24 @@ class ErrorBoundary extends Component<Props, State> {
 
     public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
         console.error("Uncaught error:", error, errorInfo);
+
+        // Handle chunk loading failures (stale build objects)
+        const errorMessage = error.message.toLowerCase();
+        if (
+            errorMessage.includes("failed to fetch dynamically imported module") ||
+            errorMessage.includes("error loading dynamically imported module") ||
+            errorMessage.includes("loading chunk") ||
+            errorMessage.includes("failed to fetch")
+        ) {
+            console.log("Chunk loading error detected. Re-validating application manifest...");
+            // Use a short delay to avoid infinite reload loops
+            const lastReload = sessionStorage.getItem("last_chunk_reload") || "0";
+            const now = Date.now();
+            if (now - parseInt(lastReload) > 5000) {
+                sessionStorage.setItem("last_chunk_reload", now.toString());
+                window.location.reload();
+            }
+        }
     }
 
     public render() {

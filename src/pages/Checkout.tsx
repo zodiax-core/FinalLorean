@@ -64,6 +64,7 @@ const Checkout = () => {
     const [isApplyingPromo, setIsApplyingPromo] = useState(false);
     const [taxData, setTaxData] = useState({ amount: 0, name: "Tax", breakdown: [] });
     const [isCalculatingTax, setIsCalculatingTax] = useState(false);
+    const [isSuccess, setIsSuccess] = useState(false);
 
     // Form states
     const [formData, setFormData] = useState({
@@ -268,18 +269,27 @@ const Checkout = () => {
                 console.error("Confirmation email failed:", emailError);
             }
 
+            setIsSuccess(true);
+            
+            // Navigate immediately to success page
+            navigate("/order-success", { 
+                state: { order: newOrder },
+                replace: true 
+            });
+
+            // Clean cart after initiating navigation
             clearCart();
 
             toast({
                 title: "Order Placed Successfully!",
                 description: "Your order is confirmed. A confirmation email will be sent shortly.",
             });
-
-            setTimeout(() => navigate("/order-success", { state: { order: newOrder } }), 1500);
         } catch (error: any) {
             console.error("Order error:", error);
             toast({ variant: "destructive", title: "Order Failed", description: error?.message || "An error occurred while placing your order. Please try again." });
         } finally {
+            // We don't setSubmitting(false) here if we've already navigated away
+            // but for safety in case of error:
             setSubmitting(false);
         }
     };
@@ -293,7 +303,7 @@ const Checkout = () => {
         );
     }
 
-    if (cartItems.length === 0 && !submitting) {
+    if (cartItems.length === 0 && !submitting && !isSuccess) {
         return (
             <div className="min-h-screen bg-background text-center py-40 px-4">
                 <Navbar />
