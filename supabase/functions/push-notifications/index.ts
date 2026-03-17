@@ -232,14 +232,22 @@ serve(async (req) => {
         }
 
         const successCount = results.filter(r => r.success).length;
+        const failureCount = results.length - successCount;
         console.log(`[FCM] Broadcast complete: ${successCount}/${tokens.length} successful`);
 
         return new Response(JSON.stringify({
             success: true,
             sent: successCount,
             total: tokens.length,
-            details: results.map(r => ({ success: r.success, token: r.token.substring(0, 10) + "...", error: r.success ? null : r.data }))
-        }), { headers: corsHeaders });
+            failures: failureCount,
+            details: results.map(r => ({
+                success: r.success,
+                token_end: r.token.slice(-10),
+                error: r.success ? null : r.data
+            }))
+        }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
 
     } catch (err: any) {
         console.error("[FCM] ERROR:", err.message);

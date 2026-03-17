@@ -1541,9 +1541,14 @@ export const storageService = {
     },
 
     async uploadImage(file: File, path: string) {
+        // Sanitize path to ensure no illegal characters during upload
+        const cleanPath = path.split('/').map(part =>
+            part.toLowerCase().replace(/[^a-z0-9.]+/g, '-').replace(/(^-|-$)/g, '')
+        ).join('/');
+
         const { data, error } = await supabase.storage
-            .from('prodpics')
-            .upload(path, file, {
+            .from('product-images')
+            .upload(cleanPath, file, {
                 cacheControl: '3600',
                 upsert: true
             });
@@ -1551,7 +1556,7 @@ export const storageService = {
         if (error) throw error;
 
         const { data: { publicUrl } } = supabase.storage
-            .from('prodpics')
+            .from('product-images')
             .getPublicUrl(data.path);
 
         return publicUrl;

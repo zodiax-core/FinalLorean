@@ -216,12 +216,21 @@ export default function ProductForm() {
             canvas.toBlob(async (blob) => {
                 if (blob) {
                     const file = new File([blob], `thumb-${Date.now()}.jpg`, { type: "image/jpeg" });
-                    const safeFolderName = (formData.slug || formData.name || 'unnamed').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-                    const path = `products/${safeFolderName}/thumbnails/at-${Math.floor(video.currentTime)}-${Date.now()}.jpg`;
+                    // Explicitly use slug or a safe version of name
+                    const safeFolderName = (formData.slug || formData.name || 'unnamed')
+                        .toLowerCase()
+                        .trim()
+                        .replace(/[^a-z0-9]+/g, '-')
+                        .replace(/(^-|-$)/g, '');
+
+                    const timestamp = Date.now();
+                    const seconds = Math.floor(video.currentTime);
+                    const path = `products/${safeFolderName}/thumbnails/at-${seconds}-${timestamp}.jpg`;
+
                     try {
                         const publicUrl = await storageService.uploadImage(file, path);
                         updateNestedField('video_proofs', index, 'thumbnail', publicUrl);
-                        toast({ title: "Frame Captured", description: `Thumbnail saved from ${Math.floor(video.currentTime)}s mark.` });
+                        toast({ title: "Frame Captured", description: `Thumbnail saved from ${seconds}s mark.` });
                     } catch (uploadErr: any) {
                         console.error("Thumbnail upload error:", uploadErr);
                         toast({

@@ -724,20 +724,25 @@ const ProductDetail = () => {
 
                                 <motion.div
                                     ref={visionsCarouselRef}
-                                    className="flex gap-6 overflow-x-auto pb-12 snap-x snap-mandatory scroll-smooth cursor-default scrollbar-hide [mask-image:linear-gradient(to_right,transparent,black_15%,black_85%,transparent)]"
+                                    className="flex gap-10 overflow-x-auto py-12 pb-20 snap-x snap-mandatory scroll-smooth cursor-default scrollbar-hide select-none relative"
+                                    style={{
+                                        paddingLeft: 'calc(50vw - 160px)',
+                                        paddingRight: 'calc(50vw - 160px)'
+                                    }}
                                     onScroll={(e) => {
                                         const el = e.currentTarget;
-                                        const index = Math.round(el.scrollLeft / (el.scrollWidth / product.video_proofs.length));
+                                        const cardWidth = window.innerWidth < 768 ? 280 : 320;
+                                        const gap = 40; // gap-10
+                                        const index = Math.round(el.scrollLeft / (cardWidth + gap));
                                         if (index !== visionsIndex) setVisionsIndex(index);
                                     }}
                                 >
-                                    <div className="flex-none w-[calc(50vw-140px)] md:w-[calc(50vw-160px)]" /> {/* Dynamic Centering Padding */}
                                     {(product.video_proofs || []).map((proof: any, i: number) => {
                                         const url = proof.url;
                                         if (!url) return null;
 
                                         const { platform: inferredPlatform, embedUrl, thumb: inferredThumb } = getVideoData(url);
-                                        const thumb = proof.thumbnail || inferredThumb;
+                                        const thumb = proof.thumbnail || inferredThumb || product.image; // Fallback to main product image
                                         const platform = proof.platform || inferredPlatform;
                                         const handle = proof.username || getUsernameFromUrl(url);
                                         let redirectionLink = proof.redirection_link || url;
@@ -783,7 +788,7 @@ const ProductDetail = () => {
                                                                     <video
                                                                         src={url}
                                                                         poster={thumb}
-                                                                        className="w-full h-full object-contain"
+                                                                        className="w-full h-full object-cover" // Changed to cover for full window feel
                                                                         autoPlay
                                                                         playsInline
                                                                         muted={isMuted}
@@ -896,7 +901,15 @@ const ProductDetail = () => {
                                                         ) : (
                                                             <>
                                                                 {thumb ? (
-                                                                    <img src={thumb} className="w-full h-full object-cover grayscale-[0.2] group-hover/vid-card:grayscale-0 group-hover/vid-card:scale-105 transition-all duration-[2s]" alt="Ritual Proof" />
+                                                                    <img
+                                                                        src={thumb}
+                                                                        className="w-full h-full object-cover grayscale-[0.2] group-hover/vid-card:grayscale-0 group-hover/vid-card:scale-105 transition-all duration-[2s]"
+                                                                        alt="Ritual Proof"
+                                                                        onError={(e) => {
+                                                                            e.currentTarget.onerror = null; // Prevent infinite loop
+                                                                            e.currentTarget.src = product.image || "/favicon.png";
+                                                                        }}
+                                                                    />
                                                                 ) : isUpload ? (
                                                                     <video src={url} className="w-full h-full object-cover grayscale-[0.2] opacity-50" />
                                                                 ) : (
