@@ -1,6 +1,6 @@
 import { motion, useScroll, useTransform } from "framer-motion";
 import { useRef } from "react";
-import { Leaf, Heart, Award, Users, Sparkles, Globe } from "lucide-react";
+import { Leaf, Heart, Award, Sparkles, Globe } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 
@@ -34,23 +34,7 @@ const stats = [
   { value: "15+", label: "Years Experience" },
 ];
 
-const team = [
-  {
-    name: "Elena Rosetti",
-    role: "Founder & CEO",
-    image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&q=80",
-  },
-  {
-    name: "Sophie Chen",
-    role: "Head of Product",
-    image: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&q=80",
-  },
-  {
-    name: "Maya Johnson",
-    role: "Lead Researcher",
-    image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&q=80",
-  },
-];
+
 
 const About = () => {
   const heroRef = useRef<HTMLDivElement>(null);
@@ -239,59 +223,7 @@ const About = () => {
         </div>
       </section>
 
-      {/* Team */}
-      <section className="py-24">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-center mb-16"
-          >
-            <span className="text-primary text-sm font-medium tracking-wider uppercase mb-4 block">
-              The People Behind Lorean
-            </span>
-            <h2
-              className="text-3xl sm:text-4xl font-light"
-              style={{ fontFamily: "'Cormorant Garamond', serif" }}
-            >
-              Meet Our <span className="text-primary italic">Team</span>
-            </h2>
-          </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
-            {team.map((member, index) => (
-              <motion.div
-                key={member.name}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.15 }}
-                className="text-center group"
-              >
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  className="relative w-48 h-48 mx-auto mb-6 rounded-full overflow-hidden"
-                >
-                  <img
-                    src={member.image}
-                    alt={member.name}
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity" />
-                </motion.div>
-                <h3
-                  className="text-xl font-medium mb-1"
-                  style={{ fontFamily: "'Cormorant Garamond', serif" }}
-                >
-                  {member.name}
-                </h3>
-                <p className="text-muted-foreground text-sm">{member.role}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
 
       <Footer />
     </div>

@@ -8,7 +8,7 @@ import { SmoothScroll } from "./components/SmoothScroll";
 import ErrorBoundary from "./components/ErrorBoundary";
 
 // Providers
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import { ProductsProvider } from "./context/ProductsContext";
 import { CartProvider } from "./context/CartContext";
 import { AuthProvider } from "./context/AuthContext";
@@ -23,21 +23,22 @@ import ScrollToTop from "./components/ScrollToTop";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Shop from "./pages/Shop";
-// Lazy Load Heavy Pages
+import ProductDetail from "./pages/ProductDetail";
+import Collections from "./pages/Collections";
+import About from "./pages/About";
+import Story from "./pages/Story";
+import Sustainability from "./pages/Sustainability";
+import Contact from "./pages/Contact";
+import Checkout from "./pages/Checkout";
+import OrderSuccess from "./pages/OrderSuccess";
+
+// Lazy Load Secondary Pages
 const Dashboard = lazy(() => import("./pages/Dashboard"));
-const ProductDetail = lazy(() => import("./pages/ProductDetail"));
-const Checkout = lazy(() => import("./pages/Checkout"));
-const Collections = lazy(() => import("./pages/Collections"));
-const About = lazy(() => import("./pages/About"));
-const OrderSuccess = lazy(() => import("./pages/OrderSuccess"));
 const TrackOrder = lazy(() => import("./pages/TrackOrder"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
-// Shared Pages
-const Story = lazy(() => import("./pages/Story"));
-const Sustainability = lazy(() => import("./pages/Sustainability"));
+// Shared Pages (Lazy)
 const Careers = lazy(() => import("./pages/Careers"));
-const Contact = lazy(() => import("./pages/Contact"));
 const FAQ = lazy(() => import("./pages/FAQ"));
 const Shipping = lazy(() => import("./pages/Shipping"));
 const Returns = lazy(() => import("./pages/Returns"));
@@ -81,8 +82,34 @@ const queryClient = new QueryClient({
   },
 });
 
-const App = () => (
-  <ErrorBoundary>
+const App = () => {
+  // Background preloader for lazy pages after initial load
+  useEffect(() => {
+    const preloadLazyPages = async () => {
+      // Small delay to ensure priority assets load first
+      await new Promise(r => setTimeout(r, 2000));
+      
+      const lazyPaths = [
+        () => import("./pages/Dashboard"),
+        () => import("./pages/TrackOrder"),
+        () => import("./pages/Careers"),
+        () => import("./pages/FAQ"),
+        () => import("./pages/Shipping"),
+        // Preload Admin Layout (Core of admin experience)
+        () => import("./components/admin/AdminLayout"),
+      ];
+
+      // Load them sequentially in background
+      for (const load of lazyPaths) {
+        try { load(); } catch (e) {}
+      }
+    };
+    
+    preloadLazyPages();
+  }, []);
+
+  return (
+    <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="light" storageKey="lorean-ui-theme">
         <TooltipProvider>
@@ -169,7 +196,8 @@ const App = () => (
         </TooltipProvider>
       </ThemeProvider>
     </QueryClientProvider>
-  </ErrorBoundary>
-);
+    </ErrorBoundary>
+  );
+};
 
 export default App;
