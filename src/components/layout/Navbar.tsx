@@ -24,14 +24,28 @@ import { useTheme } from "@/components/theme-provider";
 
 const Navbar = () => {
   const { user, isAdmin, signOut } = useAuth();
-  const { theme } = useTheme();
-  const isDark = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches) || document.documentElement.classList.contains("dark");
-  const logoSrc = isDark ? "/logo-dark.png?v=2" : "/logo.png?v=2";
+  const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">("light");
+  const isDark = resolvedTheme === "dark";
+  const logoSrc = isDark ? "/logo-dark.png?v=3" : "/logo.png?v=3";
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isWishlistOpen, setIsWishlistOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
+
+  useEffect(() => {
+    const root = window.document.documentElement;
+    const updateTheme = () => {
+      setResolvedTheme(root.classList.contains("dark") ? "dark" : "light");
+    };
+
+    updateTheme();
+
+    const observer = new MutationObserver(updateTheme);
+    observer.observe(root, { attributes: true, attributeFilter: ["class"] });
+
+    return () => observer.disconnect();
+  }, []);
 
   const location = useLocation();
   const { itemCount: cartCount } = useCart();
@@ -71,6 +85,9 @@ const Navbar = () => {
                 src={logoSrc}
                 alt="Lórean Logo"
                 className="h-auto w-auto max-h-8 md:max-h-10 max-w-[140px] object-contain"
+                loading="eager"
+                // @ts-ignore
+                fetchpriority="high"
                 whileHover={{ scale: 1.05 }}
                 transition={{ type: "spring", stiffness: 400, damping: 10 }}
               />

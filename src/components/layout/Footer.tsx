@@ -6,9 +6,20 @@ import { useTheme } from "@/components/theme-provider";
 import { settingsService } from "@/services/supabase";
 
 const Footer = () => {
-  const { theme } = useTheme();
-  const isDark = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches) || document.documentElement.classList.contains("dark");
-  const logoSrc = isDark ? "/logo-dark.png?v=2" : "/logo.png?v=2";
+  const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">("light");
+  const isDark = resolvedTheme === "dark";
+  const logoSrc = isDark ? "/logo-dark.png?v=3" : "/logo.png?v=3";
+
+  useEffect(() => {
+    const root = window.document.documentElement;
+    const updateTheme = () => {
+      setResolvedTheme(root.classList.contains("dark") ? "dark" : "light");
+    };
+    updateTheme();
+    const observer = new MutationObserver(updateTheme);
+    observer.observe(root, { attributes: true, attributeFilter: ["class"] });
+    return () => observer.disconnect();
+  }, []);
 
   const [socialLinksData, setSocialLinksData] = useState<string[]>([]);
 

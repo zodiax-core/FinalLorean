@@ -125,6 +125,9 @@ const HeroSection = () => {
                   src="https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?w=800&q=80"
                   alt="Premium Herbal Hair Oil"
                   className="w-full h-full object-cover"
+                  loading="eager"
+                  // @ts-ignore
+                  fetchpriority="high"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-background/20 to-transparent" />
               </motion.div>
