@@ -69,7 +69,7 @@ const Navbar = () => {
             <Link to="/" className="flex items-center shrink-0">
               <motion.img
                 src={logoSrc}
-                alt="Lorean Logo"
+                alt="Lórean Logo"
                 className="h-auto w-auto max-h-8 md:max-h-10 max-w-[140px] object-contain"
                 whileHover={{ scale: 1.05 }}
                 transition={{ type: "spring", stiffness: 400, damping: 10 }}
@@ -244,7 +244,7 @@ const Navbar = () => {
             className="fixed inset-0 z-50 bg-background/95 backdrop-blur-lg md:hidden flex flex-col"
           >
             <div className="p-8 flex justify-between items-center border-b border-border/50">
-              <img src={logoSrc} alt="Lorean Logo" className="h-8 w-auto" />
+              <img src={logoSrc} alt="Lórean Logo" className="h-8 w-auto" />
               <Button variant="ghost" size="icon" onClick={() => setIsMobileMenuOpen(false)}>
                 <X className="w-6 h-6" />
               </Button>

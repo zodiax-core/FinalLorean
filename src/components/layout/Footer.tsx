@@ -57,7 +57,7 @@ const Footer = () => {
             <Link to="/" className="inline-block group">
               <img
                 src={logoSrc}
-                alt="Lorean Logo"
+                alt="Lórean Logo"
                 className="h-auto w-auto max-h-12 max-w-[160px] object-contain transition-transform duration-700 group-hover:scale-105"
               />
             </Link>
@@ -145,7 +145,7 @@ const Footer = () => {
         <div className="mt-24 pt-10 border-t border-border/30 flex flex-col md:flex-row justify-between items-center gap-8">
           <div className="text-center md:text-left space-y-2">
             <p className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">
-              © {new Date().getFullYear()} Lorean.
+              © {new Date().getFullYear()} Lórean.
             </p>
             <p className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground/30 font-black">Crafted for Excellence</p>
           </div>
