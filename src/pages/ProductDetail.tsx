@@ -684,10 +684,10 @@ const ProductDetail = () => {
                                 </div>
                             </div>
 
-                            <div className="relative max-w-7xl mx-auto px-4 group">
+                            <div className="relative w-full group overflow-hidden">
                                 {/* Edge Blurs */}
-                                <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-background via-background/40 to-transparent z-20 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                                <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-background via-background/40 to-transparent z-20 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                                <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-background via-background/40 to-transparent z-20 pointer-events-none opacity-100" />
+                                <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-background via-background/40 to-transparent z-20 pointer-events-none opacity-100" />
 
                                 {product.video_proofs && product.video_proofs.length > 2 && visionsIndex > 0 && (
                                     <button
@@ -724,10 +724,15 @@ const ProductDetail = () => {
 
                                 <motion.div
                                     ref={visionsCarouselRef}
-                                    className="flex gap-10 overflow-x-auto py-12 pb-20 snap-x snap-mandatory scroll-smooth cursor-default scrollbar-hide select-none relative"
-                                    style={{
-                                        paddingLeft: 'calc(50vw - 160px)',
-                                        paddingRight: 'calc(50vw - 160px)'
+                                    className={`flex gap-6 md:gap-10 overflow-x-auto py-12 pb-20 snap-x snap-mandatory scroll-smooth scrollbar-hide select-none relative ${product.video_proofs.length <= 2 ? 'justify-center' : ''}`}
+                                    style={product.video_proofs.length > 2 ? {
+                                        paddingLeft: 'calc(50vw - (min(320px, 80vw) / 2))',
+                                        paddingRight: 'calc(50vw - (min(320px, 80vw) / 2))'
+                                    } : {
+                                        maxWidth: '100%',
+                                        width: 'max-content',
+                                        marginLeft: 'auto',
+                                        marginRight: 'auto'
                                     }}
                                     onScroll={(e) => {
                                         const el = e.currentTarget;
@@ -788,7 +793,7 @@ const ProductDetail = () => {
                                                                     <video
                                                                         src={url}
                                                                         poster={thumb || product.image}
-                                                                        className="w-full h-full object-cover" // Changed to cover for full window feel
+                                                                        className="w-full h-full object-contain" // Changed to contain to avoid chopping/cropping
                                                                         autoPlay
                                                                         playsInline
                                                                         muted={isMuted}
@@ -864,7 +869,7 @@ const ProductDetail = () => {
                                                                     <video
                                                                         src={tiktokMp4}
                                                                         poster={thumb || product.image}
-                                                                        className="w-full h-full object-cover"
+                                                                        className="w-full h-full object-contain"
                                                                         controls
                                                                         autoPlay
                                                                         playsInline
@@ -903,7 +908,7 @@ const ProductDetail = () => {
                                                                 {thumb ? (
                                                                     <img
                                                                         src={thumb}
-                                                                        className="w-full h-full object-cover grayscale-[0.2] group-hover/vid-card:grayscale-0 group-hover/vid-card:scale-105 transition-all duration-[2s]"
+                                                                        className="w-full h-full object-contain grayscale-[0.2] group-hover/vid-card:grayscale-0 group-hover/vid-card:scale-105 transition-all duration-[2s]"
                                                                         alt="Ritual Proof"
                                                                         onError={(e) => {
                                                                             e.currentTarget.onerror = null; // Prevent infinite loop
@@ -911,7 +916,7 @@ const ProductDetail = () => {
                                                                         }}
                                                                     />
                                                                 ) : isUpload ? (
-                                                                    <video src={url} className="w-full h-full object-cover grayscale-[0.2] opacity-50" />
+                                                                    <video src={url} className="w-full h-full object-contain grayscale-[0.2] opacity-50 block" autoPlay muted playsInline loop />
                                                                 ) : (
                                                                     <div className="w-full h-full flex items-center justify-center bg-muted/20">
                                                                         <Play className="w-12 h-12 text-primary opacity-20" />

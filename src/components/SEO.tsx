@@ -17,7 +17,7 @@ const SEO = ({
     canonicalUrl,
 }: SEOProps) => {
     const { pathname } = useLocation();
-    const siteName = "Lórean | Ancient Herbal Hair Rituals";
+    const siteName = "Lórean";
     const defaultDescription = "Lórean - Premium herbal hair oils crafted with ancient Ayurvedic wisdom. Discover our collection for healthy, thick, and radiant hair.";
     const siteUrl = "https://lorean.online";
     const defaultImage = "/og-image.png";

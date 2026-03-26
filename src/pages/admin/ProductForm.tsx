@@ -75,6 +75,11 @@ export default function ProductForm() {
         variants: { sizes: ["30ml", "50ml", "100ml"], colors: [] }
     });
 
+    const formDataRef = useRef(formData);
+    useEffect(() => {
+        formDataRef.current = formData;
+    }, [formData]);
+
     // Form persistence for new product draft
     useEffect(() => {
         if (!isEditing) {
@@ -189,9 +194,19 @@ export default function ProductForm() {
     };
 
     const updateNestedField = (field: keyof Product, index: number, subfield: string, value: any) => {
-        const newList = [...((formData[field] as any[]) || [])];
-        newList[index] = { ...newList[index], [subfield]: value };
-        setFormData(prev => ({ ...prev, [field]: newList }));
+        setFormData(prev => {
+            const newList = [...((prev[field] as any[]) || [])];
+            newList[index] = { ...newList[index], [subfield]: value };
+            return { ...prev, [field]: newList };
+        });
+    };
+
+    const updateMultipleInNestedField = (field: keyof Product, index: number, updates: Record<string, any>) => {
+        setFormData(prev => {
+            const newList = [...((prev[field] as any[]) || [])];
+            newList[index] = { ...newList[index], ...updates };
+            return { ...prev, [field]: newList };
+        });
     };
 
     const handleCaptureThumbnail = async (index: number) => {
@@ -233,7 +248,8 @@ export default function ProductForm() {
                         
                         if (isEditing && formData?.id) {
                             try {
-                                const updatedProofs = [...(formData.video_proofs || [])];
+                                const latestFormData = formDataRef.current;
+                                const updatedProofs = [...(latestFormData.video_proofs || [])];
                                 updatedProofs[index] = { ...updatedProofs[index], thumbnail: publicUrl };
                                 await productsService.update(Number(formData.id), { video_proofs: updatedProofs });
                                 toast({ title: "Frame Captured", description: `Thumbnail saved from ${seconds}s mark to database.` });
@@ -548,7 +564,7 @@ export default function ProductForm() {
                                                                 src={videoPreviews[i] || proof.url}
                                                                 className="max-w-full max-h-[500px] object-contain shadow-2xl"
                                                                 controls
-                                                                crossOrigin="anonymous"
+                                                                crossOrigin={!videoPreviews[i] ? "anonymous" : undefined}
                                                             />
                                                             <div className="absolute top-4 left-4 z-10">
                                                                 <Badge className="bg-primary/80 backdrop-blur-md text-white border-none text-[8px] font-black uppercase">
@@ -595,13 +611,21 @@ export default function ProductForm() {
                                                                     const publicUrl = await (storageService as any).uploadVideo(file, path, (progressPercentage: number) => {
                                                                         setUploadProgress(prev => ({ ...prev, [i]: Math.max(progressPercentage, prev[i] || 0) }));
                                                                     });
-                                                                    updateNestedField('video_proofs', i, 'url', publicUrl);
-                                                                    updateNestedField('video_proofs', i, 'platform', 'upload');
+                                                                    updateMultipleInNestedField('video_proofs', i, { url: publicUrl, platform: 'upload' });
                                                                     
                                                                     if (isEditing && formData?.id) {
                                                                         try {
-                                                                            const updatedProofs = [...(formData.video_proofs || [])];
-                                                                            updatedProofs[i] = { ...updatedProofs[i], url: publicUrl, platform: 'upload' };
+                                                                            // Fetch freshest list from DB before updating JSONB column to prevent data loss
+                                                                            const freshProduct = await (productsService as any).getById(Number(formData.id));
+                                                                            const updatedProofs = [...(freshProduct?.video_proofs || [])];
+                                                                            
+                                                                            if (updatedProofs[i]) {
+                                                                                updatedProofs[i] = { ...updatedProofs[i], url: publicUrl, platform: 'upload' };
+                                                                            } else {
+                                                                                // Fallback to local state if DB structure mismatch
+                                                                                updatedProofs[i] = { ...(formDataRef.current.video_proofs?.[i] || {}), url: publicUrl, platform: 'upload' };
+                                                                            }
+
                                                                             await productsService.update(Number(formData.id), { video_proofs: updatedProofs });
                                                                             toast({ title: "Manifested", description: "Ritual video uploaded and saved to product successfully." });
                                                                         } catch(e) {
