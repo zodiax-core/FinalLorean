@@ -1019,7 +1019,6 @@ const ProductDetail = () => {
                                             </div>
                                         );
                                     })}
-                                    <div className="flex-none w-[calc(50vw-140px)] md:w-[calc(50vw-160px)]" /> {/* Dynamic Centering Padding */}
                                 </motion.div>
                             </div>
                         </div>
