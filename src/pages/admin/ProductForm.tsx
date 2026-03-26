@@ -230,7 +230,19 @@ export default function ProductForm() {
                     try {
                         const publicUrl = await storageService.uploadImage(file, path);
                         updateNestedField('video_proofs', index, 'thumbnail', publicUrl);
-                        toast({ title: "Frame Captured", description: `Thumbnail saved from ${seconds}s mark.` });
+                        
+                        if (isEditing && formData?.id) {
+                            try {
+                                const updatedProofs = [...(formData.video_proofs || [])];
+                                updatedProofs[index] = { ...updatedProofs[index], thumbnail: publicUrl };
+                                await productsService.update(Number(formData.id), { video_proofs: updatedProofs });
+                                toast({ title: "Frame Captured", description: `Thumbnail saved from ${seconds}s mark to database.` });
+                            } catch (saveErr) {
+                                toast({ title: "Frame Captured", description: "Thumbnail uploaded. Click Save Changes below to persist." });
+                            }
+                        } else {
+                            toast({ title: "Frame Captured", description: `Thumbnail saved from ${seconds}s mark.` });
+                        }
                     } catch (uploadErr: any) {
                         console.error("Thumbnail upload error:", uploadErr);
                         toast({
@@ -585,7 +597,19 @@ export default function ProductForm() {
                                                                     });
                                                                     updateNestedField('video_proofs', i, 'url', publicUrl);
                                                                     updateNestedField('video_proofs', i, 'platform', 'upload');
-                                                                    toast({ title: "Manifested", description: "Ritual video successfully uploaded." });
+                                                                    
+                                                                    if (isEditing && formData?.id) {
+                                                                        try {
+                                                                            const updatedProofs = [...(formData.video_proofs || [])];
+                                                                            updatedProofs[i] = { ...updatedProofs[i], url: publicUrl, platform: 'upload' };
+                                                                            await productsService.update(Number(formData.id), { video_proofs: updatedProofs });
+                                                                            toast({ title: "Manifested", description: "Ritual video uploaded and saved to product successfully." });
+                                                                        } catch(e) {
+                                                                            toast({ title: "Manifested", description: "Video uploaded. Click 'Save Changes' below to persist." });
+                                                                        }
+                                                                    } else {
+                                                                        toast({ title: "Manifested", description: "Video uploaded. Click 'Save Changes' below to persist." });
+                                                                    }
                                                                 } catch (err: any) {
                                                                     toast({ variant: "destructive", title: "Ritual Failed", description: err.message });
                                                                 } finally {

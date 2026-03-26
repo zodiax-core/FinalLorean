@@ -11,6 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import { settingsService } from "@/services/supabase";
 import {
     Dialog,
     DialogContent,
@@ -59,6 +60,9 @@ export default function PatronDashboard() {
     const [returnDetails, setReturnDetails] = useState("");
     const [isSubmittingReturn, setIsSubmittingReturn] = useState(false);
 
+    // Social Links state
+    const [socialLinks, setSocialLinks] = useState<string[]>([]);
+
     useEffect(() => {
         if (!authLoading && !user) {
             navigate("/login");
@@ -82,6 +86,15 @@ export default function PatronDashboard() {
             }
         } catch (e) {
             console.error("Profile fetch error:", e);
+        }
+
+        try {
+            const configs = await settingsService.getAllConfigs();
+            if (configs?.marketing?.custom_social_links) {
+                setSocialLinks(configs.marketing.custom_social_links);
+            }
+        } catch (e) {
+            console.error("Social links fetch failed", e);
         }
     };
 
@@ -373,6 +386,35 @@ export default function PatronDashboard() {
                                     </span>
                                 )}
                             </Button>
+
+                            {/* Social Connections in Dashboard */}
+                            {socialLinks && socialLinks.length > 0 && (
+                                <div className="pt-8 border-t border-border/10">
+                                    <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 mb-4 text-center">Connect With Us</h4>
+                                    <div className="flex flex-wrap justify-center gap-4">
+                                        {socialLinks.map((url, i) => {
+                                            let hostname = "";
+                                            try {
+                                                const validUrl = url.startsWith('http') ? url : `https://${url}`;
+                                                hostname = new URL(validUrl).hostname;
+                                            } catch (e) { }
+                                            if (!hostname) return null;
+
+                                            return (
+                                                <a key={i} href={url.startsWith('http') ? url : `https://${url}`} target="_blank" rel="noopener noreferrer"
+                                                    className="w-10 h-10 rounded-full bg-muted/30 border border-border/10 flex items-center justify-center hover:border-primary transition-all duration-300 group overflow-hidden">
+                                                    <img
+                                                        src={`https://www.google.com/s2/favicons?domain=${hostname}&sz=64`}
+                                                        alt={hostname}
+                                                        className="w-4 h-4 object-contain transition-transform group-hover:scale-110"
+                                                        onError={(e) => { (e.target as HTMLImageElement).style.visibility = 'hidden'; }}
+                                                    />
+                                                </a>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
                         </motion.section>
                     </aside>
 

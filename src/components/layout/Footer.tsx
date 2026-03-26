@@ -88,11 +88,11 @@ const Footer = () => {
 
                   return (
                     <motion.a key={i} href={url.startsWith('http') ? url : `https://${url}`} target="_blank" rel="noopener noreferrer" whileHover={{ scale: 1.1, y: -2 }} whileTap={{ scale: 0.95 }}
-                      className="w-12 h-12 rounded-full bg-muted/50 border border-border/10 flex items-center justify-center hover:bg-primary transition-all duration-300 group overflow-hidden">
+                      className="w-12 h-12 rounded-full bg-muted/50 border border-border/10 flex items-center justify-center hover:border-primary transition-all duration-300 group overflow-hidden">
                       <img
                         src={`https://www.google.com/s2/favicons?domain=${hostname}&sz=64`}
                         alt={hostname}
-                        className="w-5 h-5 object-contain opacity-70 group-hover:opacity-100 transition-all filter grayscale group-hover:grayscale-0 group-hover:invert"
+                        className="w-5 h-5 object-contain"
                         onError={(e) => { (e.target as HTMLImageElement).style.visibility = 'hidden'; }}
                       />
                     </motion.a>

@@ -22,6 +22,7 @@ export default function AdminContactMessages() {
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState("All");
     const [selectedMessage, setSelectedMessage] = useState<any | null>(null);
+    const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
     const fetchMessages = async (silent = false) => {
         if (!silent) setLoading(true);
@@ -80,6 +81,35 @@ export default function AdminContactMessages() {
         }
     };
 
+    const handleBulkDelete = async () => {
+        if (!selectedIds.length) return;
+        if (!confirm(`Are you sure you want to delete ${selectedIds.length} messages?`)) return;
+        
+        try {
+            await contactsService.deleteMultiple(selectedIds);
+            setMessages(prev => prev.filter(m => !selectedIds.includes(m.id)));
+            setSelectedIds([]);
+            toast({ title: "Messages Deleted", description: "The records have been purged." });
+        } catch (error) {
+            toast({ variant: "destructive", title: "Error", description: "Failed to delete messages." });
+        }
+    };
+
+    const toggleSelection = (id: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        setSelectedIds(prev =>
+            prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+        );
+    };
+
+    const toggleAll = () => {
+        if (selectedIds.length === filteredMessages.length) {
+            setSelectedIds([]);
+        } else {
+            setSelectedIds(filteredMessages.map(m => m.id));
+        }
+    };
+
     const handleViewMessage = (message: any) => {
         setSelectedMessage(message);
         if (message.status === 'unread') {
@@ -94,8 +124,25 @@ export default function AdminContactMessages() {
                     <h1 className="text-4xl font-serif">Inquiry <span className="text-primary italic">Vault</span></h1>
                     <p className="text-muted-foreground font-light text-sm mt-1 uppercase tracking-widest">Patron Communications Intelligence</p>
                 </div>
-                <div className="flex gap-3">
-                    <Button onClick={() => fetchMessages()} variant="outline" className="h-12 w-12 rounded-2xl p-0 shadow-lg border-2">
+                <div className="flex gap-3 items-center">
+                    <AnimatePresence>
+                        {selectedIds.length > 0 && (
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.9 }}
+                            >
+                                <Button
+                                    variant="destructive"
+                                    onClick={handleBulkDelete}
+                                    className="h-12 rounded-2xl gap-2 font-black uppercase tracking-widest text-[9px] shadow-[0_0_20px_rgba(239,68,68,0.2)] hover:shadow-[0_0_30px_rgba(239,68,68,0.4)] transition-all"
+                                >
+                                    <Trash2 className="w-4 h-4" /> Delete ({selectedIds.length})
+                                </Button>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                    <Button onClick={() => fetchMessages()} variant="outline" className="h-12 w-12 rounded-2xl p-0 shadow-lg border-2 hover:bg-muted">
                         <RefreshCcw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
                     </Button>
                 </div>
@@ -135,11 +182,19 @@ export default function AdminContactMessages() {
                     <table className="w-full text-left">
                         <thead className="bg-muted/30">
                             <tr>
-                                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Status</th>
-                                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Patron</th>
-                                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Subject</th>
-                                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Date</th>
-                                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-muted-foreground text-right">Action</th>
+                                <th className="px-6 py-6 w-16 text-center">
+                                    <input 
+                                        type="checkbox" 
+                                        className="w-4 h-4 rounded border-border/50 text-primary focus:ring-primary/20 bg-background/50 accent-primary cursor-pointer"
+                                        checked={filteredMessages.length > 0 && selectedIds.length === filteredMessages.length}
+                                        onChange={toggleAll}
+                                    />
+                                </th>
+                                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-muted-foreground w-28">Status</th>
+                                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-muted-foreground min-w-[200px]">Patron</th>
+                                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-muted-foreground w-full">Subject</th>
+                                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-muted-foreground w-36">Date</th>
+                                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-muted-foreground text-right w-28">Action</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-border/10">
@@ -154,8 +209,16 @@ export default function AdminContactMessages() {
                                     <tr
                                         key={msg.id}
                                         onClick={() => handleViewMessage(msg)}
-                                        className={`hover:bg-primary/5 transition-colors group cursor-pointer ${msg.status === 'unread' ? 'bg-primary/5' : ''}`}
+                                        className={`hover:bg-primary/5 transition-colors group cursor-pointer ${msg.status === 'unread' ? 'bg-primary/5' : ''} ${selectedIds.includes(msg.id) ? 'bg-primary/10 hover:bg-primary/15' : ''}`}
                                     >
+                                        <td className="px-6 py-6 text-center" onClick={(e) => e.stopPropagation()}>
+                                            <input 
+                                                type="checkbox" 
+                                                className="w-4 h-4 rounded border-border/50 text-primary focus:ring-primary/20 bg-background/50 accent-primary cursor-pointer"
+                                                checked={selectedIds.includes(msg.id)}
+                                                onChange={(e) => toggleSelection(msg.id, e as unknown as React.MouseEvent)}
+                                            />
+                                        </td>
                                         <td className="px-8 py-6">
                                             <Badge className={`px-4 py-1.5 rounded-full text-[9px] uppercase font-black tracking-widest border-none ${msg.status === 'unread' ? 'bg-amber-500/10 text-amber-500' :
                                                     msg.status === 'read' ? 'bg-emerald-500/10 text-emerald-500' :

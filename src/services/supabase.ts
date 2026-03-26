@@ -1512,32 +1512,57 @@ export const contactsService = {
 
         if (error) throw error;
         return true;
+    },
+
+    async deleteMultiple(ids: string[]) {
+        const { error } = await supabase
+            .from('contact_messages')
+            .delete()
+            .in('id', ids);
+
+        if (error) throw error;
+        return true;
     }
 };
 
 export const storageService = {
-    async uploadVideo(file: File, path: string, onProgress?: (progress: number) => void) {
-        const { data, error } = await supabase.storage
-            .from('product-videos')
-            .upload(path, file, {
-                cacheControl: '3600',
-                upsert: true,
-                // @ts-ignore
-                onUploadProgress: (progress) => {
-                    if (onProgress) {
-                        const percent = (progress.loaded / progress.total) * 100;
+    async uploadVideo(file: File, path: string, onProgress?: (progress: number) => void): Promise<string> {
+        return new Promise(async (resolve, reject) => {
+            try {
+                // Get auth token for direct API call
+                const { data: { session } } = await supabase.auth.getSession();
+                const url = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/product-videos/${path}`;
+
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', url);
+                xhr.setRequestHeader('Authorization', `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY}`);
+                xhr.setRequestHeader('apikey', import.meta.env.VITE_SUPABASE_ANON_KEY);
+                xhr.setRequestHeader('Content-Type', file.type || 'video/mp4');
+
+                xhr.upload.onprogress = (event) => {
+                    if (event.lengthComputable && onProgress) {
+                        const percent = Math.round((event.loaded / event.total) * 100);
                         onProgress(percent);
                     }
-                }
-            });
+                };
 
-        if (error) throw error;
+                xhr.onload = () => {
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        const { data: { publicUrl } } = supabase.storage
+                            .from('product-videos')
+                            .getPublicUrl(path);
+                        resolve(publicUrl);
+                    } else {
+                        reject(new Error(`Upload failed: ${xhr.responseText}`));
+                    }
+                };
 
-        const { data: { publicUrl } } = supabase.storage
-            .from('product-videos')
-            .getPublicUrl(data.path);
-
-        return publicUrl;
+                xhr.onerror = () => reject(new Error('Network error during upload'));
+                xhr.send(file);
+            } catch (err) {
+                reject(err);
+            }
+        });
     },
 
     async uploadImage(file: File, path: string) {

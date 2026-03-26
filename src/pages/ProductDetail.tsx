@@ -742,7 +742,7 @@ const ProductDetail = () => {
                                         if (!url) return null;
 
                                         const { platform: inferredPlatform, embedUrl, thumb: inferredThumb } = getVideoData(url);
-                                        const thumb = proof.thumbnail || inferredThumb || product.image; // Fallback to main product image
+                                        const thumb = proof.thumbnail || inferredThumb; // No product.image fallback so native video can appear
                                         const platform = proof.platform || inferredPlatform;
                                         const handle = proof.username || getUsernameFromUrl(url);
                                         let redirectionLink = proof.redirection_link || url;
@@ -787,7 +787,7 @@ const ProductDetail = () => {
                                                                 <div className="absolute inset-0 z-30">
                                                                     <video
                                                                         src={url}
-                                                                        poster={thumb}
+                                                                        poster={thumb || product.image}
                                                                         className="w-full h-full object-cover" // Changed to cover for full window feel
                                                                         autoPlay
                                                                         playsInline
@@ -863,7 +863,7 @@ const ProductDetail = () => {
                                                                 <div className="absolute inset-0 z-30">
                                                                     <video
                                                                         src={tiktokMp4}
-                                                                        poster={thumb}
+                                                                        poster={thumb || product.image}
                                                                         className="w-full h-full object-cover"
                                                                         controls
                                                                         autoPlay
@@ -907,7 +907,7 @@ const ProductDetail = () => {
                                                                         alt="Ritual Proof"
                                                                         onError={(e) => {
                                                                             e.currentTarget.onerror = null; // Prevent infinite loop
-                                                                            e.currentTarget.src = product.image || "/favicon.png";
+                                                                            e.currentTarget.style.display = 'none';
                                                                         }}
                                                                     />
                                                                 ) : isUpload ? (
