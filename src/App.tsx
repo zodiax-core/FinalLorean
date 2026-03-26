@@ -17,6 +17,7 @@ import { WishlistProvider } from "./context/WishlistContext";
 // Components
 import ProtectedRoute from "./components/ProtectedRoute";
 import GlobalMarketing from "./components/GlobalMarketing";
+import FloatingSocialIcons from "./components/FloatingSocialIcons";
 import ScrollToTop from "./components/ScrollToTop";
 
 // Pages
@@ -120,6 +121,7 @@ const App = () => {
                   <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
                     <ScrollToTop />
                     <GlobalMarketing />
+                    <FloatingSocialIcons />
                     <SmoothScroll>
                       <Suspense fallback={<RitualLoader />}>
                         <Routes>

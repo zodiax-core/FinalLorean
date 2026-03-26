@@ -17,8 +17,8 @@ const SEO = ({
     canonicalUrl,
 }: SEOProps) => {
     const { pathname } = useLocation();
-    const siteName = "Lorean | Ancient Herbal Hair Rituals";
-    const defaultDescription = "Lorean - Premium herbal hair oils crafted with ancient Ayurvedic wisdom. Discover our collection for healthy, thick, and radiant hair.";
+    const siteName = "Lórean | Ancient Herbal Hair Rituals";
+    const defaultDescription = "Lórean - Premium herbal hair oils crafted with ancient Ayurvedic wisdom. Discover our collection for healthy, thick, and radiant hair.";
     const siteUrl = "https://lorean.online";
     const defaultImage = "/og-image.png";
 
@@ -26,7 +26,7 @@ const SEO = ({
     const cleanPathname = pathname === '/' ? pathname : pathname.replace(/\/$/, '');
 
     const seo = {
-        title: title ? `${title} | Lorean` : siteName,
+        title: title ? `${title} | Lórean` : siteName,
         description: description || defaultDescription,
         image: image ? (image.startsWith('http') ? image : `${siteUrl}${image}`) : `${siteUrl}${defaultImage}`,
         url: canonicalUrl ? `${siteUrl}${canonicalUrl}` : `${siteUrl}${cleanPathname}`,

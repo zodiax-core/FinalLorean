@@ -151,7 +151,7 @@ export default function GlobalMarketing() {
                                             size="lg"
                                             onClick={() => {
                                                 setShowPopup(false);
-                                                navigate(`/product/${popupProduct.id}`);
+                                                navigate(`/product/${popupProduct.slug || popupProduct.id}`);
                                             }}
                                             className="w-full sm:w-auto h-14 md:h-16 rounded-full text-[10px] font-black uppercase tracking-widest shadow-xl shadow-primary/20 bg-primary group px-8"
                                         >

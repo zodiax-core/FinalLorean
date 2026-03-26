@@ -370,6 +370,86 @@ export default function AdminSettings() {
                             </CardContent>
                         </Card>
 
+                        {/* Floating Social Icons Control */}
+                        {configs.marketing?.custom_social_links?.length > 0 && (
+                            <Card className="glass border-primary/10 shadow-2xl rounded-[3.5rem] overflow-hidden border-2">
+                                <CardHeader className="p-10 pb-6 flex flex-row items-center gap-6 border-b border-border/5">
+                                    <div className="w-16 h-16 rounded-[2rem] bg-primary/10 flex items-center justify-center text-primary">
+                                        <Layout className="w-8 h-8" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <CardTitle className="text-3xl font-serif italic">Floating Icons</CardTitle>
+                                        <CardDescription className="text-xs font-medium uppercase tracking-widest opacity-50">Select icons that float on all customer pages</CardDescription>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50">
+                                            {configs.marketing?.floating_icons_enabled ? "Active" : "Disabled"}
+                                        </Label>
+                                        <Switch
+                                            checked={configs.marketing?.floating_icons_enabled || false}
+                                            onCheckedChange={(checked) => {
+                                                setConfigs((prev: any) => ({
+                                                    ...prev,
+                                                    marketing: { ...prev.marketing, floating_icons_enabled: checked }
+                                                }));
+                                            }}
+                                        />
+                                    </div>
+                                </CardHeader>
+                                <CardContent className="p-10">
+                                    {configs.marketing?.floating_icons_enabled ? (
+                                        <div className="space-y-4">
+                                            <p className="text-xs text-muted-foreground italic mb-4">
+                                                Check the links you want to appear as floating icons on all customer pages.
+                                            </p>
+                                            {(configs.marketing?.custom_social_links || []).map((url: string, index: number) => {
+                                                let hostname = "";
+                                                try {
+                                                    const validUrl = url.startsWith('http') ? url : `https://${url}`;
+                                                    hostname = new URL(validUrl).hostname;
+                                                } catch (e) { }
+                                                if (!hostname) return null;
+
+                                                const floatingLinks: string[] = configs.marketing?.floating_social_links || [];
+                                                const isSelected = floatingLinks.includes(url);
+
+                                                return (
+                                                    <div key={index} className="flex items-center gap-4 bg-muted/10 p-3 pl-5 border border-border/10 rounded-2xl">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={isSelected}
+                                                            onChange={(e) => {
+                                                                const newFloating = e.target.checked
+                                                                    ? [...floatingLinks, url]
+                                                                    : floatingLinks.filter((u: string) => u !== url);
+                                                                setConfigs((prev: any) => ({
+                                                                    ...prev,
+                                                                    marketing: { ...prev.marketing, floating_social_links: newFloating }
+                                                                }));
+                                                            }}
+                                                            className="w-5 h-5 rounded-lg accent-primary cursor-pointer"
+                                                        />
+                                                        <img
+                                                            src={`https://www.google.com/s2/favicons?domain=${hostname}&sz=64`}
+                                                            alt={hostname}
+                                                            className="w-7 h-7 rounded-full border border-border/5 bg-background object-contain p-0.5"
+                                                            onError={(e) => { (e.target as HTMLImageElement).style.visibility = 'hidden'; }}
+                                                        />
+                                                        <span className="text-sm font-medium text-muted-foreground truncate flex-1">{hostname}</span>
+                                                        {isSelected && (
+                                                            <span className="text-[9px] font-black uppercase tracking-widest text-primary bg-primary/10 px-3 py-1.5 rounded-full">Floating</span>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    ) : (
+                                        <p className="text-center py-6 text-muted-foreground/50 italic text-sm">Enable floating icons to select which social links appear on customer pages.</p>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        )}
+
                         {/* EmailJS Configuration (Moved from Marketing) */}
                         <Card className="glass border-border/20 shadow-xl rounded-[3rem] overflow-hidden">
                             <CardHeader className="p-10 pb-6">
