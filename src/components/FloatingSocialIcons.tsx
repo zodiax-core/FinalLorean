@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, UserRound } from "lucide-react";
+import { X, Headset } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { settingsService } from "@/services/supabase";
 
@@ -69,7 +69,7 @@ const FloatingSocialIcons = () => {
                             exit={{ rotate: -90, opacity: 0 }}
                             transition={{ duration: 0.2 }}
                         >
-                            <UserRound className="w-5 h-5 relative z-10" />
+                            <Headset className="w-5 h-5 relative z-10" />
                         </motion.div>
                     )}
                 </AnimatePresence>
