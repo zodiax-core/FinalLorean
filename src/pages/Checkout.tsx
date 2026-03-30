@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
     ChevronRight, ArrowLeft, ShieldCheck, CreditCard,
     Truck, Gift, BadgeCheck, Plus, Minus, Trash2,
-    Wallet, Banknote, ShoppingBag, Lock, Loader2, Sparkles, CheckCircle2
+    Wallet, Banknote, ShoppingBag, Lock, Loader2, Sparkles, CheckCircle2,
+    Check, ChevronsUpDown
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -32,21 +33,19 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-
-const COUNTRIES = [
-    { code: "PK", name: "Pakistan" },
-    { code: "US", name: "United States" },
-    { code: "GB", name: "United Kingdom" },
-    { code: "CA", name: "Canada" },
-    { code: "AU", name: "Australia" },
-    { code: "DE", name: "Germany" },
-    { code: "FR", name: "France" },
-    { code: "IN", name: "India" },
-    { code: "JP", name: "Japan" },
-    { code: "CN", name: "China" },
-    { code: "BR", name: "Brazil" },
-    { code: "GLOBAL", name: "Global" }
-];
+import { cn } from "@/lib/utils";
+import {
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+} from "@/components/ui/command";
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover";
 
 const Checkout = () => {
     const navigate = useNavigate();
@@ -67,53 +66,72 @@ const Checkout = () => {
     const [isCalculatingTax, setIsCalculatingTax] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
 
-    // Form states
     const [formData, setFormData] = useState({
+        email: "",
         firstName: "",
         lastName: "",
-        email: "",
         address: "",
         city: "",
         state: "",
         postalCode: "",
-        country: "PK", // Default to Pakistan or from profile
+        country: "PK", // Changed default to PK
         receiverName: "",
         receiverPhone: "",
         nearestFamousPlace: ""
     });
 
+    const [allRegionalRates, setAllRegionalRates] = useState<any[]>([]);
+    const [availableStates, setAvailableStates] = useState<string[]>([]);
+    const [availableCities, setAvailableCities] = useState<string[]>([]);
+    const [stateOpen, setStateOpen] = useState(false);
+    const [cityOpen, setCityOpen] = useState(false);
+
     useEffect(() => {
         const setupCheckout = async () => {
+            setLoading(true);
             try {
                 const { data: { user } } = await supabase.auth.getUser();
                 if (user) {
-                    const { profilesService } = await import("@/services/supabase");
-                    const profile = await profilesService.getById(user.id);
+                    const { data: profile } = await supabase
+                        .from('profiles')
+                        .select('*')
+                        .eq('id', user.id)
+                        .single();
 
                     if (profile) {
-                        const names = (profile.full_name || "").split(" ");
                         setFormData(prev => ({
                             ...prev,
-                            email: user.email || "",
-                            firstName: names[0] || "",
-                            lastName: names.slice(1).join(" ") || "",
+                            email: profile.email || user.email || "",
+                            firstName: profile.full_name?.split(" ")[0] || "",
+                            lastName: profile.full_name?.split(" ").slice(1).join(" ") || "",
                             address: profile.address || "",
                             city: profile.city || "",
                             state: profile.state || "",
                             postalCode: profile.postal_code || "",
-                            country: profile.country || "PK",
+                            country: "PK", // Hardcoded to Pakistan
                             receiverName: profile.receiver_name || profile.full_name || "",
                             receiverPhone: profile.receiver_phone || ""
                         }));
                     } else {
-                        setFormData(prev => ({ ...prev, email: user.email || "" }));
+                        setFormData(prev => ({ ...prev, email: user.email || "", country: "PK" }));
                     }
+                } else {
+                    setFormData(prev => ({ ...prev, country: "PK" }));
                 }
-                const rates = await settingsService.getShipping();
+
+                const [rates, regionalData] = await Promise.all([
+                    settingsService.getShipping(),
+                    shippingService.getAllRates()
+                ]);
+
                 setShippingRates({
                     flat_rate: Number(rates.flat_rate),
                     threshold: Number(rates.threshold)
                 });
+                setAllRegionalRates(regionalData);
+                const states = Array.from(new Set(regionalData.map(r => r.state)));
+                setAvailableStates(states);
+
             } catch (error) {
                 console.error("Auth error:", error);
             } finally {
@@ -122,6 +140,24 @@ const Checkout = () => {
         };
         setupCheckout();
     }, []);
+
+    useEffect(() => {
+        if (formData.state) {
+            const cities = allRegionalRates
+                .filter(r => r.state === formData.state && r.city)
+                .map(r => r.city);
+            
+            // Add state-wide option if rate exists
+            const hasStateRate = allRegionalRates.some(r => r.state === formData.state && r.city === null);
+            if (hasStateRate) {
+                cities.push("Standard Delivery (State-wide)");
+            }
+            
+            setAvailableCities(cities);
+        } else {
+            setAvailableCities([]);
+        }
+    }, [formData.state, allRegionalRates]);
 
     const [isCalculatingShipping, setIsCalculatingShipping] = useState(false);
 
@@ -142,14 +178,18 @@ const Checkout = () => {
                 if (rate) {
                     setShippingRates(prev => ({
                         ...prev,
-                        flat_rate: Number(rate.charge)
+                        flat_rate: Number(rate.charge),
+                        // If it's a regional rate, the global threshold shouldn't override it 
+                        // unless the admin specifically marked this regional rate as free.
+                        // We use a massive threshold to ensure the charge is applied if not marked free.
+                        threshold: rate.is_free ? 0 : 999999999 
                     }));
                 } else {
                     const globalSettings = await settingsService.getShipping();
-                    setShippingRates(prev => ({
-                        ...prev,
-                        flat_rate: Number(globalSettings.flat_rate)
-                    }));
+                    setShippingRates({
+                        flat_rate: Number(globalSettings.flat_rate),
+                        threshold: Number(globalSettings.threshold)
+                    });
                 }
             } catch (error) {
                 console.error("Shipping fetch error:", error);
@@ -489,52 +529,104 @@ const Checkout = () => {
                                         </div>
 
                                         <div className="grid grid-cols-2 gap-4 mb-4">
-                                            <div className="space-y-1.5">
-                                                <Label className="text-[9px] font-black uppercase tracking-widest ml-1">Country</Label>
-                                                <Select
-                                                    value={formData.country}
-                                                    onValueChange={value => setFormData({ ...formData, country: value })}
-                                                >
-                                                    <SelectTrigger className="rounded-xl h-11 bg-muted/30 border-none px-5 focus:ring-0">
-                                                        <SelectValue placeholder="Select Country" />
-                                                    </SelectTrigger>
-                                                    <SelectContent className="rounded-2xl border-border/10">
-                                                        {COUNTRIES.map(country => (
-                                                            <SelectItem key={country.code} value={country.code} className="rounded-xl">
-                                                                {country.name}
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
+                                            <div className="space-y-1.5 font-sans">
+                                                <Label className="text-[9px] font-black uppercase tracking-widest ml-1 text-primary">State / Province</Label>
+                                                <Popover open={stateOpen} onOpenChange={setStateOpen}>
+                                                    <PopoverTrigger asChild>
+                                                        <Button
+                                                            variant="outline"
+                                                            role="combobox"
+                                                            aria-expanded={stateOpen}
+                                                            className="w-full rounded-xl h-11 bg-muted/30 border-none px-5 justify-between font-normal hover:bg-muted/40 transition-all text-sm"
+                                                        >
+                                                            {formData.state || "Select State"}
+                                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                        </Button>
+                                                    </PopoverTrigger>
+                                                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0 rounded-2xl border-border/10 shadow-2xl glass" align="start">
+                                                        <Command className="bg-transparent">
+                                                            <CommandInput placeholder="Search state..." className="h-10 border-none focus:ring-0" />
+                                                            <CommandEmpty>No state found.</CommandEmpty>
+                                                            <CommandGroup className="max-h-[300px] overflow-y-auto scrollbar-hide p-2">
+                                                                {availableStates.map((state) => (
+                                                                    <CommandItem
+                                                                        key={state}
+                                                                        value={state}
+                                                                        onSelect={(currentValue) => {
+                                                                            setFormData({ ...formData, state: state, city: "" });
+                                                                            setStateOpen(false);
+                                                                        }}
+                                                                        className="rounded-xl cursor-pointer p-3 aria-selected:bg-primary/10 aria-selected:text-primary"
+                                                                    >
+                                                                        <Check
+                                                                            className={cn(
+                                                                                "mr-2 h-4 w-4",
+                                                                                formData.state === state ? "opacity-100" : "opacity-0"
+                                                                            )}
+                                                                        />
+                                                                        {state}
+                                                                    </CommandItem>
+                                                                ))}
+                                                            </CommandGroup>
+                                                        </Command>
+                                                    </PopoverContent>
+                                                </Popover>
                                             </div>
-                                            <div className="space-y-1.5 text-transparent select-none">
-                                                {/* Spacer for alignment */}
-                                                <Label className="text-[9px] font-black uppercase tracking-widest ml-1">Placeholder</Label>
-                                                <div className="h-11"></div>
+
+                                            <div className="space-y-1.5 font-sans">
+                                                <Label className="text-[9px] font-black uppercase tracking-widest ml-1 opacity-50">Region</Label>
+                                                <div className="h-11 px-5 flex items-center bg-muted/10 rounded-xl text-xs font-bold text-muted-foreground/80 cursor-not-allowed">
+                                                    Pakistan
+                                                </div>
                                             </div>
                                         </div>
 
-                                        <div className="grid grid-cols-3 gap-4">
-                                            <div className="space-y-1.5">
-                                                <Label className="text-[9px] font-black uppercase tracking-widest ml-1">City</Label>
-                                                <Input
-                                                    value={formData.city}
-                                                    onChange={e => setFormData({ ...formData, city: e.target.value })}
-                                                    placeholder="City"
-                                                    className="rounded-xl h-11 bg-muted/30 border-none px-5 focus-visible:bg-background transition-all"
-                                                />
-                                            </div>
-                                            <div className="space-y-1.5">
-                                                <Label className="text-[9px] font-black uppercase tracking-widest ml-1">State</Label>
-                                                <Input
-                                                    value={formData.state}
-                                                    onChange={e => setFormData({ ...formData, state: e.target.value })}
-                                                    placeholder="State"
-                                                    className="rounded-xl h-11 bg-muted/30 border-none px-5 focus-visible:bg-background transition-all"
-                                                />
+                                        <div className="grid grid-cols-2 gap-4 mb-4">
+                                            <div className="space-y-1.5 font-sans">
+                                                <Label className="text-[9px] font-black uppercase tracking-widest ml-1 text-primary">City</Label>
+                                                <Popover open={cityOpen} onOpenChange={setCityOpen}>
+                                                    <PopoverTrigger asChild disabled={!formData.state}>
+                                                        <Button
+                                                            variant="outline"
+                                                            role="combobox"
+                                                            aria-expanded={cityOpen}
+                                                            className="w-full rounded-xl h-11 bg-muted/30 border-none px-5 justify-between font-normal hover:bg-muted/40 transition-all text-sm disabled:opacity-50"
+                                                        >
+                                                            {formData.city || (formData.state ? "Select City" : "Select state first")}
+                                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                        </Button>
+                                                    </PopoverTrigger>
+                                                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0 rounded-2xl border-border/10 shadow-2xl glass" align="start">
+                                                        <Command className="bg-transparent">
+                                                            <CommandInput placeholder="Search city..." className="h-10 border-none focus:ring-0" />
+                                                            <CommandEmpty>No city found.</CommandEmpty>
+                                                            <CommandGroup className="max-h-[300px] overflow-y-auto scrollbar-hide p-2">
+                                                                {availableCities.map((city) => (
+                                                                    <CommandItem
+                                                                        key={city}
+                                                                        value={city}
+                                                                        onSelect={(currentValue) => {
+                                                                            setFormData({ ...formData, city: city });
+                                                                            setCityOpen(false);
+                                                                        }}
+                                                                        className="rounded-xl cursor-pointer p-3 aria-selected:bg-primary/10 aria-selected:text-primary"
+                                                                    >
+                                                                        <Check
+                                                                            className={cn(
+                                                                                "mr-2 h-4 w-4",
+                                                                                formData.city === city ? "opacity-100" : "opacity-0"
+                                                                            )}
+                                                                        />
+                                                                        {city}
+                                                                    </CommandItem>
+                                                                ))}
+                                                            </CommandGroup>
+                                                        </Command>
+                                                    </PopoverContent>
+                                                </Popover>
                                             </div>
                                             <div className="space-y-2">
-                                                <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Postal Code (Optional)</Label>
+                                                <Label className="text-[9px] font-black uppercase tracking-widest ml-1">Postal Code (Optional)</Label>
                                                 <Input
                                                     value={formData.postalCode}
                                                     onChange={e => setFormData({ ...formData, postalCode: e.target.value })}

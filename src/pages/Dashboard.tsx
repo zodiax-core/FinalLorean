@@ -267,159 +267,132 @@ export default function PatronDashboard() {
             <Navbar />
 
             <main className="max-w-6xl mx-auto px-6 pt-40 pb-32 relative">
-                <header className="mb-24 lg:mb-32">
+                <header className="mb-20">
                     <motion.div
                         initial={{ opacity: 0, y: 30 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.8, ease: "easeOut" }}
-                        className="space-y-6"
+                        className="space-y-4"
                     >
                         <div className="flex items-center gap-4 text-primary mb-2">
-                            <span className="w-12 h-[1px] bg-primary/40" />
-                            <span className="text-[11px] font-black uppercase tracking-[0.4em] leading-none">Customer Dashboard</span>
+                             <span className="w-12 h-[1px] bg-primary/40" />
+                            <span className="text-[10px] font-black uppercase tracking-[0.4em] leading-none">Patron Portal</span>
                         </div>
-                        <h1 className="text-4xl md:text-6xl font-serif tracking-tighter leading-[0.9] text-foreground">
-                            Welcome, <br />
-                            <span className="text-primary italic font-light">{user?.user_metadata?.full_name || "Guest"}</span>
+                        <h1 className="text-4xl md:text-5xl font-serif tracking-tighter leading-tight text-foreground">
+                            Welcome Back, <span className="text-primary italic">{user?.user_metadata?.full_name || "Guest"}</span>
                         </h1>
-                        <p className="text-muted-foreground font-light text-xl max-w-xl leading-relaxed opacity-70">
-                             Manage your account, orders, and addresses.
-                        </p>
                     </motion.div>
                 </header>
 
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-20">
-                    {/* Profile & Address Portal */}
-                    <aside className="lg:col-span-4 space-y-12">
-                        <motion.section
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            className="glass p-12 rounded-[3.5rem] border border-border/10 space-y-12 shadow-2xl relative overflow-hidden group"
-                        >
-                            <div className="absolute top-0 right-0 p-10 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity duration-1000 rotate-12">
-                                <img src="/favicon.png" className="w-40 h-40 object-contain grayscale" alt="" />
-                            </div>
-
-                            <div className="space-y-3 relative z-10">
-                                <div className="flex items-center gap-3 mb-2">
-                                    <div className="w-10 h-10 bg-primary/10 rounded-2xl flex items-center justify-center p-2">
-                                        <img src="/favicon.png" className="w-full h-full object-contain" alt="" />
+                <div className="space-y-24">
+                    {/* Simplified Personal Details Section */}
+                    <motion.section
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="glass p-10 md:p-14 rounded-[3.5rem] border border-border/10 shadow-2xl relative overflow-hidden"
+                    >
+                        <div className="flex flex-col lg:flex-row gap-16">
+                            <div className="lg:w-1/3 space-y-6">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center p-2.5">
+                                        <User className="w-full h-full text-primary" />
                                     </div>
-                                     <h3 className="text-2xl font-serif italic text-primary">Personal Details</h3>
+                                    <h3 className="text-3xl font-serif italic text-primary">Personal Details</h3>
                                 </div>
-                                <p className="text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground/40 leading-relaxed">
-                                     Keep your details updated for faster checkout.
+                                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/50 leading-relaxed max-w-xs">
+                                    Your information is used for deliveries and order updates. Keep it current for a seamless experience.
                                 </p>
+                                
+                                {socialLinks && socialLinks.length > 0 && (
+                                    <div className="pt-8 border-t border-border/5 space-y-4">
+                                        <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/30">Lorean Socials</p>
+                                        <div className="flex flex-wrap gap-3">
+                                            {socialLinks.map((url, i) => {
+                                                let hostname = "";
+                                                try {
+                                                    const validUrl = url.startsWith('http') ? url : `https://${url}`;
+                                                    hostname = new URL(validUrl).hostname;
+                                                } catch (e) { }
+                                                if (!hostname) return null;
+                                                return (
+                                                    <a key={i} href={url.startsWith('http') ? url : `https://${url}`} target="_blank" rel="noopener noreferrer"
+                                                        className="w-10 h-10 rounded-2xl bg-muted/20 border border-border/5 flex items-center justify-center hover:border-primary/30 transition-all duration-300">
+                                                        <img src={`https://www.google.com/s2/favicons?domain=${hostname}&sz=64`} alt="" className="w-4 h-4 grayscale opacity-40 hover:grayscale-0 hover:opacity-100 transition-all" />
+                                                    </a>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
-                            <div className="space-y-8 relative z-10">
-                                <div className="space-y-4">
-                                     <UILabel className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 ml-2">Full Name</UILabel>
-                                    <Input
-                                        value={addressForm.full_name}
-                                        onChange={e => setAddressForm({ ...addressForm, full_name: e.target.value })}
-                                        className="h-16 rounded-[2rem] bg-muted/5 border-border/5 px-8 text-sm focus:bg-muted/10 transition-all font-light shadow-inner"
-                                        placeholder="Full Name"
-                                    />
-                                </div>
-
-                                <div className="space-y-4">
-                                     <UILabel className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 ml-2">Shipping Address</UILabel>
-                                    <Input
-                                        value={addressForm.address}
-                                        onChange={e => setAddressForm({ ...addressForm, address: e.target.value })}
-                                        className="h-16 rounded-[2rem] bg-muted/5 border-border/5 px-8 text-sm focus:bg-muted/10 transition-all font-light shadow-inner"
-                                        placeholder="Sanctum Address / Street / House"
-                                    />
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-6">
-                                    <div className="space-y-4">
-                                         <UILabel className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 ml-2">City</UILabel>
+                            <div className="lg:w-2/3">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 mb-10">
+                                    <div className="space-y-3">
+                                        <UILabel className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 ml-4">Full Name</UILabel>
+                                        <Input
+                                            value={addressForm.full_name}
+                                            onChange={e => setAddressForm({ ...addressForm, full_name: e.target.value })}
+                                            className="h-14 rounded-2xl bg-muted/5 border-border/5 px-6 text-sm focus:bg-muted/10 transition-all font-light"
+                                            placeholder="Your full name"
+                                        />
+                                    </div>
+                                    <div className="space-y-3">
+                                        <UILabel className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 ml-4">Shipping Address</UILabel>
+                                        <Input
+                                            value={addressForm.address}
+                                            onChange={e => setAddressForm({ ...addressForm, address: e.target.value })}
+                                            className="h-14 rounded-2xl bg-muted/5 border-border/5 px-6 text-sm focus:bg-muted/10 transition-all font-light"
+                                            placeholder="Street, House, Landmark"
+                                        />
+                                    </div>
+                                    <div className="space-y-3">
+                                        <UILabel className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 ml-4">City</UILabel>
                                         <Input
                                             value={addressForm.city}
                                             onChange={e => setAddressForm({ ...addressForm, city: e.target.value })}
-                                            className="h-16 rounded-[2rem] bg-muted/5 border-border/5 px-8 text-sm focus:bg-muted/10 transition-all font-light shadow-inner"
+                                            className="h-14 rounded-2xl bg-muted/5 border-border/5 px-6 text-sm focus:bg-muted/10 transition-all font-light"
                                             placeholder="City"
                                         />
                                     </div>
-                                    <div className="space-y-4">
-                                         <UILabel className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 ml-2">State</UILabel>
+                                    <div className="space-y-3">
+                                        <UILabel className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 ml-4">State</UILabel>
                                         <Input
                                             value={addressForm.state}
                                             onChange={e => setAddressForm({ ...addressForm, state: e.target.value })}
-                                            className="h-16 rounded-[2rem] bg-muted/5 border-border/5 px-8 text-sm focus:bg-muted/10 transition-all font-light shadow-inner"
+                                            className="h-14 rounded-2xl bg-muted/5 border-border/5 px-6 text-sm focus:bg-muted/10 transition-all font-light"
                                             placeholder="State"
                                         />
                                     </div>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-6">
-                                    <div className="space-y-4">
-                                         <UILabel className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 ml-2">Postal Code</UILabel>
+                                    <div className="space-y-3">
+                                        <UILabel className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 ml-4">Postal Code</UILabel>
                                         <Input
                                             value={addressForm.postal_code}
                                             onChange={e => setAddressForm({ ...addressForm, postal_code: e.target.value })}
-                                            className="h-16 rounded-[2rem] bg-muted/5 border-border/5 px-8 text-sm focus:bg-muted/10 transition-all font-light shadow-inner"
-                                            placeholder="Zip Code"
+                                            className="h-14 rounded-2xl bg-muted/5 border-border/5 px-6 text-sm focus:bg-muted/10 transition-all font-light"
+                                            placeholder="Zip / Postal"
                                         />
                                     </div>
-                                    <div className="space-y-4">
-                                         <UILabel className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 ml-2">Country</UILabel>
-                                        <Input
-                                            value={addressForm.country}
-                                            readOnly
-                                            className="h-16 rounded-[2rem] bg-muted/5 border-none px-8 text-[11px] uppercase font-black tracking-widest opacity-40 shadow-inner"
-                                        />
+                                    <div className="space-y-3">
+                                        <UILabel className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 ml-4">Country</UILabel>
+                                        <div className="h-14 rounded-2xl bg-muted/10 border-none px-6 flex items-center text-[10px] uppercase font-black tracking-widest text-muted-foreground/40">
+                                            {addressForm.country}
+                                        </div>
                                     </div>
                                 </div>
+
+                                <Button
+                                    onClick={handleSaveAddress}
+                                    disabled={isSavingProfile}
+                                    className="w-full md:w-auto px-12 h-14 rounded-full bg-primary text-white text-[10px] font-black uppercase tracking-[0.3em] shadow-xl shadow-primary/10 hover:scale-105 transition-all duration-500"
+                                >
+                                    {isSavingProfile ? <RefreshCcw className="w-5 h-5 animate-spin" /> : "Save Changes"}
+                                </Button>
                             </div>
+                        </div>
+                    </motion.section>
 
-                            <Button
-                                onClick={handleSaveAddress}
-                                disabled={isSavingProfile}
-                                className="w-full h-18 rounded-full bg-primary text-white text-[11px] font-black uppercase tracking-[0.4em] shadow-2xl shadow-primary/20 hover:scale-[1.02] transition-all duration-700 relative z-10 overflow-hidden group"
-                            >
-                                {isSavingProfile ? <RefreshCcw className="w-5 h-5 animate-spin" /> : (
-                                    <span className="flex items-center justify-center gap-4">
-                                         Save Changes <ShieldCheck className="w-5 h-5 group-hover:rotate-12 transition-transform duration-500" />
-                                    </span>
-                                )}
-                            </Button>
-
-                            {/* Social Connections in Dashboard */}
-                            {socialLinks && socialLinks.length > 0 && (
-                                <div className="pt-8 border-t border-border/10">
-                                    <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 mb-4 text-center">Connect With Us</h4>
-                                    <div className="flex flex-wrap justify-center gap-4">
-                                        {socialLinks.map((url, i) => {
-                                            let hostname = "";
-                                            try {
-                                                const validUrl = url.startsWith('http') ? url : `https://${url}`;
-                                                hostname = new URL(validUrl).hostname;
-                                            } catch (e) { }
-                                            if (!hostname) return null;
-
-                                            return (
-                                                <a key={i} href={url.startsWith('http') ? url : `https://${url}`} target="_blank" rel="noopener noreferrer"
-                                                    className="w-10 h-10 rounded-full bg-muted/30 border border-border/10 flex items-center justify-center hover:border-primary transition-all duration-300 group overflow-hidden">
-                                                    <img
-                                                        src={`https://www.google.com/s2/favicons?domain=${hostname}&sz=64`}
-                                                        alt={hostname}
-                                                        className="w-4 h-4 object-contain transition-transform group-hover:scale-110"
-                                                        onError={(e) => { (e.target as HTMLImageElement).style.visibility = 'hidden'; }}
-                                                    />
-                                                </a>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            )}
-                        </motion.section>
-                    </aside>
-
-                    {/* Ritual History List */}
-                    <div className="lg:col-span-8 space-y-20">
+                    <div className="space-y-16">
                         <div className="flex items-end justify-between border-b border-border/5 pb-10">
                             <div className="space-y-2">
                                 <h2 className="text-4xl font-serif tracking-tight">Order History</h2>
