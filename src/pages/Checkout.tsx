@@ -531,7 +531,7 @@ const Checkout = () => {
                                         <div className="grid grid-cols-2 gap-4 mb-4">
                                             <div className="space-y-1.5 font-sans">
                                                 <Label className="text-[9px] font-black uppercase tracking-widest ml-1 text-primary">State / Province</Label>
-                                                <Popover open={stateOpen} onOpenChange={setStateOpen}>
+                                                <Popover open={stateOpen} onOpenChange={setStateOpen} modal={true}>
                                                     <PopoverTrigger asChild>
                                                         <Button
                                                             variant="outline"
@@ -547,7 +547,10 @@ const Checkout = () => {
                                                         <Command className="bg-transparent">
                                                             <CommandInput placeholder="Search state..." className="h-10 border-none focus:ring-0" />
                                                             <CommandEmpty>No state found.</CommandEmpty>
-                                                            <CommandGroup className="max-h-[300px] overflow-y-auto scrollbar-hide p-2">
+                                                            <CommandGroup 
+                                                                className="max-h-[300px] overflow-y-auto scrollbar-hide p-2"
+                                                                onWheel={(e) => e.stopPropagation()}
+                                                            >
                                                                 {availableStates.map((state) => (
                                                                     <CommandItem
                                                                         key={state}
@@ -584,7 +587,7 @@ const Checkout = () => {
                                         <div className="grid grid-cols-2 gap-4 mb-4">
                                             <div className="space-y-1.5 font-sans">
                                                 <Label className="text-[9px] font-black uppercase tracking-widest ml-1 text-primary">City</Label>
-                                                <Popover open={cityOpen} onOpenChange={setCityOpen}>
+                                                <Popover open={cityOpen} onOpenChange={setCityOpen} modal={true}>
                                                     <PopoverTrigger asChild disabled={!formData.state}>
                                                         <Button
                                                             variant="outline"
@@ -600,7 +603,10 @@ const Checkout = () => {
                                                         <Command className="bg-transparent">
                                                             <CommandInput placeholder="Search city..." className="h-10 border-none focus:ring-0" />
                                                             <CommandEmpty>No city found.</CommandEmpty>
-                                                            <CommandGroup className="max-h-[300px] overflow-y-auto scrollbar-hide p-2">
+                                                            <CommandGroup 
+                                                                className="max-h-[300px] overflow-y-auto scrollbar-hide p-2"
+                                                                onWheel={(e) => e.stopPropagation()}
+                                                            >
                                                                 {availableCities.map((city) => (
                                                                     <CommandItem
                                                                         key={city}

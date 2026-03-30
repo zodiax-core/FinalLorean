@@ -281,64 +281,91 @@ export default function AdminShipping() {
                         </div>
                     )}
 
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm text-left">
-                            <thead className="bg-muted/30">
-                                <tr>
-                                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">State/Province</th>
-                                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">City</th>
-                                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Charge</th>
-                                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Free Shipping</th>
-                                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground text-right">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-border/10">
-                                {regionalRates.map((rate) => (
-                                    <tr key={rate.id} className="hover:bg-primary/5 transition-colors">
-                                        <td className="px-6 py-4 font-bold">{rate.state}</td>
-                                        <td className="px-6 py-4">
-                                            {rate.city ? (
-                                                <Badge variant="secondary" className="rounded-full text-[8px] font-black uppercase px-2">
-                                                    {rate.city}
-                                                </Badge>
-                                            ) : (
-                                                <span className="text-[10px] text-muted-foreground uppercase font-black italic">State-wide</span>
-                                            )}
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-[10px] text-muted-foreground">Rs.</span>
-                                                <Input 
-                                                    type="number"
-                                                    value={rate.charge}
-                                                    onChange={(e) => handleUpdateRegionalRate(rate.id, { charge: Number(e.target.value) })}
-                                                    className="h-8 w-24 bg-muted/20 border-none text-xs font-serif font-black"
-                                                />
+                    <div className="space-y-8">
+                        {Object.entries(
+                            regionalRates.reduce((acc: any, rate: any) => {
+                                if (!acc[rate.state]) acc[rate.state] = [];
+                                acc[rate.state].push(rate);
+                                return acc;
+                            }, {})
+                        ).map(([state, rates]: [string, any]) => (
+                            <div key={state} className="space-y-4">
+                                <div className="flex items-center gap-4 border-b border-border/10 pb-4">
+                                    <h3 className="text-xl font-serif text-primary italic">{state}</h3>
+                                    <Badge variant="outline" className="rounded-full text-[8px] font-black uppercase">
+                                        {rates.length} Rates Defined
+                                    </Badge>
+                                </div>
+                                <div className="grid grid-cols-1 gap-4">
+                                    {rates.map((rate: any) => (
+                                        <div 
+                                            key={rate.id}
+                                            className="group flex flex-col md:flex-row items-center justify-between gap-6 p-6 rounded-3xl bg-muted/5 border border-border/5 hover:border-primary/20 hover:bg-muted/10 transition-all duration-300 shadow-sm"
+                                        >
+                                            <div className="flex items-center gap-6 flex-1">
+                                                <div className="w-12 h-12 rounded-2xl bg-primary/5 flex items-center justify-center p-3 group-hover:bg-primary/10 transition-colors">
+                                                    <MapPin className="w-full h-full text-primary opacity-40" />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <div className="flex items-center gap-3">
+                                                        <span className="text-sm font-bold">{rate.city || "All Cities / State-wide"}</span>
+                                                        {!rate.city && <Badge variant="secondary" className="text-[7px] font-black uppercase tracking-widest px-2 py-0">Global Fallback</Badge>}
+                                                    </div>
+                                                    <p className="text-[9px] text-muted-foreground uppercase tracking-widest font-black opacity-50">Local Delivery Rate</p>
+                                                </div>
                                             </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-3">
-                                                <Switch 
-                                                    checked={rate.is_free}
-                                                    onCheckedChange={(checked) => handleUpdateRegionalRate(rate.id, { is_free: checked, charge: checked ? 0 : rate.charge })}
-                                                />
-                                                {rate.is_free && <Badge className="bg-emerald-500 text-white border-none text-[8px] font-black uppercase">Free</Badge>}
+
+                                            <div className="flex flex-wrap items-center gap-8 md:gap-12">
+                                                <div className="space-y-2">
+                                                    <Label className="text-[9px] font-black uppercase tracking-widest opacity-40 ml-1 text-center block">Shipping Charge</Label>
+                                                    <div className="flex items-center gap-2 px-4 py-2 bg-muted/20 rounded-xl border border-border/5 shadow-inner">
+                                                        <span className="text-[10px] text-muted-foreground font-mono">Rs.</span>
+                                                        <Input 
+                                                            type="number"
+                                                            value={rate.charge}
+                                                            onChange={(e) => handleUpdateRegionalRate(rate.id, { charge: Number(e.target.value) })}
+                                                            className="h-8 w-20 bg-transparent border-none text-sm font-serif font-black p-0 focus:ring-0"
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                <div className="space-y-2 flex flex-col items-center">
+                                                    <Label className="text-[9px] font-black uppercase tracking-widest opacity-40 text-center block">Free Toggle</Label>
+                                                    <div className="flex items-center gap-3 h-12">
+                                                        <Switch 
+                                                            checked={rate.is_free}
+                                                            onCheckedChange={(checked) => handleUpdateRegionalRate(rate.id, { is_free: checked, charge: checked ? 0 : rate.charge })}
+                                                            className="scale-90"
+                                                        />
+                                                        {rate.is_free && <Badge className="bg-emerald-500 text-white border-none text-[8px] font-black uppercase py-0.5">Free</Badge>}
+                                                    </div>
+                                                </div>
+
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="icon" 
+                                                    onClick={() => handleDeleteRegionalRate(rate.id)}
+                                                    className="text-destructive h-10 w-10 rounded-2xl hover:bg-destructive/10 transition-all opacity-0 group-hover:opacity-100"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </Button>
                                             </div>
-                                        </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <Button 
-                                                variant="ghost" 
-                                                size="icon" 
-                                                onClick={() => handleDeleteRegionalRate(rate.id)}
-                                                className="text-destructive h-8 w-8 rounded-full hover:bg-destructive/10"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </Button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                        {regionalRates.length === 0 && (
+                            <div className="py-20 text-center space-y-6">
+                                <div className="w-16 h-16 bg-muted/10 rounded-full flex items-center justify-center mx-auto border border-border/5">
+                                    <Globe className="w-8 h-8 text-muted-foreground/30" />
+                                </div>
+                                <div className="space-y-2">
+                                    <p className="font-serif italic text-lg">No regional rates defined yet.</p>
+                                    <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">Add your first state-specific charge to get started.</p>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </CardContent>
             </Card>
