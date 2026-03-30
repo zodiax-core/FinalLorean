@@ -85,6 +85,7 @@ const Checkout = () => {
     const [availableCities, setAvailableCities] = useState<string[]>([]);
     const [stateOpen, setStateOpen] = useState(false);
     const [cityOpen, setCityOpen] = useState(false);
+    const [formErrors, setFormErrors] = useState<Record<string, boolean>>({});
 
     useEffect(() => {
         const setupCheckout = async () => {
@@ -245,23 +246,33 @@ const Checkout = () => {
     const total = useMemo(() => subtotal + shipping + tax - discountAmount + giftWrapCost, [subtotal, shipping, tax, discountAmount, giftWrapCost]);
 
     const validateStep1 = () => {
-        const required = ['firstName', 'lastName', 'email', 'address', 'city', 'state', 'country', 'receiverPhone'];
+        const required = ['firstName', 'lastName', 'email', 'address', 'city', 'state', 'country', 'receiverName', 'receiverPhone'];
+        const newErrors: Record<string, boolean> = {};
+        let isValid = true;
+
         for (const field of required) {
             if (!formData[field as keyof typeof formData]) {
-                const label = field.replace(/([A-Z])/g, ' $1').toLowerCase();
-                toast({ 
-                    variant: "destructive", 
-                    title: "Missing Information", 
-                    description: `Please enter your ${label}.` 
-                });
-                return false;
+                newErrors[field] = true;
+                isValid = false;
             }
         }
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-            toast({ variant: "destructive", title: "Invalid Email", description: "Please enter a valid email address." });
-            return false;
+
+        if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+            newErrors['email'] = true;
+            isValid = false;
         }
-        return true;
+
+        setFormErrors(newErrors);
+
+        if (!isValid) {
+            toast({
+                variant: "destructive",
+                title: "Incomplete Details",
+                description: "Please fulfill the highlighted fields to proceed."
+            });
+        }
+
+        return isValid;
     };
 
     const handleApplyPromo = async () => {
@@ -467,7 +478,10 @@ const Checkout = () => {
                                                     value={formData.firstName}
                                                     onChange={e => setFormData({ ...formData, firstName: e.target.value })}
                                                     placeholder="First Name"
-                                                    className="rounded-xl h-11 bg-muted/30 border-none px-5 focus-visible:bg-background transition-all"
+                                                    className={cn(
+                                                        "rounded-xl h-11 bg-muted/30 border-none px-5 focus-visible:bg-background transition-all",
+                                                        formErrors.firstName && "border-b-2 border-destructive"
+                                                    )}
                                                 />
                                             </div>
                                             <div className="space-y-1.5">
@@ -476,7 +490,10 @@ const Checkout = () => {
                                                     value={formData.lastName}
                                                     onChange={e => setFormData({ ...formData, lastName: e.target.value })}
                                                     placeholder="Last Name"
-                                                    className="rounded-xl h-11 bg-muted/30 border-none px-5 focus-visible:bg-background transition-all"
+                                                    className={cn(
+                                                        "rounded-xl h-11 bg-muted/30 border-none px-5 focus-visible:bg-background transition-all",
+                                                        formErrors.lastName && "border-b-2 border-destructive"
+                                                    )}
                                                 />
                                             </div>
                                         </div>
@@ -486,7 +503,10 @@ const Checkout = () => {
                                                 value={formData.email}
                                                 onChange={e => setFormData({ ...formData, email: e.target.value })}
                                                 placeholder="Email Address"
-                                                className="rounded-xl h-11 bg-muted/30 border-none px-5 focus-visible:bg-background transition-all"
+                                                className={cn(
+                                                    "rounded-xl h-11 bg-muted/30 border-none px-5 focus-visible:bg-background transition-all",
+                                                    formErrors.email && "border-b-2 border-destructive"
+                                                )}
                                             />
                                         </div>
                                         <div className="space-y-1.5 mb-4">
@@ -495,7 +515,10 @@ const Checkout = () => {
                                                 value={formData.address}
                                                 onChange={e => setFormData({ ...formData, address: e.target.value })}
                                                 placeholder="Shipping Address"
-                                                className="rounded-xl h-11 bg-muted/30 border-none px-5 focus-visible:bg-background transition-all"
+                                                className={cn(
+                                                    "rounded-xl h-11 bg-muted/30 border-none px-5 focus-visible:bg-background transition-all",
+                                                    formErrors.address && "border-b-2 border-destructive"
+                                                )}
                                             />
                                         </div>
                                         <div className="space-y-2">
@@ -514,7 +537,10 @@ const Checkout = () => {
                                                     value={formData.receiverName}
                                                     onChange={e => setFormData({ ...formData, receiverName: e.target.value })}
                                                     placeholder="Receiver Name"
-                                                    className="rounded-xl h-11 bg-muted/30 border-none px-5 focus-visible:bg-background transition-all"
+                                                    className={cn(
+                                                        "rounded-xl h-11 bg-muted/30 border-none px-5 focus-visible:bg-background transition-all",
+                                                        formErrors.receiverName && "border-b-2 border-destructive"
+                                                    )}
                                                 />
                                             </div>
                                             <div className="space-y-1.5">
@@ -523,7 +549,10 @@ const Checkout = () => {
                                                     value={formData.receiverPhone}
                                                     onChange={e => setFormData({ ...formData, receiverPhone: e.target.value })}
                                                     placeholder="03xx xxxxxxxx"
-                                                    className="rounded-xl h-11 bg-muted/30 border-none px-5 focus-visible:bg-background transition-all"
+                                                    className={cn(
+                                                        "rounded-xl h-11 bg-muted/30 border-none px-5 focus-visible:bg-background transition-all",
+                                                        formErrors.receiverPhone && "border-b-2 border-destructive"
+                                                    )}
                                                 />
                                             </div>
                                         </div>
@@ -537,7 +566,10 @@ const Checkout = () => {
                                                             variant="outline"
                                                             role="combobox"
                                                             aria-expanded={stateOpen}
-                                                            className="w-full rounded-xl h-11 bg-muted/30 border-none px-5 justify-between font-normal hover:bg-muted/40 transition-all text-sm"
+                                                            className={cn(
+                                                                "w-full rounded-xl h-11 bg-muted/30 border-none px-5 justify-between font-normal hover:bg-muted/40 transition-all text-sm",
+                                                                formErrors.state && "border-b-2 border-destructive"
+                                                            )}
                                                         >
                                                             {formData.state || "Select State"}
                                                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -593,7 +625,10 @@ const Checkout = () => {
                                                             variant="outline"
                                                             role="combobox"
                                                             aria-expanded={cityOpen}
-                                                            className="w-full rounded-xl h-11 bg-muted/30 border-none px-5 justify-between font-normal hover:bg-muted/40 transition-all text-sm disabled:opacity-50"
+                                                            className={cn(
+                                                                "w-full rounded-xl h-11 bg-muted/30 border-none px-5 justify-between font-normal hover:bg-muted/40 transition-all text-sm disabled:opacity-50",
+                                                                formErrors.city && "border-b-2 border-destructive"
+                                                            )}
                                                         >
                                                             {formData.city || (formData.state ? "Select City" : "Select state first")}
                                                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />

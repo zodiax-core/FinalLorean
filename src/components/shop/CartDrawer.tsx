@@ -1,8 +1,11 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { X, ShoppingBag, Plus, Minus, Trash2, ArrowRight, Sparkles } from "lucide-react";
+import { X, ShoppingBag, Plus, Minus, Trash2, ArrowRight, Sparkles, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useCart } from "@/context/CartContext";
+import { useEffect, useState } from "react";
+import { profilesService, settingsService, shippingService } from "@/services/supabase";
+import { supabase } from "@/integrations/supabase/client";
 
 interface CartDrawerProps {
   isOpen: boolean;
@@ -13,8 +16,47 @@ const CartDrawer = ({ isOpen, onClose }: CartDrawerProps) => {
   const { cartItems, removeFromCart, updateQuantity, subtotal, itemCount } = useCart();
   const navigate = useNavigate();
 
-  const shippingThreshold = 150;
-  const shipping = subtotal > shippingThreshold ? 0 : 15;
+  const [shippingRates, setShippingRates] = useState({ flat_rate: 15, threshold: 150 });
+  const [isCalculating, setIsCalculating] = useState(false);
+
+  useEffect(() => {
+    const calculateShipping = async () => {
+      if (!isOpen) return;
+      setIsCalculating(true);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        let locationRate = null;
+
+        if (user) {
+          const profile = await profilesService.getById(user.id);
+          if (profile?.state) {
+            locationRate = await shippingService.getRateByLocation(profile.state, profile.city || "");
+          }
+        }
+
+        if (locationRate) {
+          setShippingRates({
+            flat_rate: Number(locationRate.charge),
+            threshold: locationRate.is_free ? 0 : 999999999
+          });
+        } else {
+          const globalSettings = await settingsService.getShipping();
+          setShippingRates({
+            flat_rate: Number(globalSettings.flat_rate),
+            threshold: Number(globalSettings.threshold)
+          });
+        }
+      } catch (error) {
+        console.error("Cart shipping calc error:", error);
+      } finally {
+        setIsCalculating(false);
+      }
+    };
+
+    calculateShipping();
+  }, [isOpen, subtotal]);
+
+  const shipping = subtotal > shippingRates.threshold ? 0 : shippingRates.flat_rate;
   const total = subtotal + shipping;
 
   return (
@@ -66,15 +108,15 @@ const CartDrawer = ({ isOpen, onClose }: CartDrawerProps) => {
             </div>
 
             {/* Progress Banner */}
-            {subtotal > 0 && subtotal < shippingThreshold && (
+            {subtotal > 0 && subtotal < shippingRates.threshold && shippingRates.threshold < 1000000 && (
               <div className="mx-5 md:mx-8 mt-4 md:mt-6 p-3 md:p-4 rounded-2xl md:rounded-3xl bg-primary/5 border border-primary/10">
                 <p className="text-[10px] md:text-xs text-center mb-2 md:mb-3">
-                  Add <span className="font-bold text-primary">Rs. {(shippingThreshold - subtotal).toFixed(0)}</span> more for <span className="font-serif italic font-bold">Complimentary Shipping</span>
+                  Add <span className="font-bold text-primary">Rs. {(shippingRates.threshold - subtotal).toFixed(0)}</span> more for <span className="font-serif italic font-bold">Complimentary Shipping</span>
                 </p>
                 <div className="h-1 md:h-1.5 bg-muted rounded-full overflow-hidden">
                   <motion.div
                     initial={{ width: 0 }}
-                    animate={{ width: `${(subtotal / shippingThreshold) * 100}%` }}
+                    animate={{ width: `${(subtotal / shippingRates.threshold) * 100}%` }}
                     className="h-full bg-primary"
                   />
                 </div>
@@ -159,7 +201,11 @@ const CartDrawer = ({ isOpen, onClose }: CartDrawerProps) => {
                   </div>
                   <div className="flex justify-between text-[10px] md:text-xs font-medium text-muted-foreground">
                     <span>Shipping</span>
-                    <span className={shipping === 0 ? "text-primary font-bold" : ""}>{shipping === 0 ? "Complimentary" : `Rs. ${shipping.toFixed(0)}`}</span>
+                    {isCalculating ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <span className={shipping === 0 ? "text-primary font-bold" : ""}>{shipping === 0 ? "Complimentary" : `Rs. ${shipping.toFixed(0)}`}</span>
+                    )}
                   </div>
                   <Separator className="my-1 md:my-2" />
                   <div className="flex justify-between items-end">
