@@ -926,28 +926,39 @@ export default function AdminOrders() {
                                         <div className="glass p-8 rounded-3xl space-y-4">
                                             <div className="flex justify-between text-sm">
                                                 <span className="text-muted-foreground">Subtotal</span>
-                                                <span className="font-bold">${Number(selectedOrder.subtotal_amount || 0).toFixed(2)}</span>
+                                                <span className="font-bold">Rs. {Number(selectedOrder.subtotal_amount || 0).toLocaleString()}</span>
                                             </div>
                                             <div className="flex justify-between text-sm">
                                                 <span className="text-muted-foreground">Shipping</span>
                                                 <span className={`font-bold ${Number(selectedOrder.shipping_amount) === 0 ? 'text-emerald-500' : ''}`}>
-                                                    {Number(selectedOrder.shipping_amount) === 0 ? 'Free' : `$${Number(selectedOrder.shipping_amount || 0).toFixed(2)}`}
+                                                    {Number(selectedOrder.shipping_amount) === 0 ? 'Free' : `Rs. ${Number(selectedOrder.shipping_amount || 0).toLocaleString()}`}
                                                 </span>
                                             </div>
                                             <div className="flex justify-between text-sm">
                                                 <span className="text-muted-foreground">Tax</span>
-                                                <span className="font-bold">${Number(selectedOrder.tax_amount || 0).toFixed(2)}</span>
+                                                <span className="font-bold">Rs. {Number(selectedOrder.tax_amount || 0).toLocaleString()}</span>
                                             </div>
                                             {Number(selectedOrder.discount_amount) > 0 && (
                                                 <div className="flex justify-between text-sm text-emerald-600">
                                                     <span>Discount {selectedOrder.discount_code ? `(${selectedOrder.discount_code})` : ''}</span>
-                                                    <span className="font-bold">-${Number(selectedOrder.discount_amount).toFixed(2)}</span>
+                                                    <span className="font-bold">-Rs. {Number(selectedOrder.discount_amount).toLocaleString()}</span>
                                                 </div>
                                             )}
                                             <div className="h-px bg-border/30 my-2" />
                                             <div className="flex justify-between items-end pt-2">
                                                 <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Total</span>
-                                                <span className="text-4xl font-serif font-black text-primary">${Number(selectedOrder.total_amount).toFixed(2)}</span>
+                                                <span className="text-4xl font-serif font-black text-primary">Rs. {Number(selectedOrder.total_amount).toLocaleString()}</span>
+                                            </div>
+
+                                            <div className="mt-8 pt-6 border-t border-dashed border-border/20 space-y-3">
+                                                <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
+                                                    <span className="text-muted-foreground/60">Estimated Cost</span>
+                                                    <span className="text-rose-500/60">Rs. {Number(selectedOrder.total_cost || 0).toLocaleString()}</span>
+                                                </div>
+                                                <div className="flex justify-between text-[10px] font-black uppercase tracking-widest bg-emerald-500/5 p-3 rounded-xl border border-emerald-500/10">
+                                                    <span className="text-emerald-600">Net Profit</span>
+                                                    <span className="text-emerald-600 font-black">Rs. {Number(selectedOrder.total_profit || 0).toLocaleString()} ({(Number(selectedOrder.total_profit) / Number(selectedOrder.total_amount) * 100).toFixed(1)}%)</span>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>

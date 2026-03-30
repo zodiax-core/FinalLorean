@@ -2,14 +2,17 @@ import { useState, useEffect } from "react";
 import {
     Truck, Save, RefreshCcw, Loader2,
     DollarSign, ArrowRight, ShieldCheck,
-    Info, Globe, Zap, AlertCircle, BadgeCheck
+    Info, Globe, Zap, AlertCircle, BadgeCheck,
+    Plus, Trash2, MapPin
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
-import { settingsService } from "@/services/supabase";
+import { settingsService, shippingService } from "@/services/supabase";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 
 export default function AdminShipping() {
     const { toast } = useToast();
@@ -19,15 +22,22 @@ export default function AdminShipping() {
         flat_rate: 15,
         threshold: 150
     });
+    const [regionalRates, setRegionalRates] = useState<any[]>([]);
+    const [isAddingRate, setIsAddingRate] = useState(false);
+    const [newRate, setNewRate] = useState({ state: "", city: "", charge: 0, is_free: false });
 
     const fetchSettings = async () => {
         setLoading(true);
         try {
-            const data = await settingsService.getShipping();
+            const [sData, rData] = await Promise.all([
+                settingsService.getShipping(),
+                shippingService.getAllRates()
+            ]);
             setSettings({
-                flat_rate: Number(data.flat_rate),
-                threshold: Number(data.threshold)
+                flat_rate: Number(sData.flat_rate),
+                threshold: Number(sData.threshold)
             });
+            setRegionalRates(rData);
         } catch (error) {
             console.error("Error fetching shipping settings:", error);
             toast({
@@ -65,6 +75,38 @@ export default function AdminShipping() {
         }
     };
 
+    const handleUpdateRegionalRate = async (id: string, updates: any) => {
+        try {
+            await shippingService.updateRate(id, updates);
+            toast({ title: "Rate Updated" });
+            fetchSettings();
+        } catch (error) {
+            toast({ variant: "destructive", title: "Update Failed" });
+        }
+    };
+
+    const handleDeleteRegionalRate = async (id: string) => {
+        try {
+            await shippingService.deleteRate(id);
+            toast({ title: "Rate Deleted" });
+            fetchSettings();
+        } catch (error) {
+            toast({ variant: "destructive", title: "Delete Failed" });
+        }
+    };
+
+    const handleAddRegionalRate = async () => {
+        try {
+            await shippingService.createRate(newRate);
+            toast({ title: "Rate Added" });
+            setIsAddingRate(false);
+            setNewRate({ state: "", city: "", charge: 0, is_free: false });
+            fetchSettings();
+        } catch (error) {
+            toast({ variant: "destructive", title: "Add Failed" });
+        }
+    };
+
     if (loading) {
         return (
             <div className="h-[60vh] flex flex-col items-center justify-center gap-4">
@@ -81,9 +123,11 @@ export default function AdminShipping() {
                     <h1 className="text-5xl font-serif tracking-tight">Global <span className="text-primary italic">Shipping</span></h1>
                     <p className="text-muted-foreground font-light uppercase tracking-widest text-[10px]">Manage your store's shipping and delivery settings.</p>
                 </div>
-                <Button variant="outline" className="h-12 rounded-2xl gap-2" onClick={fetchSettings}>
-                    <RefreshCcw className="w-4 h-4" /> Sync Settings
-                </Button>
+                <div className="flex gap-4">
+                    <Button variant="outline" className="h-12 rounded-2xl gap-2" onClick={fetchSettings}>
+                        <RefreshCcw className="w-4 h-4" /> Sync Settings
+                    </Button>
+                </div>
             </header>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -165,22 +209,139 @@ export default function AdminShipping() {
                         <div className="space-y-4">
                             <div className="flex justify-between items-center text-xs">
                                 <span className="text-muted-foreground">Current Rate</span>
-                                <span className="font-serif font-bold text-lg text-primary">${settings.flat_rate}</span>
+                                <span className="font-serif font-bold text-lg text-primary">Rs. {settings.flat_rate}</span>
                             </div>
                             <div className="flex justify-between items-center text-xs">
                                 <span className="text-muted-foreground">Threshold</span>
-                                <span className="font-serif font-bold text-lg text-primary">${settings.threshold}</span>
+                                <span className="font-serif font-bold text-lg text-primary">Rs. {settings.threshold}</span>
                             </div>
                         </div>
                         <div className="p-4 rounded-2xl bg-amber-500/5 border border-amber-500/10 flex gap-3">
                             <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
                             <p className="text-[9px] text-amber-600/80 font-medium leading-relaxed">
-                                Note: These settings require the <code className="bg-amber-500/10 px-1 rounded text-amber-700">shipping_settings</code> table to be configured in your database.
+                                Manage city-specific rates in the section below.
                             </p>
                         </div>
                     </div>
                 </div>
             </div>
+
+            <Card className="glass border-border/10 shadow-sm overflow-hidden">
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                        <CardTitle className="text-2xl font-serif flex items-center gap-3">
+                            <MapPin className="h-6 w-6 text-primary" />
+                            Regional Shipping Rates (Pakistan)
+                        </CardTitle>
+                        <CardDescription>Manage state and city specific shipping charges</CardDescription>
+                    </div>
+                    <Button 
+                        onClick={() => setIsAddingRate(true)}
+                        className="rounded-full h-10 px-6 gap-2"
+                    >
+                        <Plus className="w-4 h-4" /> Add Rate
+                    </Button>
+                </CardHeader>
+                <CardContent className="py-6">
+                    {isAddingRate && (
+                        <div className="mb-8 p-6 rounded-3xl bg-primary/5 border border-primary/20 space-y-4 animate-in slide-in-from-top-4">
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                <div className="space-y-2">
+                                    <Label className="text-[10px] font-black uppercase">State</Label>
+                                    <Input 
+                                        value={newRate.state} 
+                                        onChange={e => setNewRate({...newRate, state: e.target.value})}
+                                        placeholder="e.g. Punjab"
+                                        className="h-10 rounded-xl"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-[10px] font-black uppercase">City (Optional)</Label>
+                                    <Input 
+                                        value={newRate.city} 
+                                        onChange={e => setNewRate({...newRate, city: e.target.value})}
+                                        placeholder="e.g. Lahore"
+                                        className="h-10 rounded-xl"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-[10px] font-black uppercase">Charge (Rs.)</Label>
+                                    <Input 
+                                        type="number"
+                                        value={newRate.charge} 
+                                        onChange={e => setNewRate({...newRate, charge: Number(e.target.value)})}
+                                        className="h-10 rounded-xl"
+                                    />
+                                </div>
+                                <div className="flex items-end gap-2">
+                                    <Button onClick={handleAddRegionalRate} className="flex-1 rounded-xl">Add</Button>
+                                    <Button variant="outline" onClick={() => setIsAddingRate(false)} className="rounded-xl">Cancel</Button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm text-left">
+                            <thead className="bg-muted/30">
+                                <tr>
+                                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">State/Province</th>
+                                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">City</th>
+                                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Charge</th>
+                                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Free Shipping</th>
+                                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-border/10">
+                                {regionalRates.map((rate) => (
+                                    <tr key={rate.id} className="hover:bg-primary/5 transition-colors">
+                                        <td className="px-6 py-4 font-bold">{rate.state}</td>
+                                        <td className="px-6 py-4">
+                                            {rate.city ? (
+                                                <Badge variant="secondary" className="rounded-full text-[8px] font-black uppercase px-2">
+                                                    {rate.city}
+                                                </Badge>
+                                            ) : (
+                                                <span className="text-[10px] text-muted-foreground uppercase font-black italic">State-wide</span>
+                                            )}
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-[10px] text-muted-foreground">Rs.</span>
+                                                <Input 
+                                                    type="number"
+                                                    value={rate.charge}
+                                                    onChange={(e) => handleUpdateRegionalRate(rate.id, { charge: Number(e.target.value) })}
+                                                    className="h-8 w-24 bg-muted/20 border-none text-xs font-serif font-black"
+                                                />
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center gap-3">
+                                                <Switch 
+                                                    checked={rate.is_free}
+                                                    onCheckedChange={(checked) => handleUpdateRegionalRate(rate.id, { is_free: checked, charge: checked ? 0 : rate.charge })}
+                                                />
+                                                {rate.is_free && <Badge className="bg-emerald-500 text-white border-none text-[8px] font-black uppercase">Free</Badge>}
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4 text-right">
+                                            <Button 
+                                                variant="ghost" 
+                                                size="icon" 
+                                                onClick={() => handleDeleteRegionalRate(rate.id)}
+                                                className="text-destructive h-8 w-8 rounded-full hover:bg-destructive/10"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </Button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </CardContent>
+            </Card>
         </div>
     );
 }

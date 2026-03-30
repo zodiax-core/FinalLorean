@@ -30,6 +30,7 @@ export interface Product {
     video_proofs?: { url: string, username: string, redirection_link: string, icon_img?: string, thumbnail?: string, platform?: string }[];
     tags?: string[];
     slug?: string;
+    cost_price?: number;
 }
 
 export interface NewsletterSubscription {
@@ -127,6 +128,8 @@ export interface Order {
     receiver_phone?: string;
     receiver_name?: string;
     nearest_famous_place?: string;
+    total_cost?: number;
+    total_profit?: number;
 }
 
 export const productsService = {
@@ -764,6 +767,75 @@ export const settingsService = {
         const { error } = await supabase
             .from('admin_activity_logs')
             .insert({ admin_id: adminId, action, details });
+
+        if (error) throw error;
+        return true;
+    }
+};
+
+export const shippingService = {
+    async getAllRates() {
+        const { data, error } = await supabase
+            .from('shipping_rates')
+            .select('*')
+            .order('state', { ascending: true })
+            .order('city', { ascending: true });
+
+        if (error) throw error;
+        return data;
+    },
+
+    async getRateByLocation(state?: string, city?: string) {
+        if (!state) return null;
+
+        const { data: cityRate } = await supabase
+            .from('shipping_rates')
+            .select('*')
+            .eq('state', state)
+            .eq('city', city || "")
+            .maybeSingle();
+
+        if (cityRate) return cityRate;
+
+        // Fallback to state-wide rate
+        const { data: stateRate } = await supabase
+            .from('shipping_rates')
+            .select('*')
+            .eq('state', state)
+            .is('city', null)
+            .maybeSingle();
+
+        return stateRate;
+    },
+
+    async createRate(rate: any) {
+        const { data, error } = await supabase
+            .from('shipping_rates')
+            .insert(rate)
+            .select()
+            .single();
+
+        if (error) throw error;
+        return data;
+    },
+
+    async updateRate(id: string, updates: any) {
+        const { data, error } = await supabase
+            .from('shipping_rates')
+            .update(updates)
+            .eq('id', id)
+            .select()
+            .single();
+
+        if (error) throw error;
+        return data;
+    },
+
+    async deleteRate(id: string) {
+        const { error } = await supabase
+            .from('shipping_rates')
+            .delete()
+            .eq('id', id);
 
         if (error) throw error;
         return true;

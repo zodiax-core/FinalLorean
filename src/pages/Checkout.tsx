@@ -19,7 +19,8 @@ import {
     ordersService,
     settingsService,
     discountsService,
-    taxService
+    taxService,
+    shippingService
 } from "@/services/supabase";
 import { supabase } from "@/integrations/supabase/client";
 import { useCart } from "@/context/CartContext";
@@ -108,7 +109,6 @@ const Checkout = () => {
                         setFormData(prev => ({ ...prev, email: user.email || "" }));
                     }
                 }
-
                 const rates = await settingsService.getShipping();
                 setShippingRates({
                     flat_rate: Number(rates.flat_rate),
@@ -122,6 +122,44 @@ const Checkout = () => {
         };
         setupCheckout();
     }, []);
+
+    const [isCalculatingShipping, setIsCalculatingShipping] = useState(false);
+
+    useEffect(() => {
+        const updateShippingRate = async () => {
+            if (formData.country !== "PK") {
+                const rates = await settingsService.getShipping();
+                setShippingRates({
+                    flat_rate: Number(rates.flat_rate),
+                    threshold: Number(rates.threshold)
+                });
+                return;
+            }
+
+            setIsCalculatingShipping(true);
+            try {
+                const rate = await shippingService.getRateByLocation(formData.state, formData.city);
+                if (rate) {
+                    setShippingRates(prev => ({
+                        ...prev,
+                        flat_rate: Number(rate.charge)
+                    }));
+                } else {
+                    const globalSettings = await settingsService.getShipping();
+                    setShippingRates(prev => ({
+                        ...prev,
+                        flat_rate: Number(globalSettings.flat_rate)
+                    }));
+                }
+            } catch (error) {
+                console.error("Shipping fetch error:", error);
+            } finally {
+                setIsCalculatingShipping(false);
+            }
+        };
+
+        updateShippingRate();
+    }, [formData.city, formData.state, formData.country]);
 
     const shipping = useMemo(() => (subtotal > shippingRates.threshold ? 0 : shippingRates.flat_rate), [subtotal, shippingRates]);
 
@@ -167,7 +205,7 @@ const Checkout = () => {
     const total = useMemo(() => subtotal + shipping + tax - discountAmount + giftWrapCost, [subtotal, shipping, tax, discountAmount, giftWrapCost]);
 
     const validateStep1 = () => {
-        const required = ['firstName', 'lastName', 'email', 'address', 'city', 'country', 'receiverPhone'];
+        const required = ['firstName', 'lastName', 'email', 'address', 'city', 'state', 'country', 'receiverPhone'];
         for (const field of required) {
             if (!formData[field as keyof typeof formData]) {
                 const label = field.replace(/([A-Z])/g, ' $1').toLowerCase();
@@ -262,8 +300,10 @@ const Checkout = () => {
                     name: item.name,
                     price: item.price,
                     quantity: item.quantity,
-                    image: item.image
-                }))
+                    image: item.image,
+                    cost_price: item.cost_price || 0
+                })),
+                total_cost: cartItems.reduce((sum, item) => sum + ((item.cost_price || 0) * item.quantity), 0)
             };
 
             const newOrder = await ordersService.create(orderPayload);
@@ -386,7 +426,7 @@ const Checkout = () => {
                                                 <Input
                                                     value={formData.firstName}
                                                     onChange={e => setFormData({ ...formData, firstName: e.target.value })}
-                                                    placeholder="Jane"
+                                                    placeholder="First Name"
                                                     className="rounded-xl h-11 bg-muted/30 border-none px-5 focus-visible:bg-background transition-all"
                                                 />
                                             </div>
@@ -395,7 +435,7 @@ const Checkout = () => {
                                                 <Input
                                                     value={formData.lastName}
                                                     onChange={e => setFormData({ ...formData, lastName: e.target.value })}
-                                                    placeholder="Doe"
+                                                    placeholder="Last Name"
                                                     className="rounded-xl h-11 bg-muted/30 border-none px-5 focus-visible:bg-background transition-all"
                                                 />
                                             </div>
@@ -405,7 +445,7 @@ const Checkout = () => {
                                             <Input
                                                 value={formData.email}
                                                 onChange={e => setFormData({ ...formData, email: e.target.value })}
-                                                placeholder="jane@lorean.com"
+                                                placeholder="Email Address"
                                                 className="rounded-xl h-11 bg-muted/30 border-none px-5 focus-visible:bg-background transition-all"
                                             />
                                         </div>
@@ -414,16 +454,16 @@ const Checkout = () => {
                                             <Input
                                                 value={formData.address}
                                                 onChange={e => setFormData({ ...formData, address: e.target.value })}
-                                                placeholder="123 Luxury Avenue"
+                                                placeholder="Shipping Address"
                                                 className="rounded-xl h-11 bg-muted/30 border-none px-5 focus-visible:bg-background transition-all"
                                             />
                                         </div>
-                                        <div className="space-y-1.5 mb-4">
-                                            <Label className="text-[9px] font-black uppercase tracking-widest ml-1">Near Place (Landmark) <span className="text-[8px] opacity-60">(optional)</span></Label>
+                                        <div className="space-y-2">
+                                            <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Famous Nearest Place (Optional)</Label>
                                             <Input
                                                 value={formData.nearestFamousPlace}
                                                 onChange={e => setFormData({ ...formData, nearestFamousPlace: e.target.value })}
-                                                placeholder="Near Eiffel Tower"
+                                                placeholder="e.g. Near main gate, bridge etc. (Optional)"
                                                 className="rounded-xl h-11 bg-muted/30 border-none px-5 focus-visible:bg-background transition-all"
                                             />
                                         </div>
@@ -442,7 +482,7 @@ const Checkout = () => {
                                                 <Input
                                                     value={formData.receiverPhone}
                                                     onChange={e => setFormData({ ...formData, receiverPhone: e.target.value })}
-                                                    placeholder="+1 234 567 890"
+                                                    placeholder="03xx xxxxxxxx"
                                                     className="rounded-xl h-11 bg-muted/30 border-none px-5 focus-visible:bg-background transition-all"
                                                 />
                                             </div>
@@ -480,7 +520,7 @@ const Checkout = () => {
                                                 <Input
                                                     value={formData.city}
                                                     onChange={e => setFormData({ ...formData, city: e.target.value })}
-                                                    placeholder="Paris"
+                                                    placeholder="City"
                                                     className="rounded-xl h-11 bg-muted/30 border-none px-5 focus-visible:bg-background transition-all"
                                                 />
                                             </div>
@@ -489,16 +529,16 @@ const Checkout = () => {
                                                 <Input
                                                     value={formData.state}
                                                     onChange={e => setFormData({ ...formData, state: e.target.value })}
-                                                    placeholder="ILE"
+                                                    placeholder="State"
                                                     className="rounded-xl h-11 bg-muted/30 border-none px-5 focus-visible:bg-background transition-all"
                                                 />
                                             </div>
-                                            <div className="space-y-1.5">
-                                                <Label className="text-[9px] font-black uppercase tracking-widest ml-1">Postal</Label>
+                                            <div className="space-y-2">
+                                                <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Postal Code (Optional)</Label>
                                                 <Input
                                                     value={formData.postalCode}
                                                     onChange={e => setFormData({ ...formData, postalCode: e.target.value })}
-                                                    placeholder="75001"
+                                                    placeholder="Postal Code (Optional)"
                                                     className="rounded-xl h-11 bg-muted/30 border-none px-5 focus-visible:bg-background transition-all"
                                                 />
                                             </div>
@@ -617,7 +657,13 @@ const Checkout = () => {
                                     </div>
                                     <div className="flex justify-between text-muted-foreground font-medium text-xs">
                                         <span>Shipping</span>
-                                        <span className={shipping === 0 ? "text-primary font-bold" : "text-foreground"}>{shipping === 0 ? "Complimentary" : `Rs. ${shipping.toFixed(0)}`}</span>
+                                        <span className={shipping === 0 ? "text-primary font-bold" : "text-foreground"}>
+                                            {isCalculatingShipping ? (
+                                                <Loader2 className="w-3 h-3 animate-spin border-none" />
+                                            ) : (
+                                                shipping === 0 ? "Free Shipping" : `Rs. ${shipping.toFixed(0)}`
+                                            )}
+                                        </span>
                                     </div>
                                     <div className="flex justify-between text-muted-foreground font-medium text-xs">
                                         <span>{taxData.name || "Tax"}</span>

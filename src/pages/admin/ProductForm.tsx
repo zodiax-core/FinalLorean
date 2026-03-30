@@ -72,6 +72,7 @@ export default function ProductForm() {
         video_proofs: [],
         tags: [],
         slug: "",
+        cost_price: 0,
         variants: { sizes: ["30ml", "50ml", "100ml"], colors: [] }
     });
 
@@ -407,14 +408,26 @@ export default function ProductForm() {
                                         />
                                     </div>
                                 </div>
-                                <div className="space-y-4 pt-4">
-                                    <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Vessel Volume (e.g. 200ml)</Label>
-                                    <Input
-                                        value={formData.vessel_volume}
-                                        onChange={(e) => setFormData({ ...formData, vessel_volume: e.target.value })}
-                                        placeholder="200ml"
-                                        className="h-14 rounded-2xl bg-muted/20 border-none px-6 text-xl font-serif italic"
-                                    />
+                                <div className="grid grid-cols-2 gap-6">
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Vessel Volume (e.g. 200ml)</Label>
+                                        <Input
+                                            value={formData.vessel_volume}
+                                            onChange={(e) => setFormData({ ...formData, vessel_volume: e.target.value })}
+                                            placeholder="200ml"
+                                            className="h-14 rounded-2xl bg-muted/20 border-none px-6 text-xl font-serif italic"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] font-black uppercase tracking-widest ml-1 text-emerald-500">Unit Cost (Rs.)</Label>
+                                        <Input
+                                            type="number"
+                                            value={formData.cost_price}
+                                            onChange={(e) => setFormData({ ...formData, cost_price: Number(e.target.value) })}
+                                            className="h-14 rounded-2xl bg-emerald-500/5 border-none px-6 text-xl font-serif font-black text-emerald-600"
+                                        />
+                                        <p className="text-[10px] text-muted-foreground font-light px-2 italic">Used to track business profit. Not visible to patrons.</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
