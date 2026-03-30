@@ -30,17 +30,17 @@ const OrderSuccess = () => {
                     </div>
 
                     <h1 className="text-5xl md:text-7xl font-serif mb-6 uppercase tracking-tighter text-foreground">
-                        Ritual <span className="text-primary italic">Manifested</span>
+                        Order <span className="text-primary italic">Completed</span>
                     </h1>
 
                     <div className="flex items-center justify-center gap-2 mb-8">
                         <div className="h-px w-12 bg-primary/30" />
-                        <span className="text-[10px] uppercase font-black tracking-[0.4em] text-primary">Sacred Confirmation</span>
+                        <span className="text-[10px] uppercase font-black tracking-[0.4em] text-primary">Order Confirmation</span>
                         <div className="h-px w-12 bg-primary/30" />
                     </div>
 
                     <p className="text-muted-foreground text-lg font-light max-w-lg mx-auto leading-relaxed font-serif italic">
-                        "Your botanical selection has been heard by the guardians. The essence is now traveling toward your abode."
+                        "Thank you for your order. We've received it and are preparing it for shipment."
                     </p>
                 </motion.div>
 
@@ -63,7 +63,7 @@ const OrderSuccess = () => {
                                     <h3 className="font-serif text-2xl tracking-tight">Order Receipt</h3>
                                 </div>
                                 <div className="text-right">
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 mb-1">Ritual ID</p>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 mb-1">Order ID</p>
                                     <p className="font-mono text-xs font-bold bg-muted/50 px-3 py-1 rounded-full">
                                         #{(orderData?.short_id || orderData?.id?.slice(0, 8) || "PENDING")}
                                     </p>
@@ -73,7 +73,7 @@ const OrderSuccess = () => {
                             <div className="space-y-8">
                                 <section>
                                     <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-4 flex items-center gap-2">
-                                        <Truck className="w-3 h-3" /> Delivery Manifest
+                                        <Truck className="w-3 h-3" /> Delivery Details
                                     </h4>
                                     <div className="bg-muted/30 p-6 rounded-2xl border border-border/10">
                                         <p className="font-bold text-lg mb-1">{orderData?.full_name || "Inner Circle Patron"}</p>
@@ -86,17 +86,17 @@ const OrderSuccess = () => {
 
                                 <div className="grid grid-cols-2 gap-6 pb-8 border-bottom border-border/10">
                                     <div>
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">Manifest Date</p>
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">Order Date</p>
                                         <p className="text-sm font-medium">{new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
                                     </div>
                                     <div className="text-right">
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">Exchange Method</p>
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">Payment Method</p>
                                         <p className="text-sm font-medium uppercase tracking-tighter">{orderData?.payment_method || "Processing"}</p>
                                     </div>
                                 </div>
 
                                 <div className="pt-8 border-t border-border/10 flex items-center justify-between">
-                                    <span className="font-serif italic text-xl">Sacred Total</span>
+                                    <span className="font-serif italic text-xl">Total Amount</span>
                                     <span className="text-2xl font-serif font-black text-primary">
                                         Rs. {Math.round(orderData?.total_amount || 0).toLocaleString()}
                                     </span>
@@ -115,9 +115,9 @@ const OrderSuccess = () => {
                         >
                             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/natural-paper.png')] opacity-10" />
                             <Mail className="w-12 h-12 mb-6 opacity-30 group-hover:scale-110 transition-transform duration-500" />
-                            <h3 className="font-serif text-2xl mb-4 italic">A parchment is arriving...</h3>
+                            <h3 className="font-serif text-2xl mb-4 italic">Check your email</h3>
                             <p className="text-primary-foreground/70 text-sm leading-relaxed mb-6">
-                                We've dispatched a digital scroll (confirmation email) to your inbox. Please check your junk or spam rituals if it hasn't manifested.
+                                We've sent a confirmation email to your inbox. Please check your junk or spam folders if it hasn't arrived.
                             </p>
                         </motion.div>
 
@@ -134,7 +134,7 @@ const OrderSuccess = () => {
                             </Button>
                             <Button variant="outline" asChild size="lg" className="h-14 rounded-full text-xs font-black uppercase tracking-[0.2em] border-2 bg-white hover:bg-muted transition-colors">
                                 <Link to="/">
-                                    <Home className="mr-3 w-4 h-4" /> Return to Sanctuary
+                                    <Home className="mr-3 w-4 h-4" /> Return to Home
                                 </Link>
                             </Button>
                         </motion.div>

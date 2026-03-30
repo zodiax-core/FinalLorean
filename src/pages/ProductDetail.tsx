@@ -111,7 +111,7 @@ const RecentlyViewedProducts = ({ currentId, products }: { currentId: number, pr
 
     return (
         <div className="mt-12 animate-in fade-in slide-in-from-bottom-6 duration-1000">
-            <h2 className="text-2xl sm:text-4xl font-serif mb-6 sm:mb-12">Your <span className="text-primary italic">Stalker List</span> </h2>
+            <h2 className="text-2xl sm:text-4xl font-serif mb-6 sm:mb-12">Recently <span className="text-primary italic">Viewed</span> </h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-8">
                 {viewed.map(p => (
                     <Link to={`/product/${p.slug || p.id}`} key={p.id} className="group glass p-2 sm:p-4 rounded-[1.5rem] sm:rounded-[2rem] hover:shadow-2xl transition-all border-border/30">
@@ -353,7 +353,7 @@ const ProductDetail = () => {
     const handleShare = () => {
         navigator.clipboard.writeText(window.location.href);
         setIsCopied(true);
-        toast({ title: "Link Ritualized", description: "Product essence link copied to clipboard." });
+        toast({ title: "Link Copied", description: "Product link copied to clipboard." });
         setTimeout(() => setIsCopied(false), 2000);
     };
 
@@ -384,7 +384,7 @@ const ProductDetail = () => {
         return (
             <div className="min-h-screen bg-background flex flex-col items-center justify-center space-y-4">
                 <Loader2 className="w-12 h-12 text-primary animate-spin" />
-                <p className="font-serif text-lg animate-pulse">Establishing botanical connection...</p>
+                <p className="font-serif text-lg animate-pulse">Loading product...</p>
             </div>
         );
     }
@@ -393,8 +393,8 @@ const ProductDetail = () => {
         return (
             <div className="min-h-screen bg-background text-center py-40">
                 <Navbar />
-                <h2 className="text-4xl font-serif mb-6 uppercase tracking-tighter">Manifestation <span className="text-primary">Failed</span></h2>
-                <p className="text-muted-foreground mb-8">The botanical essence you seek has dissolved into the ether.</p>
+                <h2 className="text-4xl font-serif mb-6 uppercase tracking-tighter">Product <span className="text-primary">Not Found</span></h2>
+                <p className="text-muted-foreground mb-8">The product you're looking for is no longer available.</p>
                 <Button onClick={() => navigate('/shop')} className="rounded-full px-12 h-14 bg-primary">Back to Collection</Button>
                 <Footer />
             </div>
@@ -447,7 +447,7 @@ const ProductDetail = () => {
                                     >
                                         <Heart className={`w-5 h-5 ${isInWishlist(product.id) ? "fill-rose-500" : ""}`} />
                                     </Button>
-                                    <Button onClick={() => addToCart(product, quantity)} size="lg" className="rounded-full px-6 h-12 bg-primary font-black uppercase tracking-widest text-[10px] shadow-xl shadow-primary/20 active:scale-95 transition-all">Manifest</Button>
+                                    <Button onClick={() => addToCart(product, quantity)} size="lg" className="rounded-full px-6 h-12 bg-primary font-black uppercase tracking-widest text-[10px] shadow-xl shadow-primary/20 active:scale-95 transition-all">Add to Cart</Button>
                                 </div>
                             </div>
 
@@ -467,7 +467,7 @@ const ProductDetail = () => {
                                     >
                                         <Heart className={`w-5 h-5 ${isInWishlist(product.id) ? "fill-rose-500" : ""}`} />
                                     </Button>
-                                    <Button onClick={() => addToCart(product, quantity)} className="rounded-full px-10 h-14 shadow-2xl shadow-primary/30 bg-primary font-black uppercase tracking-widest text-[11px] hover:scale-105 transition-all">Manifest Into Bag</Button>
+                                    <Button onClick={() => addToCart(product, quantity)} className="rounded-full px-10 h-14 shadow-2xl shadow-primary/30 bg-primary font-black uppercase tracking-widest text-[11px] hover:scale-105 transition-all">Add To Cart</Button>
                                 </div>
                             </div>
                         </div>
@@ -542,7 +542,7 @@ const ProductDetail = () => {
                                     </div>
                                     <span className="text-[10px] font-black text-foreground uppercase tracking-wider">
                                         {displayRating} <span className="text-muted-foreground/60">({displayReviewsCount})</span>
-                                        {product.fake_sold_count ? <span className="ml-2 text-primary">| {product.fake_sold_count}+ vessels manifested</span> : null}
+                                        {product.fake_sold_count ? <span className="ml-2 text-primary">| {product.fake_sold_count}+ ordered</span> : null}
                                     </span>
                                 </div>
                             </div>
@@ -560,7 +560,7 @@ const ProductDetail = () => {
                                     <div className="flex items-center justify-center lg:justify-start gap-2 text-red-600 animate-pulse font-black">
                                         <Clock className="w-4 h-4" />
                                         <span className="text-[10px] uppercase tracking-[0.2em]">
-                                            {product.stock === 0 ? "Out of Stock" : `Botanical Shortage: Only ${product.stock} vessels Left`}
+                                            {product.stock === 0 ? "Out of Stock" : `Low Stock: Only ${product.stock} left`}
                                         </span>
                                     </div>
                                 )}
@@ -584,7 +584,7 @@ const ProductDetail = () => {
                             <div className="glass p-6 md:p-8 rounded-[2.5rem] md:rounded-[3rem] border-border/10 space-y-6 md:space-y-8 mt-4 md:mt-0">
                                 <div className="flex items-center justify-between gap-4">
                                     <div className="space-y-1">
-                                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Vessel Volume</Label>
+                                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Size / Volume</Label>
                                         <p className="font-serif italic text-xl text-primary">{product.vessel_volume || (product.variants?.sizes?.[0] || "200ml")}</p>
                                     </div>
                                     <div className="text-right">
@@ -592,7 +592,7 @@ const ProductDetail = () => {
                                         {product.stock > 0 ? (
                                             <div className="flex items-center gap-2 text-emerald-500 font-black uppercase tracking-widest text-[10px]">
                                                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                                Essence Manifested
+                                                In Stock
                                                 <span className="text-muted-foreground/60 normal-case font-semibold">· {product.stock} left</span>
                                             </div>
                                         ) : (
@@ -616,7 +616,7 @@ const ProductDetail = () => {
                                             onClick={() => addToCart(product, quantity)}
                                             className="flex-1 h-full rounded-full text-xs font-black uppercase tracking-[0.2em] shadow-xl shadow-primary/20 bg-primary group hover:bg-primary/90 transition-all duration-500"
                                         >
-                                            Manifest Into Bag
+                                            Add to Cart
                                             <ShoppingBag className="ml-3 w-5 h-5 group-hover:-translate-y-1 transition-transform" />
                                         </Button>
                                         <Button
@@ -659,8 +659,8 @@ const ProductDetail = () => {
                     {hasSpecs && (
                         <div id="specs" className="animate-in fade-in slide-in-from-bottom-8 duration-700">
                             <div className="text-center mb-16">
-                                <h2 className="text-4xl font-serif mb-4 uppercase">Technical <span className="text-primary italic">Synthesis</span></h2>
-                                <p className="text-muted-foreground text-sm uppercase tracking-widest">Botanical Composition & Molecular Alignments</p>
+                                <h2 className="text-4xl font-serif mb-4 uppercase">Product <span className="text-primary italic">Specifications</span></h2>
+                                <p className="text-muted-foreground text-sm uppercase tracking-widest">Detailed information and materials</p>
                             </div>
                             <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
                                 {Object.entries(product.specs).map(([key, val]) => (
@@ -677,17 +677,17 @@ const ProductDetail = () => {
                     {product.video_proofs && product.video_proofs.length > 0 && (
                         <div id="visions" className="animate-in fade-in slide-in-from-bottom-8 duration-700 space-y-16">
                             <div className="text-center">
-                                <h2 className="text-4xl md:text-5xl font-serif mb-4 uppercase tracking-tighter">Patron <span className="text-primary italic">Visions</span></h2>
+                                <h2 className="text-4xl md:text-5xl font-serif mb-4 uppercase tracking-tighter">Customer <span className="text-primary italic">Gallery</span></h2>
                                 <div className="flex items-center justify-center gap-2">
                                     <Play className="w-3 h-3 text-primary" />
-                                    <span className="text-[10px] font-black uppercase tracking-widest">Ritual Manifestations In Motion</span>
+                                    <span className="text-[10px] font-black uppercase tracking-widest">See it in action</span>
                                 </div>
                             </div>
 
                             <div className="relative w-full group overflow-hidden">
                                 {/* Edge Blurs */}
-                                <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-background via-background/40 to-transparent z-20 pointer-events-none opacity-100" />
-                                <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-background via-background/40 to-transparent z-20 pointer-events-none opacity-100" />
+                                <div className="absolute left-0 top-0 bottom-0 w-12 md:w-32 bg-gradient-to-r from-background via-background/40 to-transparent z-20 pointer-events-none opacity-100" />
+                                <div className="absolute right-0 top-0 bottom-0 w-12 md:w-32 bg-gradient-to-l from-background via-background/40 to-transparent z-20 pointer-events-none opacity-100" />
 
                                 {product.video_proofs && product.video_proofs.length > 2 && visionsIndex > 0 && (
                                     <button
@@ -726,8 +726,8 @@ const ProductDetail = () => {
                                     ref={visionsCarouselRef}
                                     className={`flex gap-6 md:gap-10 overflow-x-auto py-12 pb-20 snap-x snap-mandatory scroll-smooth scrollbar-hide select-none relative ${product.video_proofs.length <= 2 ? 'justify-center' : ''}`}
                                     style={product.video_proofs.length > 2 ? {
-                                        paddingLeft: 'calc(50vw - (min(320px, 80vw) / 2))',
-                                        paddingRight: 'calc(50vw - (min(320px, 80vw) / 2))'
+                                        paddingLeft: 'calc(50vw - (min(320px, 280px) / 2))',
+                                        paddingRight: 'calc(50vw - (min(320px, 280px) / 2))'
                                     } : {
                                         maxWidth: '100%',
                                         width: 'max-content',

@@ -45,8 +45,8 @@ const TrackOrder = () => {
 
             setOrder(data);
             if (!data) {
-                toast.error("Manifestation not found", {
-                    description: "Please check the ritual reference and try again."
+                toast.error("Order not found", {
+                    description: "Please check the order ID and try again."
                 });
             }
         } catch (error) {
@@ -106,7 +106,7 @@ const TrackOrder = () => {
                 setSearchId(finalId);
                 navigate(`/track/${finalId}`);
                 fetchOrder(finalId);
-                toast.success("Ritual Decoded");
+                toast.success("Order ID Recognized");
             };
 
             const config = { fps: 10, qrbox: { width: 250, height: 250 } };
@@ -168,10 +168,10 @@ const TrackOrder = () => {
     };
 
     const steps = [
-        { label: 'Manifested', icon: Clock, desc: 'Ritual initiated' },
-        { label: 'Essence Purified', icon: CheckCircle2, desc: 'Payment verified' },
-        { label: 'Transit Ritual', icon: Truck, desc: 'Essence in movement' },
-        { label: 'Manifested', icon: Package, desc: 'Ritual complete' }
+        { label: 'Ordered', icon: Clock, desc: 'Order received' },
+        { label: 'Processing', icon: CheckCircle2, desc: 'Payment confirmed' },
+        { label: 'Shipped', icon: Truck, desc: 'In transit' },
+        { label: 'Delivered', icon: Package, desc: 'Order delivered' }
     ];
 
     return (
@@ -188,10 +188,10 @@ const TrackOrder = () => {
                         <Search className="w-3 h-3" /> Tracking Portal
                     </motion.div>
                     <h1 className="text-5xl md:text-7xl font-serif mb-6 uppercase tracking-tighter">
-                        Track <span className="text-primary italic">Ritual</span>
+                        Track <span className="text-primary italic">Order</span>
                     </h1>
                     <p className="text-muted-foreground text-lg font-light max-w-xl mx-auto leading-relaxed">
-                        Enter your ritual reference or scan the manifestation code to see the current state of your essence.
+                        Enter your order number or scan the QR code to see your order status.
                     </p>
                 </div>
 
@@ -202,7 +202,7 @@ const TrackOrder = () => {
                             <Input
                                 value={searchId}
                                 onChange={(e) => setSearchId(e.target.value)}
-                                placeholder="Manifest Ref (e.g. LRN-XXXXXX)"
+                                placeholder="Order ID (e.g. LRN-XXXXXX)"
                                 className="h-16 pl-14 rounded-full border-border/20 bg-background/50 text-base focus-visible:ring-primary shadow-inner"
                             />
                             <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground transition-colors group-focus-within:text-primary" />
@@ -218,7 +218,7 @@ const TrackOrder = () => {
                                 <span className="hidden md:inline font-black text-[10px] uppercase tracking-widest">{isScanning ? 'Close' : 'Scan'}</span>
                             </Button>
                             <Button type="submit" disabled={loading} className="h-16 px-10 rounded-full bg-primary shadow-xl shadow-primary/20 flex-1 md:flex-none">
-                                {loading ? <RefreshCcw className="w-5 h-5 animate-spin" /> : "Track Ritual"}
+                                {loading ? <RefreshCcw className="w-5 h-5 animate-spin" /> : "Track Order"}
                             </Button>
                         </div>
                     </form>
@@ -242,7 +242,7 @@ const TrackOrder = () => {
                                         <div className="absolute -bottom-1 -right-1 w-8 h-8 border-b-4 border-r-4 border-primary rounded-br-lg" />
                                     </div>
                                     <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 px-4 py-2 bg-primary/90 backdrop-blur-md rounded-full text-white text-[9px] font-black uppercase tracking-widest shadow-2xl">
-                                        Aim at Manifest Code
+                                        Aim at Order Code
                                     </div>
                                 </div>
                             </motion.div>
@@ -284,7 +284,7 @@ const TrackOrder = () => {
                                         </div>
                                     </div>
                                     <div className="text-left md:text-right">
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50 mb-1">Total Value</p>
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50 mb-1">Total Amount</p>
                                         <p className="text-3xl font-serif font-black text-primary">Rs. {Math.round(order.total_amount).toLocaleString()}</p>
                                     </div>
                                 </div>
@@ -343,7 +343,7 @@ const TrackOrder = () => {
 
                                 <div className="glass p-10 rounded-[3rem] border-border/10 shadow-xl">
                                     <h3 className="font-serif text-2xl mb-8 flex items-center gap-3">
-                                        <Package className="w-6 h-6 text-primary" /> Ritual Items
+                                        <Package className="w-6 h-6 text-primary" /> Order Items
                                     </h3>
                                     <div className="space-y-6">
                                         {order.items?.map((item: any, idx: number) => (
@@ -372,9 +372,9 @@ const TrackOrder = () => {
                                 <div className="w-20 h-20 bg-rose-500/5 rounded-full flex items-center justify-center mx-auto mb-6">
                                     <AlertCircle className="w-10 h-10 text-rose-500" />
                                 </div>
-                                <h3 className="text-3xl font-serif mb-2">No Ritual Found</h3>
+                                <h3 className="text-3xl font-serif mb-2">No Order Found</h3>
                                 <p className="text-muted-foreground font-light max-w-sm mx-auto">
-                                    The ritual reference provided does not exist in our manifest records.
+                                    The order number provided does not exist in our records.
                                 </p>
                             </motion.div>
                         )

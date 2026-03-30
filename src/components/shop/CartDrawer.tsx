@@ -48,10 +48,10 @@ const CartDrawer = ({ isOpen, onClose }: CartDrawerProps) => {
                   <h2
                     className="text-lg md:text-2xl font-serif uppercase tracking-tight"
                   >
-                    Your <span className="text-primary italic">Selection</span>
+                    Your <span className="text-primary italic">Cart</span>
                   </h2>
                   <p className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
-                    {itemCount} botanical items
+                    {itemCount} items
                   </p>
                 </div>
               </div>
@@ -91,7 +91,7 @@ const CartDrawer = ({ isOpen, onClose }: CartDrawerProps) => {
                   <h3
                     className="text-xl md:text-2xl font-serif italic"
                   >
-                    Empty Ritual
+                    Your cart is empty
                   </h3>
                   <p className="text-muted-foreground text-xs md:text-sm font-light max-w-[180px] md:max-w-[200px] mx-auto">
                     Your collection is currently empty. Begin your journey in our shop.
@@ -154,16 +154,16 @@ const CartDrawer = ({ isOpen, onClose }: CartDrawerProps) => {
               <div className="p-5 md:p-8 border-t border-border/50 space-y-4 md:space-y-6 bg-card/10 backdrop-blur-xl">
                 <div className="space-y-2 md:space-y-3">
                   <div className="flex justify-between text-[10px] md:text-xs font-medium text-muted-foreground">
-                    <span>Essence Subtotal</span>
+                    <span>Subtotal</span>
                     <span>Rs. {subtotal.toFixed(0)}</span>
                   </div>
                   <div className="flex justify-between text-[10px] md:text-xs font-medium text-muted-foreground">
-                    <span>Shipping Logistics</span>
+                    <span>Shipping</span>
                     <span className={shipping === 0 ? "text-primary font-bold" : ""}>{shipping === 0 ? "Complimentary" : `Rs. ${shipping.toFixed(0)}`}</span>
                   </div>
                   <Separator className="my-1 md:my-2" />
                   <div className="flex justify-between items-end">
-                    <span className="text-base md:text-lg font-serif italic">Total Ritual</span>
+                    <span className="text-base md:text-lg font-serif italic">Total</span>
                     <span className="text-xl md:text-3xl font-serif font-bold text-primary">Rs. {total.toFixed(0)}</span>
                   </div>
                 </div>
@@ -174,7 +174,7 @@ const CartDrawer = ({ isOpen, onClose }: CartDrawerProps) => {
                   }}
                   className="w-full h-12 md:h-16 rounded-2xl md:rounded-3xl bg-primary hover:bg-primary/90 text-sm md:text-lg group transition-all shadow-2xl shadow-primary/20"
                 >
-                  Complete Selection
+                  Checkout
                   <ArrowRight className="w-4 h-4 md:w-5 md:h-5 ml-1 md:ml-2 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </div>

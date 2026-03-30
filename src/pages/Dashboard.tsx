@@ -106,10 +106,10 @@ export default function PatronDashboard() {
                 ...addressForm,
                 updated_at: new Date().toISOString()
             });
-            toast({ title: "Sanctum Updated", description: "Your physical coordinates have been archived." });
+            toast({ title: "Profile Updated", description: "Your address has been saved successfully." });
             fetchProfileData();
         } catch (e) {
-            toast({ variant: "destructive", title: "Archive Failed", description: "The botanical spirits could not preserve your location." });
+            toast({ variant: "destructive", title: "Update Failed", description: "We couldn't save your address. Please try again." });
         } finally {
             setIsSavingProfile(false);
         }
@@ -122,7 +122,7 @@ export default function PatronDashboard() {
             const data = await ordersService.getMyOrders(user.id);
             setOrders(data);
         } catch (error) {
-            toast({ variant: "destructive", title: "Ritual Interrupted", description: "Failed to load your ritual history." });
+            toast({ variant: "destructive", title: "Orders Failed", description: "Failed to load your order history." });
         } finally {
             setLoading(false);
         }
@@ -159,8 +159,8 @@ export default function PatronDashboard() {
             });
 
             toast({
-                title: "Insights Received",
-                description: "Your botanical feedback has been successfully archived."
+                title: "Feedback Received",
+                description: "Your review has been submitted successfully."
             });
 
             setSelectedOrderForFeedback(null);
@@ -170,8 +170,8 @@ export default function PatronDashboard() {
             console.error("Feedback error:", error);
             toast({
                 variant: "destructive",
-                title: "Critique Failed",
-                description: "The botanical archives could not store your insights."
+                title: "Feedback Failed",
+                description: "We couldn't save your review. Please try again."
             });
         } finally {
             setIsSubmittingFeedback(false);
@@ -195,8 +195,8 @@ export default function PatronDashboard() {
             });
 
             toast({
-                title: "Reversal Initiated",
-                description: "Your request for ritual reversal has been broadcast."
+                title: "Return Initiated",
+                description: "Your request for a return has been submitted."
             });
 
             setSelectedOrderForReturn(null);
@@ -206,8 +206,8 @@ export default function PatronDashboard() {
             console.error("Return error:", error);
             toast({
                 variant: "destructive",
-                title: "Reversal Failed",
-                description: "The botanical portal rejected your request."
+                title: "Return Failed",
+                description: "There was an error submitting your return request."
             });
         } finally {
             setIsSubmittingReturn(false);
@@ -235,7 +235,7 @@ export default function PatronDashboard() {
         return (
             <div className="min-h-screen bg-background flex flex-col items-center justify-center p-20 gap-4">
                 <RefreshCcw className="w-8 h-8 text-primary animate-spin" />
-                <p className="font-serif italic text-muted-foreground/60">Consulting archives...</p>
+                <p className="font-serif italic text-muted-foreground/60">Loading Dashboard...</p>
             </div>
         );
     }
@@ -276,14 +276,14 @@ export default function PatronDashboard() {
                     >
                         <div className="flex items-center gap-4 text-primary mb-2">
                             <span className="w-12 h-[1px] bg-primary/40" />
-                            <span className="text-[11px] font-black uppercase tracking-[0.4em] leading-none">Patron Repository</span>
+                            <span className="text-[11px] font-black uppercase tracking-[0.4em] leading-none">Customer Dashboard</span>
                         </div>
-                        <h1 className="text-6xl md:text-8xl font-serif tracking-tighter leading-[0.9] text-foreground">
-                            Identity: <br />
-                            <span className="text-primary italic font-light">{user?.user_metadata?.full_name || "Venerated Patron"}</span>
+                        <h1 className="text-4xl md:text-6xl font-serif tracking-tighter leading-[0.9] text-foreground">
+                            Welcome, <br />
+                            <span className="text-primary italic font-light">{user?.user_metadata?.full_name || "Guest"}</span>
                         </h1>
                         <p className="text-muted-foreground font-light text-xl max-w-xl leading-relaxed opacity-70">
-                            A sanctum for your botanical acquisitions and archived ritualistic history.
+                             Manage your account, orders, and addresses.
                         </p>
                     </motion.div>
                 </header>
@@ -305,16 +305,16 @@ export default function PatronDashboard() {
                                     <div className="w-10 h-10 bg-primary/10 rounded-2xl flex items-center justify-center p-2">
                                         <img src="/favicon.png" className="w-full h-full object-contain" alt="" />
                                     </div>
-                                    <h3 className="text-2xl font-serif italic text-primary">Identity Artifacts</h3>
+                                     <h3 className="text-2xl font-serif italic text-primary">Personal Details</h3>
                                 </div>
                                 <p className="text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground/40 leading-relaxed">
-                                    Archive your manifestations for swift checkout.
+                                     Keep your details updated for faster checkout.
                                 </p>
                             </div>
 
                             <div className="space-y-8 relative z-10">
                                 <div className="space-y-4">
-                                    <UILabel className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 ml-2">Manifested Name</UILabel>
+                                     <UILabel className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 ml-2">Full Name</UILabel>
                                     <Input
                                         value={addressForm.full_name}
                                         onChange={e => setAddressForm({ ...addressForm, full_name: e.target.value })}
@@ -324,7 +324,7 @@ export default function PatronDashboard() {
                                 </div>
 
                                 <div className="space-y-4">
-                                    <UILabel className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 ml-2">Physical Coordinates</UILabel>
+                                     <UILabel className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 ml-2">Shipping Address</UILabel>
                                     <Input
                                         value={addressForm.address}
                                         onChange={e => setAddressForm({ ...addressForm, address: e.target.value })}
@@ -335,7 +335,7 @@ export default function PatronDashboard() {
 
                                 <div className="grid grid-cols-2 gap-6">
                                     <div className="space-y-4">
-                                        <UILabel className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 ml-2">Settlement</UILabel>
+                                         <UILabel className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 ml-2">City</UILabel>
                                         <Input
                                             value={addressForm.city}
                                             onChange={e => setAddressForm({ ...addressForm, city: e.target.value })}
@@ -344,7 +344,7 @@ export default function PatronDashboard() {
                                         />
                                     </div>
                                     <div className="space-y-4">
-                                        <UILabel className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 ml-2">Province</UILabel>
+                                         <UILabel className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 ml-2">State</UILabel>
                                         <Input
                                             value={addressForm.state}
                                             onChange={e => setAddressForm({ ...addressForm, state: e.target.value })}
@@ -356,7 +356,7 @@ export default function PatronDashboard() {
 
                                 <div className="grid grid-cols-2 gap-6">
                                     <div className="space-y-4">
-                                        <UILabel className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 ml-2">Postal Rune</UILabel>
+                                         <UILabel className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 ml-2">Postal Code</UILabel>
                                         <Input
                                             value={addressForm.postal_code}
                                             onChange={e => setAddressForm({ ...addressForm, postal_code: e.target.value })}
@@ -365,7 +365,7 @@ export default function PatronDashboard() {
                                         />
                                     </div>
                                     <div className="space-y-4">
-                                        <UILabel className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 ml-2">Domain</UILabel>
+                                         <UILabel className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 ml-2">Country</UILabel>
                                         <Input
                                             value={addressForm.country}
                                             readOnly
@@ -382,7 +382,7 @@ export default function PatronDashboard() {
                             >
                                 {isSavingProfile ? <RefreshCcw className="w-5 h-5 animate-spin" /> : (
                                     <span className="flex items-center justify-center gap-4">
-                                        Preserve Artifacts <ShieldCheck className="w-5 h-5 group-hover:rotate-12 transition-transform duration-500" />
+                                         Save Changes <ShieldCheck className="w-5 h-5 group-hover:rotate-12 transition-transform duration-500" />
                                     </span>
                                 )}
                             </Button>
@@ -422,11 +422,10 @@ export default function PatronDashboard() {
                     <div className="lg:col-span-8 space-y-20">
                         <div className="flex items-end justify-between border-b border-border/5 pb-10">
                             <div className="space-y-2">
-                                <h2 className="text-4xl font-serif tracking-tight">Ritual History</h2>
-                                <p className="text-[10px] font-black text-muted-foreground/30 uppercase tracking-[0.5em]">The Chronology of Your Essence</p>
+                                <h2 className="text-4xl font-serif tracking-tight">Order History</h2>
                             </div>
                             <Badge variant="outline" className="rounded-full py-2 px-6 border-border/10 text-[10px] font-black tracking-widest bg-muted/20">
-                                {orders.length} Records found
+                                {orders.length} Orders found
                             </Badge>
                         </div>
 
@@ -443,10 +442,10 @@ export default function PatronDashboard() {
                                     </div>
                                 </div>
                                 <div className="space-y-6">
-                                    <p className="font-serif italic text-4xl leading-tight">Your archive awaits <br /> its first record.</p>
-                                    <p className="text-muted-foreground/50 text-[11px] uppercase tracking-[0.4em] font-medium max-w-sm mx-auto leading-loose">The paths to botanical enlightenment are open to those who seek them.</p>
+                                    <p className="font-serif italic text-4xl leading-tight">You haven't placed <br /> any orders yet.</p>
+                                    <p className="text-muted-foreground/50 text-[11px] uppercase tracking-[0.4em] font-medium max-w-sm mx-auto leading-loose">Start your journey by exploring our collection.</p>
                                 </div>
-                                <Button onClick={() => navigate("/shop")} className="h-16 px-14 rounded-full bg-primary text-[11px] font-black uppercase tracking-[0.3em] shadow-[0_20px_40px_rgba(var(--primary),0.2)] hover:scale-105 transition-all duration-500">Begin Investigation</Button>
+                                <Button onClick={() => navigate("/shop")} className="h-16 px-14 rounded-full bg-primary text-[11px] font-black uppercase tracking-[0.3em] shadow-[0_20px_40px_rgba(var(--primary),0.2)] hover:scale-105 transition-all duration-500">Start Shopping</Button>
                             </motion.div>
                         ) : (
                             <div className="space-y-16 lg:space-y-24">
@@ -462,7 +461,7 @@ export default function PatronDashboard() {
                                         <div className="flex flex-col md:flex-row justify-between gap-12 pb-20 border-b border-border/5 relative z-10">
                                             <div className="space-y-10 flex-1">
                                                 <div className="flex items-center flex-wrap gap-6">
-                                                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/20 font-mono">Archive No. {order.short_id || order.id.slice(0, 8)}</span>
+                                                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/20 font-mono">Order ID: {order.short_id || order.id.slice(0, 8)}</span>
                                                     <div className={`px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.3em] border shadow-sm ${order.status === 'delivered'
                                                         ? 'bg-emerald-500/5 text-emerald-500 border-emerald-500/20'
                                                         : 'bg-primary/5 text-primary border-primary/20'
@@ -488,7 +487,7 @@ export default function PatronDashboard() {
                                                     {order.items?.length > 3 && (
                                                         <div className="w-32 aspect-[4/5] rounded-[2rem] bg-muted/5 border border-dashed border-border/20 flex flex-col items-center justify-center gap-2 group/more cursor-pointer hover:bg-muted/10 transition-colors">
                                                             <span className="text-2xl font-serif italic text-muted-foreground/30 group-hover/more:text-primary transition-colors">+{order.items.length - 3}</span>
-                                                            <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/20">Essences</span>
+                                                            <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/20">Items</span>
                                                         </div>
                                                     )}
                                                 </div>
@@ -496,7 +495,7 @@ export default function PatronDashboard() {
 
                                             <div className="flex flex-col justify-between items-end gap-12 min-w-[200px]">
                                                 <div className="text-right space-y-3">
-                                                    <p className="text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground/20">Ritual Value</p>
+                                                    <p className="text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground/20">Order Total</p>
                                                     <p className="text-5xl font-serif italic text-foreground tracking-tighter leading-none pr-1">Rs. {order.total_amount}</p>
                                                 </div>
                                                 <div className="flex flex-col gap-4 w-full">
@@ -505,7 +504,7 @@ export default function PatronDashboard() {
                                                         onClick={() => navigate(`/track/${order.short_id || order.id.slice(0, 8)}`)}
                                                         className="h-14 w-full rounded-2xl text-[11px] font-black uppercase tracking-[0.4em] border-border text-foreground hover:bg-foreground hover:text-background hover:border-foreground transition-all duration-700 shadow-sm"
                                                     >
-                                                        Track Portal
+                                                        Track Order
                                                     </Button>
                                                     {order.status === 'delivered' && (
                                                         <Button
@@ -516,7 +515,7 @@ export default function PatronDashboard() {
                                                             <motion.div whileHover={{ scale: 1.2 }} className="transition-transform">
                                                                 <MessageSquare className="w-4 h-4" />
                                                             </motion.div>
-                                                            Submit Archive Insight
+                                                            Write a Review
                                                         </Button>
                                                     )}
                                                 </div>
@@ -540,9 +539,9 @@ export default function PatronDashboard() {
                                         <Sparkles className="w-10 h-10 text-primary relative z-10" />
                                     </div>
                                     <div className="space-y-3">
-                                        <DialogTitle className="text-4xl font-serif italic text-foreground">Archive Insight</DialogTitle>
+                                        <DialogTitle className="text-4xl font-serif italic text-foreground">Write a Review</DialogTitle>
                                         <DialogDescription className="text-[11px] uppercase tracking-[0.4em] font-black text-muted-foreground/40 leading-relaxed max-w-sm mx-auto">
-                                            Document the botanical manifestation of this essence for the great repository.
+                                            Share your experience with this product.
                                         </DialogDescription>
                                     </div>
                                 </DialogHeader>
@@ -564,7 +563,7 @@ export default function PatronDashboard() {
                                     </div>
 
                                     <Textarea
-                                        placeholder="Whisper your experiences into the archive..."
+                                        placeholder="Write your review here..."
                                         className="min-h-[180px] rounded-[3rem] bg-muted/5 border-border/5 p-10 text-sm font-light leading-relaxed resize-none focus:bg-muted/10 transition-all shadow-inner"
                                         value={feedbackComment}
                                         onChange={(e) => setFeedbackComment(e.target.value)}
@@ -576,9 +575,9 @@ export default function PatronDashboard() {
                                             onClick={submitFeedback}
                                             disabled={isSubmittingFeedback || !feedbackComment}
                                         >
-                                            {isSubmittingFeedback ? <RefreshCcw className="w-5 h-5 animate-spin" /> : "Preserve Insights"}
+                                            {isSubmittingFeedback ? <RefreshCcw className="w-5 h-5 animate-spin" /> : "Submit Review"}
                                         </Button>
-                                        <p className="text-[9px] text-center text-muted-foreground/30 uppercase tracking-[0.5em] font-black">Manifestation is irreversible.</p>
+                                        <p className="text-[9px] text-center text-muted-foreground/30 uppercase tracking-[0.5em] font-black">Reviews cannot be edited after submission.</p>
                                     </div>
                                 </div>
                             </DialogContent>
@@ -597,9 +596,9 @@ export default function PatronDashboard() {
                                         <RotateCcw className="w-10 h-10 text-rose-500 relative z-10" />
                                     </div>
                                     <div className="space-y-3">
-                                        <DialogTitle className="text-4xl font-serif italic text-rose-500">Ritual Dissolution</DialogTitle>
+                                        <DialogTitle className="text-4xl font-serif italic text-rose-500">Order Return</DialogTitle>
                                         <DialogDescription className="text-[11px] uppercase tracking-[0.4em] font-black text-rose-400/40 leading-relaxed max-sm mx-auto">
-                                            Initiating the ceremonial return of the manifested essence.
+                                            Request a return for your order.
                                         </DialogDescription>
                                     </div>
                                 </DialogHeader>
@@ -607,18 +606,18 @@ export default function PatronDashboard() {
                                 <div className="space-y-10 py-8">
                                     <Select value={returnReason} onValueChange={setReturnReason}>
                                         <SelectTrigger className="h-18 rounded-[2rem] bg-muted/5 border-border/5 px-10 text-[11px] font-black uppercase tracking-[0.3em] focus:ring-rose-500/20 transition-all shadow-inner">
-                                            <SelectValue placeholder="Reason for Dissolution" />
+                                            <SelectValue placeholder="Reason for Return" />
                                         </SelectTrigger>
                                         <SelectContent className="rounded-[2rem] border-border/10 bg-background/95 backdrop-blur-3xl">
-                                            <SelectItem value="Scent mismatch" className="text-[11px] uppercase font-bold tracking-[0.2em] p-6 cursor-pointer hover:bg-primary/5">Aromatic Dissonance</SelectItem>
-                                            <SelectItem value="Allergic reaction" className="text-[11px] uppercase font-bold tracking-[0.2em] p-6 cursor-pointer hover:bg-primary/5">Constitutional Reaction</SelectItem>
-                                            <SelectItem value="Vessel damage" className="text-[11px] uppercase font-bold tracking-[0.2em] p-6 cursor-pointer hover:bg-primary/5">Vessel Fracture</SelectItem>
-                                            <SelectItem value="Other" className="text-[11px] uppercase font-bold tracking-[0.2em] p-6 cursor-pointer hover:bg-primary/5">Unforeseen Path</SelectItem>
+                                            <SelectItem value="Scent mismatch" className="text-[11px] uppercase font-bold tracking-[0.2em] p-6 cursor-pointer hover:bg-primary/5">Scent Mismatch</SelectItem>
+                                            <SelectItem value="Allergic reaction" className="text-[11px] uppercase font-bold tracking-[0.2em] p-6 cursor-pointer hover:bg-primary/5">Skin Reaction</SelectItem>
+                                            <SelectItem value="Vessel damage" className="text-[11px] uppercase font-bold tracking-[0.2em] p-6 cursor-pointer hover:bg-primary/5">Product Damaged</SelectItem>
+                                            <SelectItem value="Other" className="text-[11px] uppercase font-bold tracking-[0.2em] p-6 cursor-pointer hover:bg-primary/5">Other</SelectItem>
                                         </SelectContent>
                                     </Select>
 
                                     <Textarea
-                                        placeholder="Detail the circumstances of this ritual reversal..."
+                                        placeholder="Please provide more details for your return..."
                                         className="min-h-[180px] rounded-[3rem] bg-muted/5 border-border/5 p-10 text-sm font-light leading-relaxed resize-none focus:bg-muted/10 shadow-inner"
                                         value={returnDetails}
                                         onChange={(e) => setReturnDetails(e.target.value)}
@@ -630,9 +629,9 @@ export default function PatronDashboard() {
                                             onClick={submitReturnRequest}
                                             disabled={isSubmittingReturn || !returnReason}
                                         >
-                                            {isSubmittingReturn ? <RefreshCcw className="w-5 h-5 animate-spin" /> : "Request Reversal"}
+                                            {isSubmittingReturn ? <RefreshCcw className="w-5 h-5 animate-spin" /> : "Submit Return"}
                                         </Button>
-                                        <p className="text-[9px] text-center text-muted-foreground/30 uppercase tracking-[0.5em] font-black">Certify your intent for dissolution.</p>
+                                        <p className="text-[9px] text-center text-muted-foreground/30 uppercase tracking-[0.5em] font-black">Confirm your return request.</p>
                                     </div>
                                 </div>
                             </DialogContent>

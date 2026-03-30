@@ -157,7 +157,7 @@ const Shop = () => {
                   <ShoppingBag className="w-6 h-6 text-primary animate-pulse" />
                 </div>
               </div>
-              <p className="text-muted-foreground font-serif text-xl italic animate-pulse">Unveiling our luxury collection...</p>
+              <p className="text-muted-foreground font-serif text-xl italic animate-pulse">Loading products...</p>
             </div>
           ) : (
             <div className={`grid gap-8 ${viewMode === "grid"

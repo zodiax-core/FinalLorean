@@ -166,6 +166,26 @@ const Checkout = () => {
     const giftWrapCost = useMemo(() => (includeGiftWrap ? 5 : 0), [includeGiftWrap]);
     const total = useMemo(() => subtotal + shipping + tax - discountAmount + giftWrapCost, [subtotal, shipping, tax, discountAmount, giftWrapCost]);
 
+    const validateStep1 = () => {
+        const required = ['firstName', 'lastName', 'email', 'address', 'city', 'country', 'receiverPhone'];
+        for (const field of required) {
+            if (!formData[field as keyof typeof formData]) {
+                const label = field.replace(/([A-Z])/g, ' $1').toLowerCase();
+                toast({ 
+                    variant: "destructive", 
+                    title: "Missing Information", 
+                    description: `Please enter your ${label}.` 
+                });
+                return false;
+            }
+        }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+            toast({ variant: "destructive", title: "Invalid Email", description: "Please enter a valid email address." });
+            return false;
+        }
+        return true;
+    };
+
     const handleApplyPromo = async () => {
         if (!promoCode.trim()) return;
         setIsApplyingPromo(true);
@@ -357,12 +377,12 @@ const Checkout = () => {
                                             <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
                                                 <Truck className="w-6 h-6 text-primary" />
                                             </div>
-                                            <h2 className="text-2xl font-serif tracking-tight">Shipping <span className="text-primary italic">Intelligence</span></h2>
+                                            <h2 className="text-2xl font-serif tracking-tight">Shipping <span className="text-primary italic">Details</span></h2>
                                         </div>
 
                                         <div className="grid grid-cols-2 gap-4 mb-4">
                                             <div className="space-y-1.5">
-                                                <Label className="text-[9px] font-black uppercase tracking-widest ml-1">First Identity</Label>
+                                                <Label className="text-[9px] font-black uppercase tracking-widest ml-1">First Name</Label>
                                                 <Input
                                                     value={formData.firstName}
                                                     onChange={e => setFormData({ ...formData, firstName: e.target.value })}
@@ -371,7 +391,7 @@ const Checkout = () => {
                                                 />
                                             </div>
                                             <div className="space-y-1.5">
-                                                <Label className="text-[9px] font-black uppercase tracking-widest ml-1">Last Identity</Label>
+                                                <Label className="text-[9px] font-black uppercase tracking-widest ml-1">Last Name</Label>
                                                 <Input
                                                     value={formData.lastName}
                                                     onChange={e => setFormData({ ...formData, lastName: e.target.value })}
@@ -381,7 +401,7 @@ const Checkout = () => {
                                             </div>
                                         </div>
                                         <div className="space-y-1.5 mb-4">
-                                            <Label className="text-[9px] font-black uppercase tracking-widest ml-1">Communication Email</Label>
+                                            <Label className="text-[9px] font-black uppercase tracking-widest ml-1">Email Address</Label>
                                             <Input
                                                 value={formData.email}
                                                 onChange={e => setFormData({ ...formData, email: e.target.value })}
@@ -390,7 +410,7 @@ const Checkout = () => {
                                             />
                                         </div>
                                         <div className="space-y-1.5 mb-4">
-                                            <Label className="text-[9px] font-black uppercase tracking-widest ml-1">Physical Location</Label>
+                                            <Label className="text-[9px] font-black uppercase tracking-widest ml-1">Shipping Address</Label>
                                             <Input
                                                 value={formData.address}
                                                 onChange={e => setFormData({ ...formData, address: e.target.value })}
@@ -399,7 +419,7 @@ const Checkout = () => {
                                             />
                                         </div>
                                         <div className="space-y-1.5 mb-4">
-                                            <Label className="text-[9px] font-black uppercase tracking-widest ml-1">Nearest Famous Place (Landmark)</Label>
+                                            <Label className="text-[9px] font-black uppercase tracking-widest ml-1">Near Place (Landmark) <span className="text-[8px] opacity-60">(optional)</span></Label>
                                             <Input
                                                 value={formData.nearestFamousPlace}
                                                 onChange={e => setFormData({ ...formData, nearestFamousPlace: e.target.value })}
@@ -484,8 +504,8 @@ const Checkout = () => {
                                             </div>
                                         </div>
                                     </div>
-                                    <Button onClick={() => setStep(2)} className="h-14 w-full rounded-xl text-md font-black uppercase tracking-widest shadow-2xl shadow-primary/30 group">
-                                        Next Phase <ChevronRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                                    <Button onClick={() => validateStep1() && setStep(2)} className="h-14 w-full rounded-xl text-md font-black uppercase tracking-widest shadow-2xl shadow-primary/30 group">
+                                        Next Step <ChevronRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
                                     </Button>
                                 </motion.div>
                             )}
@@ -503,7 +523,7 @@ const Checkout = () => {
                                             <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
                                                 <Lock className="w-6 h-6 text-primary" />
                                             </div>
-                                            <h2 className="text-2xl font-serif tracking-tight">Secure <span className="text-primary italic">Investment</span></h2>
+                                            <h2 className="text-2xl font-serif tracking-tight">Payment <span className="text-primary italic">Method</span></h2>
                                         </div>
 
                                         <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="space-y-4">
@@ -541,7 +561,7 @@ const Checkout = () => {
                                             <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
                                                 <Sparkles className="w-6 h-6 text-primary" />
                                             </div>
-                                            <h2 className="text-2xl font-serif tracking-tight">Final <span className="text-primary italic">Authentication</span></h2>
+                                            <h2 className="text-2xl font-serif tracking-tight">Order <span className="text-primary italic">Review</span></h2>
                                         </div>
 
                                         <div className="space-y-4 max-h-[400px] overflow-y-auto pr-4 custom-scrollbar">
@@ -619,7 +639,7 @@ const Checkout = () => {
                                     <div className="flex justify-between items-end pt-2">
                                         <div>
                                             <p className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-0.5">Total</p>
-                                            <span className="text-lg font-serif italic">Order Total</span>
+                                            <span className="text-lg font-serif italic">Total to pay</span>
                                         </div>
                                         <span className="text-3xl font-serif font-black text-primary">Rs. {total.toFixed(0)}</span>
                                     </div>
@@ -650,11 +670,11 @@ const Checkout = () => {
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="glass p-6 rounded-[2rem] flex flex-col items-center gap-3 text-center group hover:bg-primary/5 transition-colors border-border/10">
                                     <ShieldCheck className="w-8 h-8 text-primary group-hover:scale-110 transition-transform" />
-                                    <span className="text-[8px] font-black uppercase tracking-widest leading-tight">SSL<br />Secured</span>
+                                    <span className="text-[8px] font-black uppercase tracking-widest leading-tight">Secure<br />Checkout</span>
                                 </div>
                                 <div className="glass p-6 rounded-[2rem] flex flex-col items-center gap-3 text-center group hover:bg-primary/5 transition-colors border-border/10">
                                     <BadgeCheck className="w-8 h-8 text-primary group-hover:scale-110 transition-transform" />
-                                    <span className="text-[8px] font-black uppercase tracking-widest leading-tight">Verified<br />Merchants</span>
+                                    <span className="text-[8px] font-black uppercase tracking-widest leading-tight">Trusted<br />Delivery</span>
                                 </div>
                             </div>
 

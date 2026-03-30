@@ -187,7 +187,7 @@ const Navbar = () => {
                       className="rounded-full gap-2 text-muted-foreground hover:text-primary hover:bg-primary/5 px-6"
                     >
                       <User className="w-4 h-4" />
-                      <span className="text-[10px] font-black uppercase tracking-widest">Ritual Login</span>
+                      <span className="text-[10px] font-black uppercase tracking-widest">Login</span>
                     </Button>
                   </Link>
                 ) : (
@@ -202,19 +202,19 @@ const Navbar = () => {
                           <img src="/favicon.png" className="w-full h-full object-contain" alt="Patron" />
                         </div>
                         <span className="text-[10px] font-black uppercase tracking-widest max-w-[80px] truncate">
-                          {user.user_metadata?.full_name?.split(' ')[0] || "Patron"}
+                          {user.user_metadata?.full_name?.split(' ')[0] || "Account"}
                         </span>
                         <ChevronRight className="w-3 h-3 rotate-90 opacity-40" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-56 rounded-[1.5rem] p-2 mt-2 shadow-2xl border-border/10">
                       <DropdownMenuLabel className="text-[9px] font-black uppercase tracking-widest text-muted-foreground px-4 py-3">
-                        Patron Account
+                        My Account
                       </DropdownMenuLabel>
                       <Link to="/dashboard">
                         <DropdownMenuItem className="rounded-xl gap-3 py-3 cursor-pointer">
                           <LayoutDashboard className="w-4 h-4 text-primary" />
-                          <span className="text-xs font-bold font-serif italic">My Rituals</span>
+                          <span className="text-xs font-bold font-serif italic">Dashboard</span>
                         </DropdownMenuItem>
                       </Link>
                       {isAdmin && (
@@ -231,7 +231,7 @@ const Navbar = () => {
                         className="rounded-xl gap-3 py-3 cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/5"
                       >
                         <X className="w-4 h-4" />
-                        <span className="text-xs font-bold uppercase tracking-widest">End Session</span>
+                        <span className="text-xs font-bold uppercase tracking-widest">Logout</span>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -290,14 +290,14 @@ const Navbar = () => {
               {!user ? (
                 <Link to="/login" onClick={() => setIsMobileMenuOpen(false)}>
                   <Button className="w-full h-16 rounded-full text-lg uppercase font-black tracking-widest shadow-xl shadow-primary/20">
-                    Sign Into Ritual
+                    Login
                   </Button>
                 </Link>
               ) : (
                 <div className="space-y-4">
                   <Link to="/dashboard" onClick={() => setIsMobileMenuOpen(false)}>
                     <Button variant="outline" className="w-full h-16 rounded-full text-lg uppercase font-black tracking-widest border-2">
-                      My Rituals
+                      Dashboard
                     </Button>
                   </Link>
 
@@ -316,7 +316,7 @@ const Navbar = () => {
                     variant="ghost"
                     className="w-full h-12 text-destructive font-black uppercase tracking-widest"
                   >
-                    End Session
+                    Logout
                   </Button>
                 </div>
               )}
