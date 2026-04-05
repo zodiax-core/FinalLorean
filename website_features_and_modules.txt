@@ -1,0 +1,47 @@
+Website Features & Modules | Lorean
+
+1. CUSTOMER JOURNEY & SHOPPING EXPERIENCE
+------------------------------------------
+- Dynamic Product Discovery: Responsive grid and list views for exploring Ayurvedic collections.
+- High-Fidelity Product Pages: Detailed product narratives including ingredient origins, usage rituals, and video proofs.
+- Shopping Bag & Smart Checkout: Intelligent cart management with integrated shipping/tax calculations and multi-step validation.
+- Interactive Order Tracking: Real-time order status monitoring for customers via unique tracking identifiers.
+- Ritual Education: Integrated brand story, "The Lorean Way," and educational sustainability content.
+
+2. ADMINISTRATIVE & CONTENT MANAGEMENT (PORTAL)
+-----------------------------------------------
+- Advanced Analytics Dashboard: Real-time visual tracking of orders, revenue performance, and customer trends (powered by Recharts).
+- Dynamic Product Management: Full CRUD (Create, Read, Update, Delete) capabilities for product catalogs, pricing, and inventory.
+- Order Lifecycle Management: Administrative control over order fulfillment status, customer communications, and historical logs.
+- Global Settings Control: Configuration for branding, social media links, and site-wide notifications.
+- Media Asset Management: Native support for high-quality video proof uploads and product imagery across the storefront.
+
+3. DATA & LOGISTICS INFRASTRUCTURE
+-----------------------------------
+- Realtime Database: Supabase-driven persistence ensuring zero-latency updates for order and content data.
+- PDF Generation: Automated order receipt and shipping label generation for both admins and customers (via jspdf).
+- QR Integration: Dynamic QR code generation for streamlined order verification and scanning.
+- Automated Tax Engine: Built-in regional tax logic for precise transactional calculations.
+- Integrated Notification System: Multi-channel notifications for order confirmations and shipping updates.
+
+4. USER INTERFACE & ACCESSIBILITY
+----------------------------------
+- Universal Dark/Light Support: Carefully crafted theme switching ensuring brand consistency across all visual preferences.
+- Adaptive Responsiveness: Mobile-first design architecture optimized for smartphone, tablet, and desktop viewports.
+- Enhanced Usability: Glassmorphic UI elements, custom-sculpted scrollbars, and premium typography for optimal readability.
+- Performance Architecture: Built-in lazy loading and resource hints for ultra-fast LCP (Largest Contentful Paint) times.
+
+5. CONTENT CATEGORIES & KEY PAGES
+---------------------------------
+- Prime: Index (Home), Collective (All Products), Seasonal Edit (Collections).
+- Functional: Checkout, Order Success, Tracking Center.
+- Information: Our Story, Sustainability, Careers.
+- Support: FAQ Center, Shipping & Returns, Legal (Terms/Privacy).
+- Identity: Secure Customer Login, Profile Dashboard.
+
+6. INNOVATIVE INTERACTIVE ELEMENTS
+----------------------------------
+- Fluid Fluid Motion: Framer-motion driven micro-interactions for every button, hover, and page transition.
+- Smooth Scroll: Lenis integration for a frictionless, high-end "luxury brand" scrolling feel.
+- Interactive Hero Sections: High-impact visuals with dynamic overlay controls.
+- Emounted Media: Video-centric product showcasing to build trust through visual proof of efficacy.

@@ -1,0 +1,38 @@
+Website Architecture & Security | Lorean
+
+1. SYSTEM ARCHITECTURE
+----------------------
+- Core Logic Flow: Modular React architecture with a clear separation between Presentational Components (UI), Service Modules (Supabase/API), and State Hooks.
+- Data Flow Architecture: Synchronous React Query caching for immediate UI updates, backed by Supabase PostgreSQL for persistent, mission-critical data.
+- Routing Engine: Client-side Single Page Application (SPA) routing with strategic redirects ensuring SEO-friendly URLs and seamless UX across Netlify.
+- Media Pipeline: Integrated cloud-hosted media workflows for high-performance video streaming of product trials and proof-of-work "rituals."
+
+2. ADVANCED SECURITY PROTOCOLS
+------------------------------
+- Authentication Layer: Encrypted session-handling via Supabase Auth, supporting role-based access for admins and secure private profiles for users.
+- Row-Level Security (RLS): Sophisticated PostgreSQL policies ensuring that user data, order history, and private configurations are strictly isolated at the database level.
+- Input Sanitization & Validation: Schema-driven validation using Zod for every data entry point, preventing XSS, SQL Injection, and data corruption.
+- API Integrity: Secure bearer token authentication for all backend transactions, preventing unauthorized data modification or access to administrative modules.
+- Infrastructure Hardening: Standard HTTPS/TLS encryption across all environments, with production-only deployment protections on Netlify.
+
+3. WEB DESCRIPTION & NICHE
+--------------------------
+Lorean operates in a specialized "Premium Ayurvedic Wellness" niche, requiring high trust and proof of efficacy. The platform functions not just as a shop, but as a digital brand sanctuary that communicates heritage and purity.
+
+4. METADATA & SEO STRATEGY
+---------------------------
+- Dynamic Tagging: Automated metadata generation for dynamic product pages to ensure maximum visibility in health/wellness search segments.
+- Performance SEO: Leveraging resource pre-warming and DNS-prefetching for lightning-fast loads, a key signal for Google search ranking (Core Web Vitals).
+- Brand Consistency: Unified Open Graph and Twitter Card schemas ensuring that every shared link across social platforms reflects the premium "Lorean" aesthetic.
+
+5. ANIMATION & UX PRINCIPLES
+----------------------------
+- Performance-Optimized Motion: Framer Motion interactions are hardware-accelerated to ensure 60fps fluidity on all modern devices.
+- Inertial UX: Lenis smooth-scrolling provides a tactile, weighted feel to page navigation, characteristic of luxury digital flagship stores.
+- Visual Feedback Hierarchy: Subtle use of glassmorphism and organic gradients directs user attention to "Call-to-Action" (CTA) buttons and product narratives without overwhelming the minimalist design.
+
+6. UI TYPE: THE LUXURY FLAGSHIP
+--------------------------------
+- Design DNA: The "Lorean" UI is classified as a "Luxury Digital Flagship," prioritizing whitespace, high-contrast serif typography, and organic texture (via herbal imagery and gold accents).
+- Theme Synchronicity: Both light and dark modes are treated with equal visual priority, ensuring that "Cormorant Garamond" and "Jost" maintain elite readability across all user display preferences.
+- Scalable Components: A modular "atoms/molecules" approach to UI components (via Shadcn) allows for rapid brand evolution while maintaining rigorous visual standards.

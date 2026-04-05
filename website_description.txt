@@ -1,0 +1,73 @@
+Website Technology & Specification Profile | Lorean
+
+1. CORE TECHNOLOGY & LANGUAGES
+------------------------------
+- Frontend Framework: React.js (v18.3.1)
+- Programming Language: TypeScript (TSX) / JavaScript (ES6+)
+- Build System: Vite (Next-gen bundling)
+- Package Management: Bun / NPM
+- Logic Architecture: Component-driven functional architecture with React Hooks
+
+2. FRONTEND TECH STACK
+----------------------
+- UI Components: Shadcn UI (Radix UI Primitives)
+- Styling Engine: Tailwind CSS (Utility-first) + PostCSS
+- State & Data Management: TanStack Query (v5+)
+- Routing: React Router DOM (v6)
+- Form Handling: React Hook Form
+- Schema Validation: Zod
+- Icons: Lucide React
+
+3. BACKEND & INFRASTRUCTURE
+---------------------------
+- Primary Backend: Supabase (PostgreSQL + Realtime + RLS)
+- Authentication: Supabase Auth (JWT-based)
+- External Services: Firebase integration
+- Hosting Platform: Netlify (CI/CD)
+- Deployment Config: Netlify sidecar redirects for SPA routing
+
+4. WEB DESCRIPTION
+------------------
+Lorean is a premium, high-conversion e-commerce platform and digital experience centered around "Ancient Herbal Hair Rituals." It serves as a luxury storefront that bridges the gap between historical Ayurvedic wisdom and modern digital wellness, offering a curated path to holistic hair health.
+
+5. WEB NICHE
+------------
+- Luxury Health & Beauty
+- Premium Ayurvedic Hair Care
+- Herbal Wellness & Rituals
+- Holistic Apothecary
+
+6. SECURITY PROTOCOLS
+---------------------
+- Authentication: Secure JWT session management via Supabase.
+- Database Security: Granular Row Level Security (RLS) policies protecting user and order data.
+- Input Validation: End-to-end type safety and schema validation using Zod.
+- Transport: Mandatory SSL/TLS (HTTPS) encryption for all client-server communication.
+- Secret Management: Encrypted environment variables for API keys and sensitive credentials.
+
+7. META DATA & SEO
+------------------
+- Descriptive SEO: Targeted title tags and meta descriptions for high search relevancy.
+- Social Graph: Integrated Open Graph (OG) and Twitter Card metadata for rich social sharing.
+- Performance Meta: Resource hints (Preconnect/DNS-prefetch) for Google Fonts and Supabase API endpoints.
+- Accessibility: Semantic HTML5 structure and canonical link implementation.
+- Branding: Custom favicon ecosystem and theme-color specifications.
+
+8. ANIMATIONS & UX
+------------------
+- Fluid Motion: High-fidelity interactive animations powered by Framer Motion.
+- Smooth Scroll: Lenis library for premium inertial scrolling effects.
+- Dynamic Feedback: Sonner toast system for elegant UI state notifications.
+- Component Transitions: tailwindcss-animate for entrance/exit micro-interactions.
+- Carousels: Embla Carousel for responsive, smooth product media galleries.
+- Loading States: Custom CSS-in-JS loading spinners to prevent layout shifts.
+
+9. UI TYPE & AESTHETIC
+----------------------
+- Style Category: Luxury Minimalist / Neo-Classic / Organic Premium.
+- Typography: Sophisticated pairing of 'Cormorant Garamond' (Serif for elegance) and 'Jost' (Sans-serif for clarity).
+- Design Elements: Glassmorphism (blur/transparency), organic gradients, and custom refined scrollbars.
+- Color Palette: 
+  * Light: Champagne, Nude, Soft Gold, and Cream.
+  * Dark: Herbal Gold and Deep Forest/Black-Green tones.
+- Response: Full responsive fluidity across mobile, tablet, and desktop viewports.
