@@ -19,10 +19,12 @@ import {
     Receipt,
     Bell,
     Settings,
+    Mail,
     LifeBuoy,
     ChevronRight
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTheme } from "@/components/theme-provider";
 
 export const menuItems = [
     { icon: Store, label: "View Website", path: "/" },
@@ -42,6 +44,7 @@ export const menuItems = [
     { icon: Receipt, label: "Taxes", path: "/admin/taxes" },
     { icon: Bell, label: "Notifications", path: "/admin/notifications" },
     { icon: Settings, label: "Settings", path: "/admin/settings" },
+    { icon: Mail, label: "Contact Messages", path: "/admin/contact" },
     { icon: LifeBuoy, label: "Support / Tickets", path: "/admin/support" },
 ];
 
@@ -52,6 +55,9 @@ interface AdminSidebarProps {
 export const AdminSidebar = ({ className = "" }: AdminSidebarProps) => {
     const location = useLocation();
     const { user } = useAuth();
+    const { theme } = useTheme();
+    const isDark = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches) || document.documentElement.classList.contains("dark");
+    const logoSrc = isDark ? "/logo-dark.png" : "/logo.png";
     const [unreadCount, setUnreadCount] = useState(0);
 
     useEffect(() => {
@@ -84,11 +90,11 @@ export const AdminSidebar = ({ className = "" }: AdminSidebarProps) => {
             <div className="p-8 pb-4">
                 <Link to="/admin" className="flex items-center gap-3">
                     <img
-                        src="/logo.png"
-                        alt="Lorean Logo"
-                        className="h-6 w-auto object-contain dark:invert"
+                        src="/favicon.png"
+                        alt="Lorean Admin"
+                        className="h-6 w-6 object-contain"
                     />
-                    <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground mt-1">Portal</span>
+                    <span className="text-sm font-black uppercase tracking-widest text-foreground mt-1">Admin</span>
                 </Link>
             </div>
 

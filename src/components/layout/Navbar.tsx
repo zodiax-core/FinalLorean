@@ -20,14 +20,32 @@ import CartDrawer from "@/components/shop/CartDrawer";
 import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
 import { useAuth } from "@/context/AuthContext";
+import { useTheme } from "@/components/theme-provider";
 
 const Navbar = () => {
   const { user, isAdmin, signOut } = useAuth();
+  const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">("light");
+  const isDark = resolvedTheme === "dark";
+  const logoSrc = isDark ? "/logo-dark.png?v=3" : "/logo.png?v=3";
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isWishlistOpen, setIsWishlistOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
+
+  useEffect(() => {
+    const root = window.document.documentElement;
+    const updateTheme = () => {
+      setResolvedTheme(root.classList.contains("dark") ? "dark" : "light");
+    };
+
+    updateTheme();
+
+    const observer = new MutationObserver(updateTheme);
+    observer.observe(root, { attributes: true, attributeFilter: ["class"] });
+
+    return () => observer.disconnect();
+  }, []);
 
   const location = useLocation();
   const { itemCount: cartCount } = useCart();
@@ -62,11 +80,14 @@ const Navbar = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-20">
             {/* Logo */}
-            <Link to="/" className="flex items-center">
+            <Link to="/" className="flex items-center shrink-0">
               <motion.img
-                src="/logo.png"
-                alt="Lorean Logo"
-                className="h-10 md:h-14 w-auto object-contain"
+                src={logoSrc}
+                alt="Lórean Logo"
+                className="h-auto w-auto max-h-8 md:max-h-10 max-w-[140px] object-contain"
+                loading="eager"
+                // @ts-ignore
+                fetchpriority="high"
                 whileHover={{ scale: 1.05 }}
                 transition={{ type: "spring", stiffness: 400, damping: 10 }}
               />
@@ -95,7 +116,7 @@ const Navbar = () => {
             </div>
 
             {/* Icons */}
-            <div className="flex items-center space-x-2 md:space-x-4">
+            <div className="flex items-center space-x-0.5 md:space-x-4">
               <motion.button
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.95 }}
@@ -111,14 +132,14 @@ const Navbar = () => {
                 onClick={() => setIsWishlistOpen(true)}
                 className="p-2 text-foreground/70 hover:text-primary transition-colors relative"
               >
-                <Heart className="w-5 h-5" />
+                <Heart className="w-4.5 h-4.5 md:w-5 md:h-5" />
                 <AnimatePresence>
                   {wishlistCount > 0 && (
                     <motion.span
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
                       exit={{ scale: 0 }}
-                      className="absolute top-0 right-0 w-4 h-4 bg-primary text-primary-foreground text-[8px] font-black rounded-full flex items-center justify-center shadow-lg border border-background"
+                      className="absolute top-1 right-1 w-3.5 h-3.5 bg-primary text-primary-foreground text-[7px] md:text-[8px] font-black rounded-full flex items-center justify-center shadow-lg border border-background"
                     >
                       {wishlistCount}
                     </motion.span>
@@ -142,14 +163,14 @@ const Navbar = () => {
                 onClick={() => setIsCartOpen(true)}
                 className="p-2 text-foreground/70 hover:text-primary transition-colors relative"
               >
-                <ShoppingBag className="w-5 h-5" />
+                <ShoppingBag className="w-4.5 h-4.5 md:w-5 md:h-5" />
                 <AnimatePresence>
                   {cartCount > 0 && (
                     <motion.span
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
                       exit={{ scale: 0 }}
-                      className="absolute top-0 right-0 w-4 h-4 bg-primary text-primary-foreground text-[8px] font-black rounded-full flex items-center justify-center shadow-lg border border-background"
+                      className="absolute top-1 right-1 w-3.5 h-3.5 bg-primary text-primary-foreground text-[7px] md:text-[8px] font-black rounded-full flex items-center justify-center shadow-lg border border-background"
                     >
                       {cartCount}
                     </motion.span>
@@ -166,7 +187,7 @@ const Navbar = () => {
                       className="rounded-full gap-2 text-muted-foreground hover:text-primary hover:bg-primary/5 px-6"
                     >
                       <User className="w-4 h-4" />
-                      <span className="text-[10px] font-black uppercase tracking-widest">Ritual Login</span>
+                      <span className="text-[10px] font-black uppercase tracking-widest">Login</span>
                     </Button>
                   </Link>
                 ) : (
@@ -177,23 +198,23 @@ const Navbar = () => {
                         size="sm"
                         className="rounded-full gap-3 text-foreground hover:bg-primary/5 px-4 pr-2 group"
                       >
-                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all">
-                          <User className="w-4 h-4" />
+                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all overflow-hidden p-1.5">
+                          <img src="/favicon.png" className="w-full h-full object-contain" alt="Patron" />
                         </div>
                         <span className="text-[10px] font-black uppercase tracking-widest max-w-[80px] truncate">
-                          {user.user_metadata?.full_name?.split(' ')[0] || "Patron"}
+                          {user.user_metadata?.full_name?.split(' ')[0] || "Account"}
                         </span>
                         <ChevronRight className="w-3 h-3 rotate-90 opacity-40" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-56 rounded-[1.5rem] p-2 mt-2 shadow-2xl border-border/10">
                       <DropdownMenuLabel className="text-[9px] font-black uppercase tracking-widest text-muted-foreground px-4 py-3">
-                        Patron Account
+                        My Account
                       </DropdownMenuLabel>
                       <Link to="/dashboard">
                         <DropdownMenuItem className="rounded-xl gap-3 py-3 cursor-pointer">
                           <LayoutDashboard className="w-4 h-4 text-primary" />
-                          <span className="text-xs font-bold font-serif italic">My Rituals</span>
+                          <span className="text-xs font-bold font-serif italic">Dashboard</span>
                         </DropdownMenuItem>
                       </Link>
                       {isAdmin && (
@@ -210,7 +231,7 @@ const Navbar = () => {
                         className="rounded-xl gap-3 py-3 cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/5"
                       >
                         <X className="w-4 h-4" />
-                        <span className="text-xs font-bold uppercase tracking-widest">End Session</span>
+                        <span className="text-xs font-bold uppercase tracking-widest">Logout</span>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -237,10 +258,10 @@ const Navbar = () => {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: "100%" }}
             transition={{ type: "spring", damping: 30 }}
-            className="fixed inset-0 z-50 bg-background/98 backdrop-blur-2xl md:hidden flex flex-col"
+            className="fixed inset-0 z-50 bg-background/95 backdrop-blur-lg md:hidden flex flex-col"
           >
             <div className="p-8 flex justify-between items-center border-b border-border/50">
-              <img src="/logo.png" alt="Lorean Logo" className="h-10 w-auto" />
+              <img src={logoSrc} alt="Lórean Logo" className="h-8 w-auto" />
               <Button variant="ghost" size="icon" onClick={() => setIsMobileMenuOpen(false)}>
                 <X className="w-6 h-6" />
               </Button>
@@ -269,16 +290,24 @@ const Navbar = () => {
               {!user ? (
                 <Link to="/login" onClick={() => setIsMobileMenuOpen(false)}>
                   <Button className="w-full h-16 rounded-full text-lg uppercase font-black tracking-widest shadow-xl shadow-primary/20">
-                    Sign Into Ritual
+                    Login
                   </Button>
                 </Link>
               ) : (
                 <div className="space-y-4">
                   <Link to="/dashboard" onClick={() => setIsMobileMenuOpen(false)}>
                     <Button variant="outline" className="w-full h-16 rounded-full text-lg uppercase font-black tracking-widest border-2">
-                      My Rituals
+                      Dashboard
                     </Button>
                   </Link>
+
+                  {isAdmin && (
+                    <Link to="/admin" onClick={() => setIsMobileMenuOpen(false)}>
+                      <Button className="w-full h-16 rounded-full text-lg uppercase font-black tracking-widest shadow-xl shadow-primary/20 bg-primary/10 text-primary border-primary/20 hover:bg-primary hover:text-white transition-all">
+                        Admin Portal
+                      </Button>
+                    </Link>
+                  )}
                   <Button
                     onClick={() => {
                       signOut();
@@ -287,7 +316,7 @@ const Navbar = () => {
                     variant="ghost"
                     className="w-full h-12 text-destructive font-black uppercase tracking-widest"
                   >
-                    End Session
+                    Logout
                   </Button>
                 </div>
               )}

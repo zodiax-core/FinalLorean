@@ -8,7 +8,7 @@ import { SmoothScroll } from "./components/SmoothScroll";
 import ErrorBoundary from "./components/ErrorBoundary";
 
 // Providers
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import { ProductsProvider } from "./context/ProductsContext";
 import { CartProvider } from "./context/CartContext";
 import { AuthProvider } from "./context/AuthContext";
@@ -17,26 +17,29 @@ import { WishlistProvider } from "./context/WishlistContext";
 // Components
 import ProtectedRoute from "./components/ProtectedRoute";
 import GlobalMarketing from "./components/GlobalMarketing";
+import FloatingSocialIcons from "./components/FloatingSocialIcons";
+import ScrollToTop from "./components/ScrollToTop";
 
 // Pages
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Shop from "./pages/Shop";
-// Lazy Load Heavy Pages
+import ProductDetail from "./pages/ProductDetail";
+import Collections from "./pages/Collections";
+import About from "./pages/About";
+import Story from "./pages/Story";
+import Sustainability from "./pages/Sustainability";
+import Contact from "./pages/Contact";
+import Checkout from "./pages/Checkout";
+import OrderSuccess from "./pages/OrderSuccess";
+
+// Lazy Load Secondary Pages
 const Dashboard = lazy(() => import("./pages/Dashboard"));
-const ProductDetail = lazy(() => import("./pages/ProductDetail"));
-const Checkout = lazy(() => import("./pages/Checkout"));
-const Collections = lazy(() => import("./pages/Collections"));
-const About = lazy(() => import("./pages/About"));
-const OrderSuccess = lazy(() => import("./pages/OrderSuccess"));
 const TrackOrder = lazy(() => import("./pages/TrackOrder"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
-// Shared Pages
-const Story = lazy(() => import("./pages/Story"));
-const Sustainability = lazy(() => import("./pages/Sustainability"));
+// Shared Pages (Lazy)
 const Careers = lazy(() => import("./pages/Careers"));
-const Contact = lazy(() => import("./pages/Contact"));
 const FAQ = lazy(() => import("./pages/FAQ"));
 const Shipping = lazy(() => import("./pages/Shipping"));
 const Returns = lazy(() => import("./pages/Returns"));
@@ -60,6 +63,8 @@ const AdminVendors = lazy(() => import("./pages/admin/Vendors"));
 const AdminTaxes = lazy(() => import("./pages/admin/Taxes"));
 const AdminNotifications = lazy(() => import("./pages/admin/Notifications"));
 const AdminSettings = lazy(() => import("./pages/admin/Settings"));
+const AdminMarketing = lazy(() => import("./pages/admin/Marketing"));
+const AdminContactMessages = lazy(() => import("./pages/admin/ContactMessages"));
 const AdminSupport = lazy(() => import("./pages/admin/Support"));
 const AdminSupportDetail = lazy(() => import("./pages/admin/SupportDetail"));
 
@@ -78,8 +83,34 @@ const queryClient = new QueryClient({
   },
 });
 
-const App = () => (
-  <ErrorBoundary>
+const App = () => {
+  // Background preloader for lazy pages after initial load
+  useEffect(() => {
+    const preloadLazyPages = async () => {
+      // Small delay to ensure priority assets load first
+      await new Promise(r => setTimeout(r, 2000));
+      
+      const lazyPaths = [
+        () => import("./pages/Dashboard"),
+        () => import("./pages/TrackOrder"),
+        () => import("./pages/Careers"),
+        () => import("./pages/FAQ"),
+        () => import("./pages/Shipping"),
+        // Preload Admin Layout (Core of admin experience)
+        () => import("./components/admin/AdminLayout"),
+      ];
+
+      // Load them sequentially in background
+      for (const load of lazyPaths) {
+        try { load(); } catch (e) {}
+      }
+    };
+    
+    preloadLazyPages();
+  }, []);
+
+  return (
+    <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="light" storageKey="lorean-ui-theme">
         <TooltipProvider>
@@ -88,7 +119,9 @@ const App = () => (
               <WishlistProvider>
                 <CartProvider>
                   <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+                    <ScrollToTop />
                     <GlobalMarketing />
+                    <FloatingSocialIcons />
                     <SmoothScroll>
                       <Suspense fallback={<RitualLoader />}>
                         <Routes>
@@ -96,7 +129,10 @@ const App = () => (
                           <Route path="/login" element={<Login />} />
                           <Route path="/shop" element={<Shop />} />
                           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-                          <Route path="/product/:id" element={<ProductDetail />} />
+                          <Route path="/my-orders" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+                          <Route path="/orders" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+                          <Route path="/customerorder" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+                          <Route path="/product/:idOrSlug" element={<ProductDetail />} />
                           <Route path="/collections" element={<Collections />} />
                           <Route path="/about" element={<About />} />
                           <Route path="/checkout" element={<Checkout />} />
@@ -127,7 +163,7 @@ const App = () => (
                             <Route index element={<AdminDashboard />} />
                             <Route path="products" element={<AdminProducts />} />
                             <Route path="products/new" element={<AdminProductForm />} />
-                            <Route path="products/edit/:id" element={<AdminProductForm />} />
+                            <Route path="products/edit/:idOrSlug" element={<AdminProductForm />} />
                             <Route path="categories" element={<AdminCategories />} />
                             <Route path="inventory" element={<AdminInventory />} />
                             <Route path="customers" element={<AdminCustomers />} />
@@ -140,7 +176,8 @@ const App = () => (
                             <Route path="notifications" element={<AdminNotifications />} />
                             <Route path="orders" element={<AdminOrders />} />
                             <Route path="settings" element={<AdminSettings />} />
-                            <Route path="marketing" element={<AdminSettings defaultTab="marketing" />} />
+                            <Route path="marketing" element={<AdminMarketing />} />
+                            <Route path="contact" element={<AdminContactMessages />} />
                             <Route path="support" element={<AdminSupport />} />
                             <Route path="support/:id" element={<AdminSupportDetail />} />
                             <Route path="*" element={<div className="flex items-center justify-center p-20 text-muted-foreground font-serif">Admin Page Under Construction</div>} />
@@ -161,7 +198,8 @@ const App = () => (
         </TooltipProvider>
       </ThemeProvider>
     </QueryClientProvider>
-  </ErrorBoundary>
-);
+    </ErrorBoundary>
+  );
+};
 
 export default App;

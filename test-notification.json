@@ -1,0 +1,8 @@
+{
+    "type": "system",
+    "payload": {
+        "title": "Test Ritual Notification",
+        "message": "The botanical guardians are testing your manifestations.",
+        "url": "/admin/dashboard"
+    }
+}

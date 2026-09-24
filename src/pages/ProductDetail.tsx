@@ -6,7 +6,8 @@ import {
     ShieldCheck, CheckCircle2, Facebook,
     Twitter, Instagram, ChevronRight, MessageSquare, Info,
     Package, Sparkles, Clock, CreditCard, Loader2, HelpCircle,
-    Copy, Check
+    Check, Play, ExternalLink, Youtube, User, Video, Pause,
+    Volume2, VolumeX, RotateCcw, Copy, Truck
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/layout/Navbar";
@@ -24,10 +25,76 @@ import { Badge } from "@/components/ui/badge";
 import { useProducts } from "@/context/ProductsContext";
 import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
-import { Product, reviewsService, productsService } from "@/services/supabase";
+import {
+    Product,
+    reviewsService,
+    productsService,
+    marketingService,
+    settingsService
+} from "@/services/supabase";
+import { emailService } from "@/services/email";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/context/AuthContext";
 import SEO from "@/components/SEO";
+
+const getVideoData = (url: string) => {
+    let platform = 'generic';
+    let id = '';
+    let embedUrl = '';
+    let thumb = '';
+
+    if (url.includes('youtube.com') || url.includes('youtu.be')) {
+        platform = 'youtube';
+        const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|shorts\/)([^"&?\/\s]{11})/);
+        id = match?.[1] || '';
+        embedUrl = `https://www.youtube.com/embed/${id}?autoplay=1`;
+        thumb = `https://img.youtube.com/vi/${id}/maxresdefault.jpg`;
+    } else if (url.includes('instagram.com')) {
+        platform = 'instagram';
+        const match = url.match(/(?:reels?|p)\/([^\/?#&]+)/);
+        id = match?.[1] || '';
+        embedUrl = `https://www.instagram.com/reels/${id}/embed`;
+        thumb = `https://www.instagram.com/reels/${id}/thumbnail`; // Note: Might need IG API for real ones, but common pattern
+    } else if (url.includes('tiktok.com')) {
+        platform = 'tiktok';
+        const match = url.match(/video\/(\d+)/);
+        id = match?.[1] || '';
+        embedUrl = `https://www.tiktok.com/embed/v2/${id}`;
+        // TikTok doesn't have a direct thumb URL that's reliable without API, but we'll use a placeholder or the card's style
+    }
+
+    return { platform, id, embedUrl, thumb };
+};
+
+const getUsernameFromUrl = (url: string) => {
+    try {
+        if (url.includes('tiktok.com')) {
+            const match = url.match(/@([^/\?]+)/);
+            return match ? match[1] : 'Patron';
+        }
+        if (url.includes('instagram.com')) {
+            const parts = url.split('/').filter(Boolean);
+            const idx = parts.findIndex(p => p.includes('instagram.com'));
+            // Sometimes it's the next part if it's instagram.com/username
+            if (parts[idx + 1] && !['reels', 'p', 'reel'].includes(parts[idx + 1])) return parts[idx + 1];
+            return 'Patron';
+        }
+        if (url.includes('youtube.com')) {
+            const match = url.match(/@([^/\?]+)/);
+            return match ? match[1] : 'Patron';
+        }
+    } catch (e) { }
+    return 'Patron';
+};
+
+const getPlatformIcon = (platform: string) => {
+    switch (platform) {
+        case 'youtube': return <Youtube className="w-4 h-4 text-red-600" />;
+        case 'instagram': return <Instagram className="w-4 h-4 text-pink-600" />;
+        case 'tiktok': return <Sparkles className="w-4 h-4 text-cyan-400" />;
+        default: return <Play className="w-4 h-4 text-primary" />;
+    }
+};
 
 const RecentlyViewedProducts = ({ currentId, products }: { currentId: number, products: Product[] }) => {
     const viewed = useMemo(() => {
@@ -44,10 +111,10 @@ const RecentlyViewedProducts = ({ currentId, products }: { currentId: number, pr
 
     return (
         <div className="mt-12 animate-in fade-in slide-in-from-bottom-6 duration-1000">
-            <h2 className="text-2xl sm:text-4xl font-serif mb-6 sm:mb-12">Your <span className="text-primary italic">Stalker List</span> </h2>
+            <h2 className="text-2xl sm:text-4xl font-serif mb-6 sm:mb-12">Recently <span className="text-primary italic">Viewed</span> </h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-8">
                 {viewed.map(p => (
-                    <Link to={`/product/${p.id}`} key={p.id} className="group glass p-2 sm:p-4 rounded-[1.5rem] sm:rounded-[2rem] hover:shadow-2xl transition-all border-border/30">
+                    <Link to={`/product/${p.slug || p.id}`} key={p.id} className="group glass p-2 sm:p-4 rounded-[1.5rem] sm:rounded-[2rem] hover:shadow-2xl transition-all border-border/30">
                         <div className="aspect-[4/5] rounded-[1.2rem] sm:rounded-[1.5rem] overflow-hidden bg-muted mb-2 sm:mb-4 relative">
                             <img src={p.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" alt="" />
                             <div className="absolute inset-0 bg-primary/5 group-hover:bg-transparent transition-colors" />
@@ -62,26 +129,42 @@ const RecentlyViewedProducts = ({ currentId, products }: { currentId: number, pr
 };
 
 const ProductDetail = () => {
-    const { id } = useParams();
+    const { idOrSlug } = useParams();
     const navigate = useNavigate();
     const { toast } = useToast();
     const { products, loading, getProductById } = useProducts();
     const { addToCart } = useCart();
     const { addToWishlist, isInWishlist } = useWishlist();
 
-    const productId = useMemo(() => {
-        const num = Number(id);
-        return isNaN(num) ? null : num;
-    }, [id]);
-
-    const contextProduct = useMemo(() => productId ? getProductById(productId) : null, [productId, products]);
     const [directProduct, setDirectProduct] = useState<Product | null>(null);
     const [directLoading, setDirectLoading] = useState(false);
 
+    // Context Search: Find by ID or Slug
+    const contextProduct = useMemo(() => {
+        if (!idOrSlug) return null;
+
+        // Try ID first if it's numeric
+        const idNum = Number(idOrSlug);
+        if (!isNaN(idNum)) {
+            const found = getProductById(idNum);
+            if (found) return found;
+        }
+
+        // Try searching by slug in the context
+        return products.find(p => p.slug === idOrSlug) || null;
+    }, [idOrSlug, products, getProductById]);
+
     useEffect(() => {
-        if (!loading && !contextProduct && productId) {
+        if (!loading && !contextProduct && idOrSlug) {
             setDirectLoading(true);
-            productsService.getById(productId).then(data => {
+
+            // Try fetching by ID first if numeric
+            const idNum = Number(idOrSlug);
+            const fetchPromise = !isNaN(idNum)
+                ? productsService.getById(idNum)
+                : productsService.getBySlug(idOrSlug);
+
+            fetchPromise.then(data => {
                 setDirectProduct(data);
             }).catch(err => {
                 console.error("Direct fetch failed:", err);
@@ -89,10 +172,14 @@ const ProductDetail = () => {
                 setDirectLoading(false);
             });
         }
-    }, [loading, contextProduct, productId]);
+    }, [loading, contextProduct, idOrSlug]);
 
     const product = contextProduct || directProduct;
     const isActuallyLoading = loading || (directLoading && !product);
+
+    const isOutOfStock = Boolean(product && product.stock !== undefined && product.stock !== null && product.stock <= 0);
+    const isComingSoon = Boolean(product && (product.tag?.toLowerCase() === "coming soon" || product.tag?.toLowerCase() === "comming soon"));
+    const canAddToCart = Boolean(product && !isOutOfStock && !isComingSoon);
 
     const [activeImage, setActiveImage] = useState("");
     const [quantity, setQuantity] = useState(1);
@@ -103,9 +190,63 @@ const ProductDetail = () => {
     const [fetchingReviews, setFetchingReviews] = useState(false);
     const [submittingReview, setSubmittingReview] = useState(false);
     const [carouselIndex, setCarouselIndex] = useState(0);
+    const [visionsIndex, setVisionsIndex] = useState(0);
+    const [playingVideo, setPlayingVideo] = useState<string | null>(null);
+    const [isMuted, setIsMuted] = useState(true);
+    const [isPaused, setIsPaused] = useState(false);
+    const [finishedVideos, setFinishedVideos] = useState<Set<string>>(new Set());
+    const [tikTokSources, setTikTokSources] = useState<Record<string, string>>({});
+    const [subscriberEmail, setSubscriberEmail] = useState("");
+    const [subscribing, setSubscribing] = useState(false);
+    const [isSubscribed, setIsSubscribed] = useState(false);
+    const [isReviewSubmitted, setIsReviewSubmitted] = useState(false);
     const reviewCarouselRef = useRef<HTMLDivElement>(null);
-    const { user } = useAuth();
+    const visionsCarouselRef = useRef<HTMLDivElement>(null);
     const buySectionRef = useRef<HTMLDivElement>(null);
+    const { user } = useAuth();
+    const [shippingSettings, setShippingSettings] = useState({ flat_rate: 15, threshold: 150 });
+    const [loadingShipping, setLoadingShipping] = useState(true);
+
+    useEffect(() => {
+        const fetchShipping = async () => {
+            try {
+                const data = await settingsService.getShipping();
+                setShippingSettings({
+                    flat_rate: Number(data.flat_rate),
+                    threshold: Number(data.threshold)
+                });
+            } catch (error) {
+                console.error("Error fetching shipping settings:", error);
+            } finally {
+                setLoadingShipping(false);
+            }
+        };
+        fetchShipping();
+    }, []);
+
+    const isFreeShipping = useMemo(() => {
+        if (!product) return false;
+        if (shippingSettings.flat_rate === 0) return true;
+        return Number(product.price) >= shippingSettings.threshold;
+    }, [product, shippingSettings]);
+
+    useEffect(() => {
+        if (product?.video_proofs) {
+            product.video_proofs.forEach((proof: any) => {
+                const url = typeof proof === 'string' ? proof : proof.url;
+                if (url && url.includes('tiktok.com') && !tikTokSources[url]) {
+                    fetch(`https://www.tikwm.com/api/video/get?url=${encodeURIComponent(url)}`)
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.data?.play) {
+                                setTikTokSources(prev => ({ ...prev, [url]: data.data.play }));
+                            }
+                        })
+                        .catch(err => console.error("TikTok fetch error:", err));
+                }
+            });
+        }
+    }, [product?.video_proofs]);
 
     const mergedReviews = useMemo(() => {
         const fakeOnes = product?.reviews_list || [];
@@ -121,6 +262,31 @@ const ProductDetail = () => {
         const all = [...formattedFake, ...realReviews];
         return all.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     }, [product?.reviews_list, realReviews]);
+
+    const displayReviewsCount = useMemo(() => {
+        // Admin's "reviews" field is the seed count. 
+        // We add the count of real/active reviews to it.
+        const seedCount = Number(product?.reviews || 0);
+        const activeReviewsCount = mergedReviews.length;
+        return seedCount + activeReviewsCount;
+    }, [mergedReviews.length, product?.reviews]);
+
+    const displayRating = useMemo(() => {
+        const adminRating = Number(product?.rating || 5.0);
+        const seedWeight = Math.max(1, Number(product?.reviews || 0)); // Treat admin seed as weight
+
+        // If there are no DETAILED reviews (fake list or real DB)
+        if (mergedReviews.length === 0) {
+            return adminRating;
+        }
+
+        // Calculation: (Admin Rating * Seed Weight + Sum of Review Ratings) / (Seed Weight + Detailed Review Count)
+        const reviewsSum = mergedReviews.reduce((acc, r) => acc + (Number(r.rating) || 0), 0);
+        const totalWeight = seedWeight + mergedReviews.length;
+        const weightedRating = (adminRating * seedWeight + reviewsSum) / totalWeight;
+
+        return Number(weightedRating.toFixed(1));
+    }, [mergedReviews, product?.rating, product?.reviews]);
 
     useEffect(() => {
         if (product) {
@@ -176,18 +342,53 @@ const ProductDetail = () => {
         return () => window.removeEventListener("scroll", handleScroll);
     }, []);
 
+    useEffect(() => {
+        if (product?.video_proofs?.length) {
+            const hosts = ['www.tiktok.com', 'www.instagram.com', 'www.youtube.com'];
+            hosts.forEach(host => {
+                const link = document.createElement('link');
+                link.rel = 'preconnect';
+                link.href = `https://${host}`;
+                document.head.appendChild(link);
+            });
+        }
+    }, [product?.video_proofs]);
+
     const handleShare = () => {
         navigator.clipboard.writeText(window.location.href);
         setIsCopied(true);
-        toast({ title: "Link Ritualized", description: "Product essence link copied to clipboard." });
+        toast({ title: "Link Copied", description: "Product link copied to clipboard." });
         setTimeout(() => setIsCopied(false), 2000);
+    };
+
+    const handleSubscribe = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!subscriberEmail) return;
+        setSubscribing(true);
+        try {
+            await marketingService.subscribe(subscriberEmail);
+
+            // Send welcome email via EmailJS
+            try {
+                await emailService.sendWelcomeEmail(subscriberEmail);
+            } catch (emailError) {
+                console.warn("Welcome email could not be sent:", emailError);
+            }
+
+            setIsSubscribed(true);
+            toast({ title: "Welcome to the Inner Circle", description: "You've successfully subscribed to our newsletter." });
+        } catch (error: any) {
+            toast({ variant: "destructive", title: "Subscription Failed", description: error.message || "The ritual was interrupted." });
+        } finally {
+            setSubscribing(false);
+        }
     };
 
     if (isActuallyLoading) {
         return (
             <div className="min-h-screen bg-background flex flex-col items-center justify-center space-y-4">
                 <Loader2 className="w-12 h-12 text-primary animate-spin" />
-                <p className="font-serif text-lg animate-pulse">Establishing botanical connection...</p>
+                <p className="font-serif text-lg animate-pulse">Loading product...</p>
             </div>
         );
     }
@@ -196,8 +397,8 @@ const ProductDetail = () => {
         return (
             <div className="min-h-screen bg-background text-center py-40">
                 <Navbar />
-                <h2 className="text-4xl font-serif mb-6 uppercase tracking-tighter">Manifestation <span className="text-primary">Failed</span></h2>
-                <p className="text-muted-foreground mb-8">The botanical essence you seek has dissolved into the ether.</p>
+                <h2 className="text-4xl font-serif mb-6 uppercase tracking-tighter">Product <span className="text-primary">Not Found</span></h2>
+                <p className="text-muted-foreground mb-8">The product you're looking for is no longer available.</p>
                 <Button onClick={() => navigate('/shop')} className="rounded-full px-12 h-14 bg-primary">Back to Collection</Button>
                 <Footer />
             </div>
@@ -217,51 +418,75 @@ const ProductDetail = () => {
                 title={product.name}
                 description={product.description}
                 image={product.image}
+                canonicalUrl={`/product/${product.slug || product.id}`}
             />
             <Navbar />
 
-            {/* Sticky Buy Bar */}
+            {/* Sticky Buy Bar (Floating Glass Design) */}
             <AnimatePresence>
                 {showStickyBar && (
                     <motion.div
-                        initial={{ y: 100 }}
-                        animate={{ y: 0 }}
-                        exit={{ y: 100 }}
-                        className="fixed bottom-0 left-0 right-0 z-[60] bg-background/95 backdrop-blur-xl border-t border-border/50 p-3 md:p-4 shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-4 px-4 md:px-12"
+                        initial={{ y: 100, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        exit={{ y: 100, opacity: 0 }}
+                        className="fixed bottom-0 left-0 right-0 z-[60] p-4 md:p-6 pb-10 md:pb-6 pointer-events-none"
                     >
-                        <div className="flex items-center gap-4 w-full sm:w-auto">
-                            <img src={product.image} className="w-12 h-12 md:w-14 md:h-14 rounded-xl md:rounded-2xl object-cover shadow-lg" alt="" />
-                            <div className="flex-1 min-w-0">
-                                <p className="font-serif text-sm md:text-lg font-medium truncate">{product.name}</p>
-                                <p className="text-primary font-bold text-sm md:text-base">Rs. {product.price}</p>
+                        <div className="max-w-4xl mx-auto glass rounded-[2.5rem] p-3 md:p-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-2xl border border-white/20 pointer-events-auto">
+                            <div className="flex items-center gap-4 w-full sm:w-auto">
+                                <img src={product.image} className="w-14 h-14 md:w-16 md:h-16 rounded-[1.25rem] md:rounded-[1.5rem] object-cover shadow-2xl border-white/30 border" alt="" />
+                                <div className="flex-1 min-w-0">
+                                    <p className="font-serif text-base md:text-xl font-bold truncate leading-tight">{product.name}</p>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-primary font-black text-sm md:text-lg">Rs. {product.price}</span>
+                                        {oldPrice > price && <span className="text-[10px] text-muted-foreground line-through decoration-primary/30">Rs. {oldPrice}</span>}
+                                    </div>
+                                </div>
+                                {/* Mobile Actions */}
+                                <div className="flex items-center gap-2 sm:hidden ml-auto">
+                                    <Button
+                                        onClick={() => addToWishlist(product)}
+                                        size="icon"
+                                        variant="outline"
+                                        className={`w-12 h-12 rounded-full border-none transition-all ${isInWishlist(product.id) ? "bg-rose-50 text-rose-500" : "bg-muted/30"}`}
+                                    >
+                                        <Heart className={`w-5 h-5 ${isInWishlist(product.id) ? "fill-rose-500" : ""}`} />
+                                    </Button>
+                                    <Button
+                                        onClick={() => canAddToCart && addToCart(product, quantity)}
+                                        disabled={!canAddToCart}
+                                        size="lg"
+                                        className="rounded-full px-6 h-12 bg-primary font-black uppercase tracking-widest text-[10px] shadow-xl shadow-primary/20 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none"
+                                    >
+                                        {isComingSoon ? "Coming Soon" : isOutOfStock ? "Out of Stock" : "Add to Cart"}
+                                    </Button>
+                                </div>
                             </div>
-                            <div className="flex items-center gap-2 sm:hidden">
-                                <Button
-                                    onClick={() => addToWishlist(product)}
-                                    size="icon"
-                                    variant="outline"
-                                    className={`w-10 h-10 rounded-full border-2 transition-all ${isInWishlist(product.id) ? "bg-rose-50 border-rose-100 text-rose-500" : "border-border"}`}
-                                >
-                                    <Heart className={`w-4 h-4 ${isInWishlist(product.id) ? "fill-rose-500" : ""}`} />
-                                </Button>
-                                <Button onClick={() => addToCart(product, quantity)} size="sm" className="rounded-full px-6 h-10 bg-primary font-black uppercase tracking-widest text-[10px]">Add</Button>
+
+                            {/* Desktop Actions */}
+                            <div className="hidden sm:flex items-center gap-6">
+                                <div className={`flex items-center border border-border/20 rounded-full p-1 bg-muted/10 h-10 ${!canAddToCart ? 'opacity-50 pointer-events-none' : ''}`}>
+                                    <button onClick={() => setQuantity(Math.max(1, quantity - 1))} disabled={!canAddToCart} className="w-8 h-8 flex items-center justify-center hover:bg-primary hover:text-white rounded-full transition-all"><Minus className="w-3 h-3" /></button>
+                                    <span className="w-10 text-center font-bold text-sm tracking-widest">{canAddToCart ? quantity : 0}</span>
+                                    <button onClick={() => setQuantity(quantity + 1)} disabled={!canAddToCart || (product.stock !== undefined && product.stock !== null && quantity >= product.stock)} className="w-8 h-8 flex items-center justify-center hover:bg-primary hover:text-white rounded-full transition-all disabled:opacity-30"><Plus className="w-3 h-3" /></button>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <Button
+                                        onClick={() => addToWishlist(product)}
+                                        size="icon"
+                                        variant="outline"
+                                        className={`w-12 h-12 rounded-full border-none transition-all ${isInWishlist(product.id) ? "bg-rose-50 text-rose-500 shadow-lg" : "bg-muted/30 hover:bg-rose-50 hover:text-rose-500"}`}
+                                    >
+                                        <Heart className={`w-5 h-5 ${isInWishlist(product.id) ? "fill-rose-500" : ""}`} />
+                                    </Button>
+                                    <Button
+                                        onClick={() => canAddToCart && addToCart(product, quantity)}
+                                        disabled={!canAddToCart}
+                                        className="rounded-full px-10 h-14 shadow-2xl shadow-primary/30 bg-primary font-black uppercase tracking-widest text-[11px] hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                                    >
+                                        {isComingSoon ? "Coming Soon" : isOutOfStock ? "Out of Stock" : "Add To Cart"}
+                                    </Button>
+                                </div>
                             </div>
-                        </div>
-                        <div className="hidden sm:flex items-center gap-4">
-                            <div className="flex items-center border border-border/50 rounded-full p-1 bg-muted/50 h-10">
-                                <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="w-8 h-8 flex items-center justify-center hover:bg-primary hover:text-white rounded-full transition-all"><Minus className="w-3 h-3" /></button>
-                                <span className="w-8 text-center font-bold text-sm">{quantity}</span>
-                                <button onClick={() => setQuantity(quantity + 1)} className="w-8 h-8 flex items-center justify-center hover:bg-primary hover:text-white rounded-full transition-all"><Plus className="w-3 h-3" /></button>
-                            </div>
-                            <Button onClick={() => addToCart(product, quantity)} className="rounded-full px-8 h-12 shadow-lg shadow-primary/20 bg-primary font-black uppercase tracking-widest text-xs">Manifest Into Bag</Button>
-                            <Button
-                                onClick={() => addToWishlist(product)}
-                                size="icon"
-                                variant="outline"
-                                className={`w-12 h-12 rounded-full border-2 transition-all ${isInWishlist(product.id) ? "bg-rose-50 border-rose-100 text-rose-500 shadow-lg" : "border-border hover:border-rose-100 hover:text-rose-500"}`}
-                            >
-                                <Heart className={`w-5 h-5 ${isInWishlist(product.id) ? "fill-rose-500" : ""}`} />
-                            </Button>
                         </div>
                     </motion.div>
                 )}
@@ -329,45 +554,54 @@ const ProductDetail = () => {
                                 <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-muted/30 border border-border/10">
                                     <div className="flex gap-0.5">
                                         {[...Array(5)].map((_, i) => (
-                                            <Star key={i} className={`w-3 h-3 ${i < Math.floor(product.rating) ? "fill-primary text-primary" : "fill-muted text-muted"}`} />
+                                            <Star key={i} className={`w-3 h-3 ${i < Math.floor(displayRating) ? "fill-primary text-primary" : "fill-muted text-muted"}`} />
                                         ))}
                                     </div>
-                                    <span className="text-[10px] font-black text-foreground">
-                                        {product.rating} <span className="text-muted-foreground/60">({mergedReviews.length})</span>
-                                        {product.fake_sold_count ? <span className="ml-2 text-primary">| {product.fake_sold_count}+ sold already</span> : null}
+                                    <span className="text-[10px] font-black text-foreground uppercase tracking-wider">
+                                        {displayRating} <span className="text-muted-foreground/60">({displayReviewsCount})</span>
+                                        {product.fake_sold_count ? <span className="ml-2 text-primary">| {product.fake_sold_count}+ ordered</span> : null}
                                     </span>
                                 </div>
                             </div>
 
                             <div className="space-y-6">
-                                <h1 className="text-4xl md:text-5xl lg:text-6xl font-serif leading-tight tracking-tighter uppercase animate-in slide-in-from-left-8 duration-1000">
+                                <h1 className="text-4xl md:text-5xl lg:text-6xl font-serif leading-tight tracking-tighter uppercase animate-in slide-in-from-left-8 duration-1000 text-center lg:text-left">
                                     {product.name}
                                 </h1>
 
-                                <p className="text-muted-foreground text-lg leading-relaxed font-light text-balance max-w-xl">
+                                <p className="text-muted-foreground text-base md:text-lg leading-relaxed font-light text-balance max-w-xl text-center lg:text-left mx-auto lg:mx-0">
                                     {product.description}
                                 </p>
 
                                 {product.stock !== undefined && product.stock <= (product.min_stock_level || 5) && (
-                                    <div className="flex items-center gap-2 text-rose-500 animate-pulse">
+                                    <div className="flex items-center justify-center lg:justify-start gap-2 text-red-600 animate-pulse font-black">
                                         <Clock className="w-4 h-4" />
-                                        <span className="text-[10px] font-black uppercase tracking-[0.2em]">
-                                            {product.stock === 0 ? "Out of Stock" : `Botanical Shortage: Only ${product.stock} vessels Left`}
+                                        <span className="text-[10px] uppercase tracking-[0.2em]">
+                                            {product.stock === 0 ? "Out of Stock" : `Low Stock: Only ${product.stock} left`}
                                         </span>
                                     </div>
                                 )}
 
-                                <div className="flex items-end gap-4 pb-6">
-                                    <span className="text-4xl font-bold font-serif text-primary tracking-tighter">Rs. {product.price}</span>
-                                    {oldPrice > 0 && <span className="text-xl text-muted-foreground line-through mb-1.5 font-light tracking-tighter">Rs. {oldPrice}</span>}
+                                <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4">
+                                    <div className="flex items-end gap-3">
+                                        <span className="text-4xl font-bold font-serif text-primary tracking-tighter">Rs. {product.price}</span>
+                                        {oldPrice > 0 && <span className="text-xl text-muted-foreground line-through mb-1.5 font-light tracking-tighter">Rs. {oldPrice}</span>}
+                                    </div>
+
+                                    {isFreeShipping && (
+                                        <Badge className="bg-emerald-500/10 text-emerald-600 border-none px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] animate-in fade-in slide-in-from-left-4 duration-1000">
+                                            <Truck className="w-3 h-3 mr-2" />
+                                            Free Shipping
+                                        </Badge>
+                                    )}
                                 </div>
                             </div>
 
                             {/* Combined Actions Section */}
-                            <div className="glass p-8 rounded-[3rem] border-border/10 space-y-8">
+                            <div className="glass p-6 md:p-8 rounded-[2.5rem] md:rounded-[3rem] border-border/10 space-y-6 md:space-y-8 mt-4 md:mt-0">
                                 <div className="flex items-center justify-between gap-4">
                                     <div className="space-y-1">
-                                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Vessel Volume</Label>
+                                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Size / Volume</Label>
                                         <p className="font-serif italic text-xl text-primary">{product.vessel_volume || (product.variants?.sizes?.[0] || "200ml")}</p>
                                     </div>
                                     <div className="text-right">
@@ -375,7 +609,7 @@ const ProductDetail = () => {
                                         {product.stock > 0 ? (
                                             <div className="flex items-center gap-2 text-emerald-500 font-black uppercase tracking-widest text-[10px]">
                                                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                                Essence Manifested
+                                                In Stock
                                                 <span className="text-muted-foreground/60 normal-case font-semibold">· {product.stock} left</span>
                                             </div>
                                         ) : (
@@ -388,43 +622,46 @@ const ProductDetail = () => {
 
                                 </div>
 
-                                <div className="flex items-center gap-4 h-16">
-                                    <div className="flex items-center border-2 border-border/20 rounded-full p-1 bg-muted/10 h-full shrink-0">
-                                        <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="w-10 h-10 flex items-center justify-center hover:bg-primary hover:text-white rounded-full transition-all duration-300"><Minus className="w-4 h-4" /></button>
-                                        <span className="w-10 text-center font-black text-lg font-serif italic">{quantity}</span>
-                                        <button onClick={() => setQuantity(quantity + 1)} className="w-10 h-10 flex items-center justify-center hover:bg-primary hover:text-white rounded-full transition-all duration-300"><Plus className="w-4 h-4" /></button>
+                                <div className="flex flex-col sm:flex-row items-center gap-4 h-auto sm:h-16">
+                                    <div className={`flex items-center border-2 border-border/20 rounded-full p-1 bg-muted/10 h-14 sm:h-full w-full sm:w-auto shrink-0 ${!canAddToCart ? 'opacity-50 pointer-events-none' : ''}`}>
+                                        <button onClick={() => setQuantity(Math.max(1, quantity - 1))} disabled={!canAddToCart} className="flex-1 sm:w-10 h-full flex items-center justify-center hover:bg-primary hover:text-white rounded-full transition-all duration-300"><Minus className="w-4 h-4" /></button>
+                                        <span className="w-12 text-center font-black text-lg font-serif italic">{canAddToCart ? quantity : 0}</span>
+                                        <button onClick={() => setQuantity(quantity + 1)} disabled={!canAddToCart || (product.stock !== undefined && product.stock !== null && quantity >= product.stock)} className="flex-1 sm:w-10 h-full flex items-center justify-center hover:bg-primary hover:text-white rounded-full transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed"><Plus className="w-4 h-4" /></button>
                                     </div>
-                                    <Button
-                                        onClick={() => addToCart(product, quantity)}
-                                        className="flex-1 h-full rounded-full text-sm font-black uppercase tracking-[0.2em] shadow-xl shadow-primary/20 bg-primary group hover:bg-primary/90 transition-all duration-500"
-                                    >
-                                        Manifest Into Bag
-                                        <ShoppingBag className="ml-3 w-5 h-5 group-hover:-translate-y-1 transition-transform" />
-                                    </Button>
-                                    <Button
-                                        onClick={() => addToWishlist(product)}
-                                        variant="outline"
-                                        className={`h-full w-16 rounded-full border-2 transition-all duration-500 shrink-0 flex items-center justify-center ${isInWishlist(product.id) ? "bg-rose-50 border-rose-100 text-rose-500 shadow-lg" : "border-border hover:border-rose-100 hover:text-rose-500"}`}
-                                    >
-                                        <Heart className={`w-6 h-6 ${isInWishlist(product.id) ? "fill-rose-500" : ""}`} />
-                                    </Button>
+                                    <div className="flex gap-3 w-full sm:flex-1 h-14 sm:h-full">
+                                        <Button
+                                            onClick={() => canAddToCart && addToCart(product, quantity)}
+                                            disabled={!canAddToCart}
+                                            className="flex-1 h-full rounded-full text-xs font-black uppercase tracking-[0.2em] shadow-xl shadow-primary/20 bg-primary group hover:bg-primary/90 transition-all duration-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-primary"
+                                        >
+                                            {isComingSoon ? "Coming Soon" : isOutOfStock ? "Out of Stock" : "Add to Cart"}
+                                            <ShoppingBag className="ml-3 w-5 h-5 group-hover:-translate-y-1 transition-transform" />
+                                        </Button>
+                                        <Button
+                                            onClick={() => addToWishlist(product)}
+                                            variant="outline"
+                                            className={`h-full w-14 sm:w-16 rounded-full border-2 transition-all duration-500 shrink-0 flex items-center justify-center ${isInWishlist(product.id) ? "bg-rose-50 border-rose-100 text-rose-500 shadow-lg" : "border-border hover:border-rose-100 hover:text-rose-500"}`}
+                                        >
+                                            <Heart className={`w-5 h-5 md:w-6 h-6 ${isInWishlist(product.id) ? "fill-rose-500" : ""}`} />
+                                        </Button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                {/* ── Highlights: Full-width below the image/info grid, centered ── */}
+                {/* ── Highlights: Pair in one line on mobile ── */}
                 {product.highlights && product.highlights.length > 0 && (
-                    <div className="mb-24">
-                        <div className="flex flex-wrap justify-center gap-3">
+                    <div className="mb-24 px-2">
+                        <div className="grid grid-cols-2 lg:flex lg:flex-wrap justify-center gap-3">
                             {product.highlights.map((h: string) => (
                                 <div
                                     key={h}
-                                    className="flex items-center gap-3 bg-muted/20 px-6 py-3.5 rounded-full border border-border/10 group hover:border-primary/30 hover:bg-primary/5 transition-all"
+                                    className="flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-2 sm:gap-3 bg-muted/20 p-4 sm:px-6 sm:py-3.5 rounded-[1.5rem] sm:rounded-full border border-border/10 group hover:border-primary/30 hover:bg-primary/5 transition-all text-center sm:text-left"
                                 >
-                                    <CheckCircle2 className="w-4 h-4 text-primary shrink-0" />
-                                    <span className="text-xs font-bold uppercase tracking-widest whitespace-nowrap">{h}</span>
+                                    <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary shrink-0" />
+                                    <span className="text-[9px] sm:text-xs font-bold uppercase tracking-widest">{h}</span>
                                 </div>
                             ))}
                         </div>
@@ -434,36 +671,14 @@ const ProductDetail = () => {
                 {/* ── Continuous Sections ── */}
                 <div className="space-y-32">
 
-                    {/* Narrative — compact minimalist strip */}
-                    <div id="narrative" className="animate-in fade-in slide-in-from-bottom-8 duration-700">
-                        <div className="rounded-[2rem] md:rounded-[3rem] border border-border/10 bg-muted/10 overflow-hidden">
-                            {/* Mobile: stacked card with accent top bar */}
-                            <div className="h-1 w-full bg-gradient-to-r from-primary/40 via-primary/20 to-transparent" />
-                            <div className="flex flex-col md:flex-row md:items-center gap-0 md:gap-0">
-                                {/* Label panel */}
-                                <div className="flex items-center gap-4 md:flex-col md:items-start md:gap-3 md:shrink-0 md:w-56 px-6 pt-6 pb-3 md:p-10 md:border-r border-border/10">
-                                    <Sparkles className="w-6 h-6 md:w-7 md:h-7 text-primary/50 shrink-0" />
-                                    <div>
-                                        <h3 className="text-lg md:text-2xl font-serif italic tracking-tight text-primary leading-tight">{product.name}</h3>
-                                        <p className="text-[9px] font-black uppercase tracking-[0.25em] text-muted-foreground/40 mt-0.5">The Ritual Synthesis</p>
-                                    </div>
-                                </div>
-                                {/* Divider — horizontal on mobile, vertical on desktop */}
-                                <div className="mx-6 md:mx-0 h-px md:h-auto md:w-px bg-border/20" />
-                                {/* Description */}
-                                <p className="px-6 pb-7 pt-4 md:px-10 md:py-10 text-sm md:text-base text-muted-foreground font-light leading-relaxed">
-                                    {product.detailed_description || product.description}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
+                    {/* Narrative panel moved lower */}
 
                     {/* Specs — only shown if admin has entered data */}
                     {hasSpecs && (
                         <div id="specs" className="animate-in fade-in slide-in-from-bottom-8 duration-700">
                             <div className="text-center mb-16">
-                                <h2 className="text-4xl font-serif mb-4 uppercase">Technical <span className="text-primary italic">Synthesis</span></h2>
-                                <p className="text-muted-foreground text-sm uppercase tracking-widest">Botanical Composition & Molecular Alignments</p>
+                                <h2 className="text-4xl font-serif mb-4 uppercase">Product <span className="text-primary italic">Specifications</span></h2>
+                                <p className="text-muted-foreground text-sm uppercase tracking-widest">Detailed information and materials</p>
                             </div>
                             <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
                                 {Object.entries(product.specs).map(([key, val]) => (
@@ -476,7 +691,357 @@ const ProductDetail = () => {
                         </div>
                     )}
 
-                    {/* Patron Proof (Reviews) */}
+                    {/* ── Patron Visions (Video Proofs) ── */}
+                    {product.video_proofs && product.video_proofs.length > 0 && (
+                        <div id="visions" className="animate-in fade-in slide-in-from-bottom-8 duration-700 space-y-16">
+                            <div className="text-center">
+                                <h2 className="text-4xl md:text-5xl font-serif mb-4 uppercase tracking-tighter">Customer <span className="text-primary italic">Gallery</span></h2>
+                                <div className="flex items-center justify-center gap-2">
+                                    <Play className="w-3 h-3 text-primary" />
+                                    <span className="text-[10px] font-black uppercase tracking-widest">See it in action</span>
+                                </div>
+                            </div>
+
+                            <div className="relative w-full group overflow-hidden">
+                                {/* Edge Blurs */}
+                                <div className={`absolute left-0 top-0 bottom-0 w-4 md:w-24 bg-gradient-to-r from-background via-background/40 to-transparent z-20 pointer-events-none transition-opacity duration-300 ${visionsIndex === 0 ? 'opacity-0' : 'opacity-100'}`} />
+                                <div className="absolute right-0 top-0 bottom-0 w-4 md:w-24 bg-gradient-to-l from-background via-background/40 to-transparent z-20 pointer-events-none opacity-100" />
+
+                                {product.video_proofs && product.video_proofs.length > 2 && visionsIndex > 0 && (
+                                    <button
+                                        onClick={() => {
+                                            const next = visionsIndex - 1;
+                                            setVisionsIndex(next);
+                                            const cardWidth = window.innerWidth < 768 ? 260 : 320;
+                                            const gap = window.innerWidth < 768 ? 16 : 40;
+                                            visionsCarouselRef.current?.scrollTo({
+                                                left: (cardWidth + gap) * next,
+                                                behavior: 'smooth'
+                                            });
+                                        }}
+                                        className="absolute left-4 md:left-8 top-1/2 -translate-y-1/2 z-30 w-12 h-12 md:w-14 md:h-14 rounded-full bg-white/10 backdrop-blur-3xl border border-white/20 shadow-2xl flex items-center justify-center hover:bg-primary hover:text-white transition-all duration-500 group/btn"
+                                    >
+                                        <div className="absolute inset-0 rounded-full bg-primary/20 blur-xl opacity-0 group-hover/btn:opacity-100 transition-opacity" />
+                                        <ArrowLeft className="w-5 h-5 md:w-6 md:h-6 relative z-10" />
+                                    </button>
+                                )}
+                                {product.video_proofs && product.video_proofs.length > 2 && visionsIndex < product.video_proofs.length - 1 && (
+                                    <button
+                                        onClick={() => {
+                                            const next = visionsIndex + 1;
+                                            setVisionsIndex(next);
+                                            const cardWidth = window.innerWidth < 768 ? 260 : 320;
+                                            const gap = window.innerWidth < 768 ? 16 : 40;
+                                            visionsCarouselRef.current?.scrollTo({
+                                                left: (cardWidth + gap) * next,
+                                                behavior: 'smooth'
+                                            });
+                                        }}
+                                        className="absolute right-4 md:right-8 top-1/2 -translate-y-1/2 z-30 w-12 h-12 md:w-14 md:h-14 rounded-full bg-white/10 backdrop-blur-3xl border border-white/20 shadow-2xl flex items-center justify-center hover:bg-primary hover:text-white transition-all duration-500 group/btn"
+                                    >
+                                        <div className="absolute inset-0 rounded-full bg-primary/20 blur-xl opacity-0 group-hover/btn:opacity-100 transition-opacity" />
+                                        <ArrowLeft className="w-5 h-5 md:w-6 md:h-6 rotate-180 relative z-10" />
+                                    </button>
+                                )}
+
+                                <motion.div
+                                    ref={visionsCarouselRef}
+                                    className={`flex gap-4 md:gap-10 overflow-x-auto py-8 md:py-12 pb-16 md:pb-20 snap-x snap-mandatory scroll-smooth scrollbar-hide select-none relative touch-pan-x ${product.video_proofs.length <= 2 ? 'justify-start md:justify-center' : 'justify-start'}`}
+                                    style={{
+                                        paddingLeft: 'max(1rem, calc(50vw - 140px))',
+                                        paddingRight: 'max(1rem, calc(50vw - 140px))',
+                                        scrollPaddingLeft: 'max(1rem, calc(50vw - 140px))',
+                                        scrollPaddingRight: 'max(1rem, calc(50vw - 140px))',
+                                    }}
+                                    onScroll={(e) => {
+                                        const el = e.currentTarget;
+                                        const cardWidth = window.innerWidth < 768 ? 260 : 320;
+                                        const gap = window.innerWidth < 768 ? 16 : 40;
+                                        const index = Math.round(el.scrollLeft / (cardWidth + gap));
+                                        if (index !== visionsIndex) setVisionsIndex(index);
+                                    }}
+                                >
+                                    {(product.video_proofs || []).map((proof: any, i: number) => {
+                                        const url = proof.url;
+                                        if (!url) return null;
+
+                                        const { platform: inferredPlatform, embedUrl, thumb: inferredThumb } = getVideoData(url);
+                                        const thumb = proof.thumbnail || inferredThumb; // No product.image fallback so native video can appear
+                                        const platform = proof.platform || inferredPlatform;
+                                        const handle = proof.username || getUsernameFromUrl(url);
+                                        let redirectionLink = proof.redirection_link || url;
+                                        if (redirectionLink && !redirectionLink.startsWith('http://') && !redirectionLink.startsWith('https://')) {
+                                            redirectionLink = `https://${redirectionLink}`;
+                                        }
+                                        const iconImg = proof.icon_img;
+
+                                        const isPlaying = playingVideo === url;
+                                        const isFinished = finishedVideos.has(url);
+                                        const tiktokMp4 = tikTokSources[url];
+                                        const isUpload = platform === 'upload' || url.includes('supabase.co');
+
+                                        const liquidMorph: any = {
+                                            animate: {
+                                                borderRadius: [
+                                                    "60% 40% 30% 70% / 60% 30% 70% 40%",
+                                                    "45% 55% 50% 50% / 45% 55% 50% 50%",
+                                                    "30% 60% 70% 40% / 50% 60% 30% 60%",
+                                                    "60% 40% 30% 70% / 60% 30% 70% 40%"
+                                                ],
+                                                scale: [1, 1.05, 0.98, 1.02, 1],
+                                            },
+                                            transition: {
+                                                borderRadius: {
+                                                    duration: 10,
+                                                    repeat: Infinity,
+                                                },
+                                                scale: {
+                                                    duration: 5,
+                                                    repeat: Infinity,
+                                                }
+                                            }
+                                        };
+
+                                        return (
+                                            <div key={i} className="flex-none w-[260px] sm:w-[280px] md:w-[320px] snap-center">
+                                                <div className="glass rounded-[2.5rem] md:rounded-[3rem] overflow-hidden border-border/10 group/vid-card hover:shadow-2xl transition-all duration-700 relative h-full">
+                                                    <div className="bg-black relative overflow-hidden flex items-center justify-center w-full h-[440px] sm:h-[480px] md:h-[560px]">
+                                                        {isPlaying ? (
+                                                            isUpload ? (
+                                                                <div className="absolute inset-0 z-30">
+                                                                    <video
+                                                                        src={url}
+                                                                        poster={thumb || product.image}
+                                                                        className="w-full h-full object-contain" // Changed to contain to avoid chopping/cropping
+                                                                        autoPlay
+                                                                        playsInline
+                                                                        muted={isMuted}
+                                                                        ref={(el) => {
+                                                                            if (el) {
+                                                                                if (isPaused) el.pause();
+                                                                                else el.play().catch(() => { });
+                                                                            }
+                                                                        }}
+                                                                        onEnded={() => {
+                                                                            setPlayingVideo(null);
+                                                                            setFinishedVideos(prev => new Set(prev).add(url));
+                                                                            setIsPaused(false);
+                                                                        }}
+                                                                    />
+
+                                                                    {/* Custom Controls Overlay */}
+                                                                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent p-6 pt-12 flex items-center justify-between z-40 transition-opacity group-hover:opacity-100">
+                                                                        <div className="flex items-center gap-4">
+                                                                            <motion.button
+                                                                                {...liquidMorph}
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    setIsPaused(!isPaused);
+                                                                                }}
+                                                                                className="w-12 h-12 bg-white/10 backdrop-blur-md flex items-center justify-center text-white hover:bg-primary transition-all shadow-xl border border-white/20"
+                                                                            >
+                                                                                {isPaused ? <Play className="w-5 h-5 fill-white ml-0.5" /> : <Pause className="w-5 h-5 fill-white" />}
+                                                                            </motion.button>
+                                                                            <motion.button
+                                                                                {...liquidMorph}
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    setIsMuted(!isMuted);
+                                                                                }}
+                                                                                className="w-12 h-12 bg-white/10 backdrop-blur-md flex items-center justify-center text-white hover:bg-primary transition-all shadow-xl border border-white/20"
+                                                                            >
+                                                                                {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+                                                                            </motion.button>
+                                                                        </div>
+
+                                                                        <button
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                setPlayingVideo(null);
+                                                                                setTimeout(() => setPlayingVideo(url), 0);
+                                                                                setIsPaused(false);
+                                                                            }}
+                                                                            className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-white/60 hover:text-white transition-colors"
+                                                                        >
+                                                                            <RotateCcw className="w-3 h-3" /> Replay
+                                                                        </button>
+                                                                    </div>
+                                                                    <motion.div
+                                                                        initial={{ opacity: 0 }}
+                                                                        animate={{ opacity: 1 }}
+                                                                        className="absolute top-4 right-4 z-40"
+                                                                    >
+                                                                        <Button
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                window.open(redirectionLink, '_blank');
+                                                                            }}
+                                                                            size="icon"
+                                                                            className="rounded-full w-10 h-10 bg-white/20 backdrop-blur-md text-white hover:bg-primary transition-all shadow-xl"
+                                                                        >
+                                                                            <ExternalLink className="w-4 h-4" />
+                                                                        </Button>
+                                                                    </motion.div>
+                                                                </div>
+                                                            ) : platform === 'tiktok' && tiktokMp4 ? (
+                                                                <div className="absolute inset-0 z-30">
+                                                                    <video
+                                                                        src={tiktokMp4}
+                                                                        poster={thumb || product.image}
+                                                                        className="w-full h-full object-contain"
+                                                                        controls
+                                                                        autoPlay
+                                                                        playsInline
+                                                                        onEnded={() => {
+                                                                            setPlayingVideo(null);
+                                                                            setFinishedVideos(prev => new Set(prev).add(url));
+                                                                        }}
+                                                                    />
+                                                                    <motion.div
+                                                                        initial={{ opacity: 0 }}
+                                                                        animate={{ opacity: 1 }}
+                                                                        className="absolute top-4 right-4 z-40"
+                                                                    >
+                                                                        <Button
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                window.open(redirectionLink, '_blank');
+                                                                            }}
+                                                                            size="icon"
+                                                                            className="rounded-full w-10 h-10 bg-white/20 backdrop-blur-md text-white hover:bg-primary transition-all shadow-xl"
+                                                                        >
+                                                                            <ExternalLink className="w-4 h-4" />
+                                                                        </Button>
+                                                                    </motion.div>
+                                                                </div>
+                                                            ) : (
+                                                                <iframe
+                                                                    src={embedUrl}
+                                                                    className="absolute inset-0 w-full h-full z-30 bg-black"
+                                                                    allow="autoplay; encrypted-media; picture-in-picture"
+                                                                    allowFullScreen
+                                                                />
+                                                            )
+                                                        ) : (
+                                                            <>
+                                                                {thumb ? (
+                                                                    <img
+                                                                        src={thumb}
+                                                                        className="w-full h-full object-contain grayscale-[0.2] group-hover/vid-card:grayscale-0 group-hover/vid-card:scale-105 transition-all duration-[2s]"
+                                                                        alt="Ritual Proof"
+                                                                        onError={(e) => {
+                                                                            e.currentTarget.onerror = null; // Prevent infinite loop
+                                                                            e.currentTarget.style.display = 'none';
+                                                                        }}
+                                                                    />
+                                                                ) : isUpload ? (
+                                                                    <video src={url} className="w-full h-full object-contain grayscale-[0.2] opacity-50 block" autoPlay muted playsInline loop />
+                                                                ) : (
+                                                                    <div className="w-full h-full flex items-center justify-center bg-muted/20">
+                                                                        <Play className="w-12 h-12 text-primary opacity-20" />
+                                                                    </div>
+                                                                )}
+                                                                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent z-10" />
+
+                                                                {/* Post-play redirection button */}
+                                                                {isFinished && (
+                                                                    <motion.div
+                                                                        initial={{ opacity: 0, scale: 0.8 }}
+                                                                        animate={{ opacity: 1, scale: 1 }}
+                                                                        className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-40"
+                                                                    >
+                                                                        <div className="flex flex-col items-center gap-6">
+                                                                            <Button
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    window.open(redirectionLink, '_blank');
+                                                                                }}
+                                                                                className="rounded-full px-8 h-14 bg-primary text-white font-black uppercase tracking-widest hover:scale-110 transition-all shadow-2xl"
+                                                                            >
+                                                                                Explore Source <ExternalLink className="ml-3 w-4 h-4" />
+                                                                            </Button>
+                                                                            <button
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    setPlayingVideo(null);
+                                                                                    setTimeout(() => setPlayingVideo(url), 10);
+                                                                                    setIsPaused(false);
+                                                                                    setFinishedVideos(prev => {
+                                                                                        const next = new Set(prev);
+                                                                                        next.delete(url);
+                                                                                        return next;
+                                                                                    });
+                                                                                }}
+                                                                                className="text-[10px] font-black uppercase tracking-[0.2em] text-white/60 hover:text-white transition-colors flex items-center gap-2"
+                                                                            >
+                                                                                <RotateCcw className="w-4 h-4" /> Replay Ritual
+                                                                            </button>
+                                                                        </div>
+                                                                    </motion.div>
+                                                                )}
+
+                                                                <div className="absolute inset-0 flex items-center justify-center z-20">
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            setPlayingVideo(url);
+                                                                            setFinishedVideos(prev => {
+                                                                                const next = new Set(prev);
+                                                                                next.delete(url);
+                                                                                return next;
+                                                                            });
+                                                                        }}
+                                                                        className="w-20 h-20 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white flex items-center justify-center shadow-2xl hover:bg-primary hover:border-primary hover:scale-110 transition-all duration-700 group/play"
+                                                                    >
+                                                                        <Play className="w-8 h-8 fill-white group-hover/play:scale-110 transition-transform ml-1" />
+                                                                    </button>
+                                                                </div>
+                                                            </>
+                                                        )}
+
+                                                        <div className="absolute bottom-8 left-8 right-8 z-20 space-y-4">
+                                                            <div className="flex items-center justify-between">
+                                                                <div className="flex items-center gap-3">
+                                                                    <div className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white text-[10px] font-black uppercase overflow-hidden">
+                                                                        {iconImg ? (
+                                                                            <img src={iconImg} className="w-full h-full object-cover" alt={handle} />
+                                                                        ) : (
+                                                                            <img src="/favicon.png" className="w-full h-full object-cover" alt="Lorean" />
+                                                                        )}
+                                                                    </div>
+                                                                    <div className="min-w-0">
+                                                                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white truncate">{handle.startsWith('@') ? handle : `@${handle}`}</p>
+                                                                        <p className="text-[8px] text-white/50 font-bold uppercase tracking-widest">Patron Testimony</p>
+                                                                    </div>
+                                                                </div>
+                                                                <button
+                                                                    onClick={() => window.open(redirectionLink, '_blank')}
+                                                                    className="w-9 h-9 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white hover:bg-white hover:text-black transition-all duration-300"
+                                                                    title="Open Ritual Source"
+                                                                >
+                                                                    <ExternalLink className="w-4 h-4" />
+                                                                </button>
+                                                            </div>
+                                                            <div className="flex items-center justify-between pt-5 border-t border-white/10">
+                                                                <div className="flex items-center gap-2">
+                                                                    <div className="p-1.5 rounded-lg bg-white/5 backdrop-blur-sm">
+                                                                        {isUpload ? <Video className="w-4 h-4 text-primary" /> : getPlatformIcon(platform)}
+                                                                    </div>
+                                                                    <span className="text-[8px] font-black uppercase tracking-[0.2em] text-white/60">{isUpload ? 'Ritual' : platform}</span>
+                                                                </div>
+                                                                <div className="flex gap-0.5">
+                                                                    {[1, 2, 3, 4, 5].map(s => <Star key={s} className="w-2.5 h-2.5 fill-primary text-primary" />)}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </motion.div>
+                            </div>
+                        </div>
+                    )}
                     <div id="reviews" className="animate-in fade-in slide-in-from-bottom-8 duration-700 space-y-16">
                         <div className="text-center">
                             <h2 className="text-4xl md:text-5xl font-serif mb-4 uppercase tracking-tighter">Patron <span className="text-primary italic">Proof</span></h2>
@@ -484,7 +1049,7 @@ const ProductDetail = () => {
                                 <div className="flex gap-1">
                                     {[...Array(5)].map((_, i) => <Star key={i} className="w-4 h-4 fill-primary text-primary" />)}
                                 </div>
-                                <span className="text-sm font-black uppercase tracking-widest">Trusted by {mergedReviews.length + (product.fake_sold_count || 0)} Patrons</span>
+                                <span className="text-sm font-black uppercase tracking-widest">Trusted by {Math.max(mergedReviews.length, product.reviews || 0)} Patrons</span>
                             </div>
                         </div>
 
@@ -527,7 +1092,7 @@ const ProductDetail = () => {
                                     {mergedReviews.map((rev: any, i: number) => (
                                         <div
                                             key={rev.id || i}
-                                            className="glass flex-none w-[340px] sm:w-[400px] p-8 rounded-[2.5rem] space-y-6 border-border/10 hover:shadow-xl transition-all duration-500 relative snap-start"
+                                            className="glass flex-none w-[280px] sm:w-[400px] p-6 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] space-y-6 border-border/10 hover:shadow-xl transition-all duration-500 relative snap-start"
                                         >
                                             {rev.is_fake && (
                                                 <div className="absolute top-6 right-6 text-[8px] font-black uppercase tracking-[0.3em] text-primary/30">Curated</div>
@@ -552,13 +1117,13 @@ const ProductDetail = () => {
                                                 </div>
                                             )}
 
-                                            <div className="flex items-center gap-4 pt-4 border-t border-border/10">
-                                                <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-primary/20 to-primary/5 flex items-center justify-center text-sm font-black text-primary uppercase shadow-inner shrink-0">
+                                            <div className="flex items-center gap-3 sm:gap-4 pt-4 border-t border-border/10">
+                                                <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-gradient-to-tr from-primary/20 to-primary/5 flex items-center justify-center text-[10px] sm:text-sm font-black text-primary uppercase shadow-inner shrink-0">
                                                     {(rev.user_name || "P").slice(0, 2)}
                                                 </div>
-                                                <div>
-                                                    <p className="font-serif font-bold text-sm tracking-tight">{rev.user_name || "Anonymous Patron"}</p>
-                                                    <p className="text-[9px] text-emerald-500 font-black uppercase tracking-widest flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Verified Patron</p>
+                                                <div className="min-w-0">
+                                                    <p className="font-serif font-bold text-xs sm:text-sm tracking-tight truncate">{rev.user_name || "Anonymous Patron"}</p>
+                                                    <p className="text-[8px] sm:text-[9px] text-emerald-500 font-black uppercase tracking-widest flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Verified</p>
                                                 </div>
                                             </div>
                                         </div>
@@ -596,89 +1161,65 @@ const ProductDetail = () => {
                             </div>
                         )}
 
-                        {/* Review Submission Form — AFTER reviews */}
-                        <div className="max-w-3xl mx-auto glass p-10 rounded-[3rem] border-border/10 space-y-6">
-                            <h3 className="font-serif italic text-2xl text-center">Share your Botanical Experience</h3>
-                            {user ? (
-                                <form className="space-y-6" onSubmit={async (e) => {
-                                    e.preventDefault();
-                                    const formData = new FormData(e.currentTarget);
-                                    const comment = formData.get('comment') as string;
-                                    const rating = Number(formData.get('rating'));
-
-                                    if (!comment || !rating) {
-                                        toast({ title: "Ritual Incomplete", description: "Please provide both rating and insight.", variant: "destructive" });
-                                        return;
-                                    }
-
-                                    try {
-                                        setSubmittingReview(true);
-                                        await reviewsService.create({
-                                            product_id: product.id,
-                                            user_id: user.id,
-                                            user_name: user.user_metadata?.full_name || user.email?.split('@')[0],
-                                            rating,
-                                            comment,
-                                            status: 'approved'
-                                        });
-                                        // Optimistically prepend the new review so it shows instantly
-                                        const newReview = {
-                                            id: `new-${Date.now()}`,
-                                            user_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Patron',
-                                            rating,
-                                            comment,
-                                            is_fake: false,
-                                            created_at: new Date().toISOString(),
-                                            verified: true,
-                                        };
-                                        setRealReviews(prev => [newReview, ...prev]);
-                                        setCarouselIndex(0);
-                                        toast({ title: "Insight Manifested", description: "Your Patron Proof has been added to the collective." });
-                                        (e.target as HTMLFormElement).reset();
-                                    } catch (err) {
-                                        toast({ title: "Manifestation Failed", description: "Could not post review.", variant: "destructive" });
-                                    } finally {
-                                        setSubmittingReview(false);
-                                    }
-                                }}>
-                                    <div className="flex flex-col items-center gap-3">
-                                        <div className="flex gap-2">
-                                            {[1, 2, 3, 4, 5].map((s) => (
-                                                <div key={s} className="relative group">
-                                                    <input type="radio" name="rating" value={s} id={`star-${s}`} className="peer absolute opacity-0 cursor-pointer" required />
-                                                    <label htmlFor={`star-${s}`} className="cursor-pointer text-muted-foreground peer-checked:text-primary hover:text-primary transition-colors">
-                                                        <Star className="w-10 h-10 fill-current" />
-                                                    </label>
-                                                </div>
-                                            ))}
-                                        </div>
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Select Alignment Rating</p>
-                                    </div>
-                                    <div className="space-y-4">
-                                        <textarea
-                                            name="comment"
-                                            placeholder="Describe your ritual experience with this essence..."
-                                            className="w-full h-36 bg-muted/20 rounded-[2rem] p-6 border border-border/10 focus:border-primary/30 focus:ring-0 outline-none font-light italic text-base transition-all resize-none"
-                                            required
-                                        />
-                                        <Button
-                                            type="submit"
-                                            disabled={submittingReview}
-                                            className="w-full h-14 rounded-full bg-primary font-black uppercase tracking-widest shadow-xl shadow-primary/10 disabled:opacity-60"
-                                        >
-                                            {submittingReview ? (
-                                                <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Manifesting...</span>
-                                            ) : 'Submit Insight'}
-                                        </Button>
-                                    </div>
-                                </form>
-                            ) : (
-                                <div className="text-center py-8 space-y-6">
-                                    <Info className="w-12 h-12 mx-auto text-primary/40" />
-                                    <p className="text-muted-foreground font-light text-lg">You must be logged in to share your botanical experience.</p>
-                                    <Button onClick={() => navigate('/auth')} variant="outline" className="rounded-full px-10 h-12 border-primary/20 text-primary hover:bg-primary hover:text-white transition-all">Sign In to Manifest</Button>
+                        {/* Review Submission Notice — AFTER reviews */}
+                        <div className="max-w-3xl mx-auto glass p-10 rounded-[3rem] border-border/10 space-y-6 text-center">
+                            <h3 className="font-serif italic text-2xl">Share your Botanical Experience</h3>
+                            <div className="space-y-4">
+                                <p className="text-muted-foreground font-light text-lg">
+                                    Insights are precious. We now invite Patrons to share their proof after successful manifestation.
+                                </p>
+                                <div className="p-6 rounded-2xl bg-primary/5 border border-primary/10 inline-block mx-auto">
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center justify-center gap-2">
+                                        <Sparkles className="w-4 h-4" /> Received your vessel? Head to your dashboard to submit an insight.
+                                    </p>
                                 </div>
-                            )}
+                                <div className="pt-4">
+                                    <Button onClick={() => navigate('/dashboard')} className="rounded-full px-12 h-14 bg-primary shadow-xl shadow-primary/20">Go to Dashboard</Button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Narrative — Restructured and moved here */}
+                    <div id="narrative" className="animate-in fade-in slide-in-from-bottom-8 duration-700">
+                        <div className="rounded-[2rem] md:rounded-[3rem] border border-border/10 bg-muted/5 overflow-hidden">
+                            <div className="h-1.5 w-full bg-gradient-to-r from-primary/60 via-primary/20 to-transparent" />
+                            <div className="flex flex-col md:flex-row md:items-stretch">
+                                <div className="p-8 md:p-12 md:w-1/3 md:border-r border-border/10 flex flex-col justify-center gap-6 bg-muted/5">
+                                    <div className="space-y-4">
+                                        <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
+                                            <Sparkles className="w-7 h-7 text-primary" />
+                                        </div>
+                                        <h3 className="text-3xl md:text-4xl font-serif italic text-primary leading-tight tracking-tight">{product.name}</h3>
+                                        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/50">The Ritual Narrative</p>
+                                    </div>
+                                    <div className="h-px w-12 bg-primary/30" />
+                                    <p className="text-xs text-muted-foreground uppercase tracking-widest leading-relaxed">
+                                        A manifestation of botanical excellence, curated for the modern patron.
+                                    </p>
+                                </div>
+                                <div className="p-8 md:p-12 md:w-2/3">
+                                    <div className="prose prose-primary max-w-none">
+                                        <p className="text-lg md:text-xl text-muted-foreground/80 font-light leading-relaxed italic">
+                                            {product.detailed_description || product.description}
+                                        </p>
+                                    </div>
+
+                                    {/* SEO Tags Dispay */}
+                                    {product.tags && product.tags.length > 0 && (
+                                        <div className="mt-12 pt-12 border-t border-border/10">
+                                            <p className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 mb-6">Synthesis Alignments (Tags)</p>
+                                            <div className="flex flex-wrap gap-3">
+                                                {product.tags.map((tag: string) => (
+                                                    <span key={tag} className="px-5 py-2 rounded-full bg-muted/40 border border-border/10 text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 hover:border-primary/30 hover:text-primary transition-all cursor-default">
+                                                        #{tag.replace(/\s+/g, '')}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -718,7 +1259,7 @@ const ProductDetail = () => {
                     </div>
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
                         {products.filter(p => p.id !== product.id).slice(0, 4).map(p => (
-                            <Link to={`/product/${p.id}`} key={p.id} className="group glass p-4 rounded-[2.5rem] hover:shadow-2xl transition-all border-border/30">
+                            <Link to={`/product/${p.slug || p.id}`} key={p.id} className="group glass p-4 rounded-[2.5rem] hover:shadow-2xl transition-all border-border/30">
                                 <div className="aspect-[4/5] rounded-[2rem] overflow-hidden bg-muted mb-6">
                                     <img src={p.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" alt="" />
                                 </div>
@@ -750,11 +1291,40 @@ const ProductDetail = () => {
                                 </p>
                             </div>
                             <div className="flex-1">
-                                <div className="flex flex-row gap-3 p-2 bg-white/10 rounded-[2rem] backdrop-blur-xl border border-white/20">
-                                    <Input placeholder="Your Email Artifact" className="h-12 rounded-full bg-transparent border-none text-white placeholder:text-white/40 px-8 focus-visible:ring-0 text-sm" />
-                                    <Button className="h-12 rounded-full px-10 bg-white text-primary hover:bg-white/90 font-black uppercase tracking-widest text-[10px] shadow-lg shrink-0">Join Ritual</Button>
-                                </div>
-                                <p className="text-[8px] font-black uppercase tracking-[0.3em] opacity-40 mt-3 text-center">Privacy is curated. We never disseminate artifact data.</p>
+                                {isSubscribed ? (
+                                    <motion.div
+                                        initial={{ opacity: 0, scale: 0.9 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        className="p-6 rounded-[2rem] bg-white/10 backdrop-blur-xl border border-white/20 text-center"
+                                    >
+                                        <div className="flex items-center justify-center gap-3 text-white mb-1">
+                                            <CheckCircle2 className="w-5 h-5 text-white" />
+                                            <p className="font-serif italic text-lg">You have subscribed</p>
+                                        </div>
+                                        <p className="text-[10px] uppercase tracking-widest opacity-60">The botanical secrets will find you soon.</p>
+                                    </motion.div>
+                                ) : (
+                                    <form onSubmit={handleSubscribe}>
+                                        <div className="flex flex-row gap-3 p-2 bg-white/10 rounded-[2rem] backdrop-blur-xl border border-white/20">
+                                            <Input
+                                                value={subscriberEmail}
+                                                onChange={(e) => setSubscriberEmail(e.target.value)}
+                                                type="email"
+                                                required
+                                                placeholder="Your Email Artifact"
+                                                className="h-12 rounded-full bg-transparent border-none text-white placeholder:text-white/40 px-8 focus-visible:ring-0 text-sm"
+                                            />
+                                            <Button
+                                                type="submit"
+                                                disabled={subscribing}
+                                                className="h-12 rounded-full px-10 bg-white text-primary hover:bg-white/90 font-black uppercase tracking-widest text-[10px] shadow-lg shrink-0"
+                                            >
+                                                {subscribing ? "Joining..." : "Join Ritual"}
+                                            </Button>
+                                        </div>
+                                        <p className="text-[8px] font-black uppercase tracking-[0.3em] opacity-40 mt-3 text-center">Privacy is curated. We never disseminate artifact data.</p>
+                                    </form>
+                                )}
                             </div>
                         </div>
                         {/* Mobile: stacked layout */}
@@ -762,15 +1332,37 @@ const ProductDetail = () => {
                             <p className="text-primary-foreground/65 font-light text-sm leading-relaxed">
                                 Become a patron of Lorean — receive exclusive access to upcoming botanical manifestations.
                             </p>
-                            <div className="space-y-3">
-                                <Input
-                                    placeholder="Your Email Artifact"
-                                    className="h-13 w-full rounded-2xl bg-white/10 border border-white/20 text-white placeholder:text-white/40 px-5 focus-visible:ring-0 focus-visible:border-white/40 text-sm"
-                                />
-                                <Button className="w-full h-12 rounded-2xl bg-white text-primary hover:bg-white/90 font-black uppercase tracking-widest text-[10px] shadow-lg">
-                                    Join Ritual
-                                </Button>
-                            </div>
+                            {isSubscribed ? (
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 0.9 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    className="p-6 rounded-2xl bg-white/10 backdrop-blur-xl border border-white/20 text-center"
+                                >
+                                    <div className="flex items-center justify-center gap-3 text-white mb-2">
+                                        <CheckCircle2 className="w-5 h-5 text-white" />
+                                        <p className="font-serif italic text-xl">You have subscribed</p>
+                                    </div>
+                                    <p className="text-[9px] uppercase tracking-widest opacity-60"> Secrets are on the way.</p>
+                                </motion.div>
+                            ) : (
+                                <form onSubmit={handleSubscribe} className="space-y-3">
+                                    <Input
+                                        value={subscriberEmail}
+                                        onChange={(e) => setSubscriberEmail(e.target.value)}
+                                        type="email"
+                                        required
+                                        placeholder="Your Email Artifact"
+                                        className="h-13 w-full rounded-2xl bg-white/10 border border-white/20 text-white placeholder:text-white/40 px-5 focus-visible:ring-0 focus-visible:border-white/40 text-sm"
+                                    />
+                                    <Button
+                                        type="submit"
+                                        disabled={subscribing}
+                                        className="w-full h-12 rounded-2xl bg-white text-primary hover:bg-white/90 font-black uppercase tracking-widest text-[10px] shadow-lg"
+                                    >
+                                        {subscribing ? "Joining..." : "Join Ritual"}
+                                    </Button>
+                                </form>
+                            )}
                             <p className="text-[8px] font-black uppercase tracking-[0.3em] opacity-40 text-center">Privacy is curated. We never disseminate artifact data.</p>
                         </div>
                     </div>

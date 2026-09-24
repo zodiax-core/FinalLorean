@@ -34,9 +34,9 @@ const SearchDrawer = ({ isOpen, onClose }: SearchDrawerProps) => {
 
   const popularProducts = products.slice(0, 3);
 
-  const handleProductClick = (id: number) => {
+  const handleProductClick = (product: any) => {
     onClose();
-    navigate(`/product/${id}`);
+    navigate(`/product/${product.slug || product.id}`);
   };
 
   return (
@@ -121,7 +121,7 @@ const SearchDrawer = ({ isOpen, onClose }: SearchDrawerProps) => {
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: index * 0.05 }}
                             whileHover={{ scale: 1.02 }}
-                            onClick={() => handleProductClick(product.id)}
+                            onClick={() => handleProductClick(product)}
                             className="flex items-center gap-6 p-5 rounded-[2rem] bg-card hover:bg-card-foreground/5 cursor-pointer transition-all border border-border/50 group"
                           >
                             <img
@@ -154,7 +154,7 @@ const SearchDrawer = ({ isOpen, onClose }: SearchDrawerProps) => {
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: index * 0.1 }}
                           whileHover={{ scale: 1.02 }}
-                          onClick={() => handleProductClick(product.id)}
+                          onClick={() => handleProductClick(product)}
                           className="flex items-center gap-6 p-5 rounded-[2rem] bg-card hover:bg-card-foreground/5 cursor-pointer transition-all border border-border/50 group"
                         >
                           <img

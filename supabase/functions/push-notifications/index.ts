@@ -3,51 +3,60 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import * as jose from 'https://deno.land/x/jose@v4.14.4/index.ts';
 
-// Retrieve Firebase Service Account from environment variables
-// These must be set in Supabase: Settings -> Edge Functions -> Environment Variables
-const serviceAccount = {
-    "type": "service_account",
-    "project_id": Deno.env.get("FIREBASE_PROJECT_ID"),
-    "private_key_id": Deno.env.get("FIREBASE_PRIVATE_KEY_ID"),
-    "private_key": Deno.env.get("FIREBASE_PRIVATE_KEY")?.replace(/\\n/g, '\n'),
-    "client_email": Deno.env.get("FIREBASE_CLIENT_EMAIL"),
-    "client_id": Deno.env.get("FIREBASE_CLIENT_ID"),
-    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-    "token_uri": "https://oauth2.googleapis.com/token",
-    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-    "client_x509_cert_url": `https://www.googleapis.com/robot/v1/metadata/x509/${encodeURIComponent(Deno.env.get("FIREBASE_CLIENT_EMAIL") || "")}`,
-    "universe_domain": "googleapis.com"
-};
+/**
+ * Normalizes a private key string for use with jose.
+ */
+function normalizePrivateKey(raw: string | undefined): string {
+    if (!raw) return '';
+
+    // 1. Remove quotes
+    let key = raw.trim().replace(/^["']|["']$/g, '');
+
+    // 2. Fix escaped newlines
+    key = key.replace(/\\n/g, '\n').replace(/%0A/gi, '\n');
+
+    // 3. Ensure PEM headers
+    if (!key.includes("-----BEGIN PRIVATE KEY-----")) {
+        // If it's just raw base64, wrap it
+        const rawBody = key.replace(/\s+/g, '');
+        const chunked = (rawBody.match(/.{1,64}/g) || []).join('\n');
+        return `-----BEGIN PRIVATE KEY-----\n${chunked}\n-----END PRIVATE KEY-----\n`;
+    }
+
+    // 4. Clean PEM structure
+    const match = key.match(/-----BEGIN PRIVATE KEY-----\s*([\s\S]+?)\s*-----END PRIVATE KEY-----/);
+    if (match && match[1]) {
+        const rawBody = match[1].replace(/\s+/g, '');
+        const chunked = (rawBody.match(/.{1,64}/g) || []).join('\n');
+        return `-----BEGIN PRIVATE KEY-----\n${chunked}\n-----END PRIVATE KEY-----\n`;
+    }
+
+    return key;
+}
 
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Function to generate the Google OAuth2 Access Token
-async function getAccessToken() {
+async function getAccessToken(sa: any) {
     try {
-        console.log("Preparing JWT for email:", serviceAccount.client_email);
+        console.log("[FCM] Obtaining access token...");
+        const privateKey = normalizePrivateKey(sa.private_key);
 
-        // Ensure the private key is correctly formatted for Jose
-        let privateKey = serviceAccount.private_key;
-        if (typeof privateKey !== 'string') {
-            throw new Error("Private key is missing from service account");
-        }
+        if (!privateKey) throw new Error("Private key is missing. Check SUPABASE SECRETS for FIREBASE_PRIVATE_KEY.");
 
         const jwt = await new jose.SignJWT({
             scope: 'https://www.googleapis.com/auth/firebase.messaging'
         })
             .setProtectedHeader({ alg: 'RS256' })
-            .setIssuer(serviceAccount.client_email)
-            .setAudience(serviceAccount.token_uri)
+            .setIssuer(sa.client_email)
+            .setAudience(sa.token_uri)
             .setExpirationTime('1h')
             .setIssuedAt()
             .sign(await jose.importPKCS8(privateKey, 'RS256'));
 
-        console.log("JWT signed, requesting access token from:", serviceAccount.token_uri);
-
-        const response = await fetch(serviceAccount.token_uri, {
+        const response = await fetch(sa.token_uri, {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: new URLSearchParams({
@@ -58,151 +67,190 @@ async function getAccessToken() {
 
         const data = await response.json();
         if (!response.ok) {
-            console.error("Google Auth Response Error:", JSON.stringify(data));
-            throw new Error(data.error_description || data.error || "Unknown Auth Error");
+            console.error("[FCM] Google Auth Failed:", data);
+            throw new Error(data.error_description || data.error || "Token fetch failed");
         }
-
         return data.access_token;
-    } catch (error: any) {
-        console.error("Error generating access token:", error.message || error);
-        throw new Error(`Auth Error: ${error.message || error}`);
+    } catch (err: any) {
+        console.error("[FCM] Auth Error:", err.message);
+        throw err;
     }
 }
 
+async function sendToToken(accessToken: string, token: string, payload: any, projectId: string) {
+    const fcmUrl = `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`;
+
+    // Determine click action URL
+    const clickUrl = payload.url?.startsWith('http')
+        ? payload.url
+        : `https://lorean.online${payload.url || '/dashboard'}`;
+
+    const title = payload.title || "Lorean Notification";
+    const body = payload.message || "New activity on your store.";
+
+    const message = {
+        message: {
+            token,
+            notification: { title, body },
+            android: {
+                priority: "high"
+            },
+            webpush: {
+                headers: {
+                    Urgency: "high"
+                },
+                notification: {
+                    icon: "https://lorean.online/favicon.png"
+                },
+                fcm_options: { link: clickUrl }
+            },
+            data: {
+                url: String(clickUrl),
+                ...(payload.data ? Object.fromEntries(
+                    Object.entries(payload.data)
+                        .filter(([_, v]) => v != null)
+                        .map(([k, v]) => [k, String(v)])
+                ) : {})
+            }
+        }
+    };
+
+    const res = await fetch(fcmUrl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`
+        },
+        body: JSON.stringify(message)
+    });
+
+    const data = await res.json();
+    return { success: res.ok, data, token };
+}
+
 serve(async (req) => {
-    if (req.method === 'OPTIONS') {
-        return new Response('ok', { headers: corsHeaders });
-    }
+    // Handle CORS
+    if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
     try {
-        const body = await req.json();
-        console.log("Received notification request body:", JSON.stringify(body));
+        // 1. Get body safely
+        let body;
+        try {
+            body = await req.json();
+        } catch (e) {
+            console.error("[FCM] Invalid JSON body");
+            return new Response(JSON.stringify({ error: "Invalid JSON" }), { status: 400, headers: corsHeaders });
+        }
 
-        // Handle both flexible formats: {type, payload} OR {notification}
-        let type = body.type || 'system';
-        let payload = body.payload || body.notification;
+        const type = body.type || 'system';
+        const payload = body.payload || body.notification;
+
+        console.log(`[FCM] New request: type=${type}`);
 
         if (!payload) {
-            console.error("Missing payload or notification object in request");
-            throw new Error("Missing notification content");
+            console.warn("[FCM] Missing payload");
+            return new Response(JSON.stringify({ error: "Missing payload" }), { status: 400, headers: corsHeaders });
         }
 
-        console.log("Extracted Payload:", JSON.stringify(payload));
+        // 2. Environment Setup (with hardcoded fallbacks to lorean-4b059 if secrets are missing)
+        const FIREBASE_PROJECT_ID = Deno.env.get("FIREBASE_PROJECT_ID") || "lorean-4b059";
+        const FIREBASE_CLIENT_EMAIL = Deno.env.get("FIREBASE_CLIENT_EMAIL") || "firebase-adminsdk-fbsvc@lorean-4b059.iam.gserviceaccount.com";
+        const FIREBASE_PRIVATE_KEY = Deno.env.get("FIREBASE_PRIVATE_KEY");
 
-        // Initialize Supabase Client
-        const supabaseUrl = Deno.env.get("SUPABASE_URL");
-        const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+        const sa = {
+            project_id: FIREBASE_PROJECT_ID,
+            client_email: FIREBASE_CLIENT_EMAIL,
+            private_key: FIREBASE_PRIVATE_KEY,
+            token_uri: "https://oauth2.googleapis.com/token"
+        };
 
-        if (!supabaseUrl || !supabaseKey) {
-            console.error("Missing Supabase environment variables");
-            throw new Error("Server configuration error: Missing Supabase variables");
-        }
+        const supabase = createClient(
+            Deno.env.get("SUPABASE_URL") || "",
+            Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""
+        );
 
-        const supabase = createClient(supabaseUrl, supabaseKey);
+        // 3. Resolve Tokens
+        const tokenSet = new Set<string>();
 
-        let tokens: string[] = [];
-        console.log(`Processing notification type: ${type}`);
+        // If type is for admins, fetch admin tokens
+        const ADMIN_TYPES = ['new_order', 'order', 'system', 'contact', 'refund', 'inventory', 'review', 'vendor'];
+        const isCustomerSpecific = type === 'order' && payload.url === '/dashboard' && payload.user_id;
 
-        if (type === 'new_order' || type === 'order') {
-            // Fetch all admin tokens dynamically
-            const { data: profiles, error } = await supabase
+        if (ADMIN_TYPES.includes(type) && !isCustomerSpecific) {
+            const { data: admins } = await supabase
                 .from('profiles')
-                .select('fcm_token')
-                .eq('role', 'admin');
+                .select('id, fcm_token')
+                .in('role', ['admin', 'super_admin']);
 
-            if (error) {
-                console.error("Error fetching admin profiles:", error);
-                throw error;
+            if (admins) {
+                const adminIds = admins.map(a => a.id);
+                admins.forEach(a => { if (a.fcm_token) tokenSet.add(a.fcm_token); });
+
+                const { data: devices } = await supabase
+                    .from('admin_push_tokens')
+                    .select('fcm_token')
+                    .in('user_id', adminIds);
+
+                if (devices) {
+                    devices.forEach(d => { if (d.fcm_token) tokenSet.add(d.fcm_token); });
+                }
             }
+        }
 
-            if (profiles) {
-                const adminTokens = profiles
-                    .map((p: any) => p.fcm_token)
-                    .filter((t: any) => t);
-                tokens.push(...adminTokens);
-                console.log(`Found ${adminTokens.length} admin tokens`);
+        // Add user-specific token if provided
+        if (payload.user_id) {
+            const { data: userTokens } = await supabase
+                .from('admin_push_tokens')
+                .select('fcm_token')
+                .eq('user_id', payload.user_id);
+
+            if (userTokens && userTokens.length > 0) {
+                userTokens.forEach(t => { if (t.fcm_token) tokenSet.add(t.fcm_token); });
+            } else {
+                const { data: profile } = await supabase.from('profiles').select('fcm_token').eq('id', payload.user_id).maybeSingle();
+                if (profile?.fcm_token) tokenSet.add(profile.fcm_token);
             }
         }
 
-        // If a specific user_id is provided, also send to that user
-        if (payload?.user_id) {
-            const { data: profile } = await supabase
-                .from('profiles')
-                .select('fcm_token')
-                .eq('id', payload.user_id)
-                .single();
-
-            if (profile?.fcm_token && !tokens.includes(profile.fcm_token)) {
-                tokens.push(profile.fcm_token);
-                console.log(`Added specific user token for ID: ${payload.user_id}`);
-            }
-        }
+        const tokens = Array.from(tokenSet).filter(t => t && t.length > 30);
+        console.log(`[FCM] Targets identified: ${tokens.length}`);
 
         if (tokens.length === 0) {
-            console.log("No notification targets (FCM tokens) found.");
-            return new Response(JSON.stringify({ message: "No targets found", success: true }), {
-                headers: { ...corsHeaders, "Content-Type": "application/json" },
-            });
+            console.warn("[FCM] No valid tokens found for this request");
+            return new Response(JSON.stringify({ success: true, message: "No targets" }), { headers: corsHeaders });
         }
 
-        // Get the OAuth2 Access Token
-        console.log("Generating Google OAuth2 Access Token...");
-        const accessToken = await getAccessToken();
-        console.log("Access token generated successfully.");
+        // 4. Send
+        const accessToken = await getAccessToken(sa);
+        const results = await Promise.all(tokens.map(t => sendToToken(accessToken, t, payload, sa.project_id)));
 
-        // Send to FCM v1 API
-        console.log(`Sending notifications to ${tokens.length} devices...`);
-        const results = await Promise.all(tokens.map(async (token) => {
-            try {
-                const fcmUrl = `https://fcm.googleapis.com/v1/projects/${serviceAccount.project_id}/messages:send`;
-                const response = await fetch(fcmUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${accessToken}`
-                    },
-                    body: JSON.stringify({
-                        message: {
-                            token: token,
-                            notification: {
-                                title: payload.title || "Lorean Alchemical Update",
-                                body: payload.message || "New activity manifested on your store."
-                            },
-                            webpush: {
-                                notification: {
-                                    icon: "https://lorean.online/logo.png",
-                                    click_action: payload.url || "https://lorean.online/admin"
-                                },
-                                fcm_options: {
-                                    link: payload.url || "https://lorean.online/admin"
-                                }
-                            },
-                            data: payload.data || {}
-                        }
-                    })
-                });
+        // 5. Cleanup Stale
+        const stale = results.filter(r => !r.success && (r.data?.error?.status === 'UNREGISTERED' || r.data?.error?.status === 'INVALID_ARGUMENT')).map(r => r.token);
+        if (stale.length > 0) {
+            console.log(`[FCM] Cleaning ${stale.length} stale token(s)...`);
+            await supabase.from('admin_push_tokens').delete().in('fcm_token', stale);
+        }
 
-                const responseData = await response.json();
-                if (!response.ok) {
-                    console.error(`FCM Error for token ${token.substring(0, 10)}...:`, JSON.stringify(responseData));
-                }
-                return { token: `${token.substring(0, 5)}...`, ...responseData };
-            } catch (e: any) {
-                console.error(`Fetch exception for token ${token.substring(0, 5)}...:`, e.message);
-                return { error: e.message };
-            }
-        }));
+        const successCount = results.filter(r => r.success).length;
+        const failureCount = results.length - successCount;
+        console.log(`[FCM] Broadcast complete: ${successCount}/${tokens.length} successful`);
 
-        console.log("Notification results:", JSON.stringify(results));
-        return new Response(JSON.stringify({ success: true, results }), {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
+        return new Response(JSON.stringify({
+            success: true,
+            sent: successCount,
+            total: tokens.length,
+            failures: failureCount,
+            details: results.map(r => ({
+                success: r.success,
+                token_end: r.token.slice(-10),
+                error: r.success ? null : r.data
+            }))
+        }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
 
     } catch (err: any) {
-        console.error("Function fatal error:", err.message || err);
-        return new Response(JSON.stringify({ error: err.message || "Internal Server Error" }), {
-            status: 500,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        console.error("[FCM] ERROR:", err.message);
+        return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: corsHeaders });
     }
 });

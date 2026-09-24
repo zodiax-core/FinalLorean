@@ -1,7 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
 import { getMessaging, getToken, onMessage } from "firebase/messaging";
-import { profilesService } from "@/services/supabase";
+import { supabase } from "@/integrations/supabase/client";
 
 const firebaseConfig = {
     apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -27,49 +27,95 @@ try {
 
 export const messaging = messagingInstance;
 
+/**
+ * Registers this device for push notifications and saves the FCM token
+ * to BOTH tables:
+ *  - admin_push_tokens (multi-device: one row per user+token)
+ *  - profiles.fcm_token (legacy fallback)
+ *
+ * Uses UPSERT so re-registering the same device is idempotent.
+ */
 export const requestNotificationPermission = async (userId: string) => {
     try {
+        if (typeof window === 'undefined') return null;
+
+        const currentDomain = window.location.hostname;
+        console.log(`[FCM] Environment Check on ${currentDomain}:`, {
+            userAgent: navigator.userAgent,
+            hasServiceWorker: 'serviceWorker' in navigator,
+            hasPushManager: 'PushManager' in window,
+            hasNotification: 'Notification' in window,
+            permissionState: 'Notification' in window ? Notification.permission : 'n/a'
+        });
+
         if (!('serviceWorker' in navigator)) {
-            throw new Error("Service Workers not supported (try Chrome/Edge)");
+            throw new Error("Service Workers are not supported in this browser realm.");
         }
 
+        if (!('PushManager' in window)) {
+            throw new Error("This browser realm does not support the Ritual of Push.");
+        }
+
+        console.log("[FCM] Requesting permission...");
         const permission = await Notification.requestPermission();
         if (permission !== 'granted') {
-            throw new Error(`Permission ${permission} - Please allow notifications in browser settings`);
+            throw new Error("Notification permission denied. Please allow notifications in your browser settings.");
         }
 
-        let registration = await navigator.serviceWorker.getRegistration();
-        if (!registration) {
-            try {
-                registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-            } catch (e: any) {
-                throw new Error(`SW Register Failed: ${e.message}`);
-            }
+        console.log("[FCM] Registering Service Worker...");
+        await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+        const registration = await navigator.serviceWorker.ready;
+
+        console.log("[FCM] Fetching token with VAPID key...");
+        const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY ||
+            "BJl-tQwVr82P2JDI3oyvlS9SKCEYLqmRpVo-LHVYoOPtwzp-sjPToNQQ1s2Rumi_85k1b4XHfK_XFKzjWH9vOD8";
+
+        const token = await getToken(messaging, {
+            vapidKey,
+            serviceWorkerRegistration: registration
+        });
+
+        if (!token) throw new Error("No registration token available.");
+
+        console.log("[FCM] Token generated successfully.");
+
+        const deviceInfo = `${currentDomain} | ${navigator.userAgent.substring(0, 80)}`;
+
+        const { error: tokenError } = await supabase
+            .from('admin_push_tokens')
+            .upsert(
+                {
+                    user_id: userId,
+                    fcm_token: token,
+                    device_info: deviceInfo,
+                    last_seen_at: new Date().toISOString()
+                },
+                { onConflict: 'user_id,fcm_token' }
+            );
+
+        if (tokenError) {
+            console.error("[FCM] Failed to save to admin_push_tokens:", tokenError);
+        } else {
+            console.log("[FCM] Token upserted into admin_push_tokens.");
         }
 
-        try {
-            const token = await getToken(messaging, {
-                vapidKey: "BJl-tQwVr82P2JDI3oyvlS9SKCEYLqmRpVo-LHVYoOPtwzp-sjPToNQQ1s2Rumi_85k1b4XHfK_XFKzjWH9vOD8",
-                serviceWorkerRegistration: registration
-            });
+        await supabase
+            .from('profiles')
+            .update({
+                fcm_token: token,
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', userId);
 
-            if (!token) throw new Error("No FCM token returned");
-
-            console.log("FCM Token:", token);
-            await profilesService.updateFcmToken(userId, token);
-            return token;
-
-        } catch (e: any) {
-            console.error("Token Error:", e);
-            if (e.message?.includes("registration-token-not-registered") || e.code === "messaging/token-subscribe-failed") {
-                throw new Error("Invalid VAPID Key or Project Config");
-            }
-            throw new Error(`Token Gen Failed: ${e.message || e.code}`);
-        }
-
+        return token;
     } catch (error: any) {
-        console.error("Ritual of Permission Failed:", error);
-        throw error; // Propagate to UI
+        console.error("[FCM] Setup Error on " + window.location.hostname + ":", {
+            message: error.message,
+            code: error.code,
+            stack: error.stack,
+            full: error
+        });
+        throw error;
     }
 };
 

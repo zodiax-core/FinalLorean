@@ -13,6 +13,9 @@ const ProductCard = ({ product, index }: { product: Product; index: number }) =>
   const { addToCart } = useCart();
   const { addToWishlist, isInWishlist } = useWishlist();
   const isWishlisted = isInWishlist(product.id);
+  const isOutOfStock = product.stock !== undefined && product.stock !== null && product.stock <= 0;
+  const isComingSoon = product.tag?.toLowerCase() === "coming soon" || product.tag?.toLowerCase() === "comming soon";
+  const canAddToCart = !isOutOfStock && !isComingSoon;
 
   return (
     <motion.div
@@ -33,12 +36,18 @@ const ProductCard = ({ product, index }: { product: Product; index: number }) =>
             transition={{ duration: 0.6 }}
           />
 
-          {/* Tag */}
-          {product.tag && (
-            <div className="absolute top-4 left-4 px-3 py-1 rounded-full bg-primary/90 backdrop-blur-md text-primary-foreground text-[10px] font-bold uppercase tracking-widest z-10">
-              {product.tag}
-            </div>
-          )}
+          {/* Tag / Status Badge */}
+          <div className="absolute top-4 left-4 flex flex-col gap-1.5 z-10">
+            {isOutOfStock ? (
+              <div className="px-3 py-1 rounded-full bg-rose-500/90 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-widest shadow-md">
+                Out of Stock
+              </div>
+            ) : product.tag ? (
+              <div className="px-3 py-1 rounded-full bg-primary/90 backdrop-blur-md text-primary-foreground text-[10px] font-bold uppercase tracking-widest shadow-md">
+                {product.tag}
+              </div>
+            ) : null}
+          </div>
 
           {/* Quick actions overlay */}
           <motion.div
@@ -60,13 +69,21 @@ const ProductCard = ({ product, index }: { product: Product; index: number }) =>
                 <Heart className={`w-5 h-5 ${isWishlisted ? "fill-current" : ""}`} />
               </motion.button>
               <motion.button
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.95 }}
+                whileHover={canAddToCart ? { scale: 1.1 } : {}}
+                whileTap={canAddToCart ? { scale: 0.95 } : {}}
+                disabled={!canAddToCart}
                 onClick={(e) => {
                   e.stopPropagation();
-                  addToCart(product, 1);
+                  if (canAddToCart) {
+                    addToCart(product, 1);
+                  }
                 }}
-                className="w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg hover:bg-primary/90 transition-colors"
+                title={isComingSoon ? "Coming Soon" : isOutOfStock ? "Out of Stock" : "Add to Cart"}
+                className={`w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-colors ${
+                  !canAddToCart
+                    ? "bg-muted text-muted-foreground opacity-50 cursor-not-allowed"
+                    : "bg-primary text-primary-foreground hover:bg-primary/90"
+                }`}
               >
                 <ShoppingBag className="w-5 h-5" />
               </motion.button>

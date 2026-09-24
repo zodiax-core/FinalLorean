@@ -13,6 +13,24 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+/**
+ * Clears all Supabase auth tokens from localStorage.
+ * Called when a refresh token is found to be invalid/expired.
+ */
+function clearStaleAuthTokens() {
+    try {
+        // Remove the namespaced key we set in client.ts
+        localStorage.removeItem('lorean-auth-token');
+        // Also clear any legacy keys Supabase may have written
+        const keysToRemove = Object.keys(localStorage).filter(
+            k => k.startsWith('sb-') && k.includes('auth-token')
+        );
+        keysToRemove.forEach(k => localStorage.removeItem(k));
+    } catch (_) {
+        // localStorage unavailable — ignore
+    }
+}
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [user, setUser] = useState<User | null>(null);
     const [session, setSession] = useState<Session | null>(null);
@@ -27,37 +45,78 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 .eq('id', userId)
                 .maybeSingle();
 
-            if (data) {
-                setRole(data.role);
-            } else {
-                setRole('customer');
-            }
+            if (error) throw error;
+            setRole(data?.role ?? 'customer');
         } catch (err) {
             console.error("Error fetching profile:", err);
             setRole('customer');
         }
     };
 
+    const signOut = async () => {
+        clearStaleAuthTokens();
+        await supabase.auth.signOut();
+        setUser(null);
+        setSession(null);
+        setRole(null);
+    };
+
     useEffect(() => {
-        // Initial session check
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            setSession(session);
-            setUser(session?.user ?? null);
-            if (session?.user) {
+        // ─── Initial session check ────────────────────────────────────────────
+        supabase.auth.getSession().then(({ data: { session }, error }) => {
+            if (error || !session) {
+                // If there's an error (e.g. invalid token) or no session,
+                // clean up any stale localStorage tokens immediately
+                if (error) {
+                    console.warn("[Auth] Session error on init — clearing stale tokens:", error.message);
+                    clearStaleAuthTokens();
+                }
+                setSession(null);
+                setUser(null);
+                setRole(null);
+            } else {
+                setSession(session);
+                setUser(session.user);
                 fetchProfile(session.user.id);
             }
             setLoading(false);
         });
 
-        // Listen for changes
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        // ─── Auth state listener ──────────────────────────────────────────────
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+            console.log("[Auth] Event:", event);
+
+            if (event === 'SIGNED_OUT') {
+                // Clear any stale tokens on explicit sign-out
+                clearStaleAuthTokens();
+                setSession(null);
+                setUser(null);
+                setRole(null);
+                setLoading(false);
+                return;
+            }
+
+            if (event === 'TOKEN_REFRESHED' && !session) {
+                // Token refresh failed — clear stale tokens and sign the user out
+                console.warn("[Auth] Token refresh failed. Clearing stale session.");
+                clearStaleAuthTokens();
+                supabase.auth.signOut().catch(() => { });
+                setSession(null);
+                setUser(null);
+                setRole(null);
+                setLoading(false);
+                return;
+            }
+
             setSession(session);
             setUser(session?.user ?? null);
+
             if (session?.user) {
                 fetchProfile(session.user.id);
             } else {
                 setRole(null);
             }
+
             setLoading(false);
         });
 
@@ -65,10 +124,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, []);
 
     const isAdmin = role === 'admin' || role === 'super_admin';
-
-    const signOut = async () => {
-        await supabase.auth.signOut();
-    };
 
     return (
         <AuthContext.Provider value={{ user, session, isAdmin, role, loading, signOut }}>
@@ -84,4 +139,3 @@ export const useAuth = () => {
     }
     return context;
 };
-

@@ -6,6 +6,7 @@ interface SEOProps {
     description?: string;
     image?: string;
     article?: boolean;
+    canonicalUrl?: string;
 }
 
 const SEO = ({
@@ -13,18 +14,22 @@ const SEO = ({
     description,
     image,
     article = false,
+    canonicalUrl,
 }: SEOProps) => {
     const { pathname } = useLocation();
-    const siteName = "Lorean | Ancient Herbal Hair Rituals";
-    const defaultDescription = "Lorean - Premium herbal hair oils crafted with ancient Ayurvedic wisdom. Discover our collection for healthy, thick, and radiant hair.";
+    const siteName = "Lórean";
+    const defaultDescription = "Lórean - Premium herbal hair oils crafted with ancient Ayurvedic wisdom. Discover our collection for healthy, thick, and radiant hair.";
     const siteUrl = "https://lorean.online";
     const defaultImage = "/og-image.png";
 
+    // Strip trailing slash to match sitemap format (except for root path)
+    const cleanPathname = pathname === '/' ? pathname : pathname.replace(/\/$/, '');
+
     const seo = {
-        title: title ? `${title} | Lorean` : siteName,
+        title: title ? `${title} | Lórean` : siteName,
         description: description || defaultDescription,
-        image: `${siteUrl}${image || defaultImage}`,
-        url: `${siteUrl}${pathname}`,
+        image: image ? (image.startsWith('http') ? image : `${siteUrl}${image}`) : `${siteUrl}${defaultImage}`,
+        url: canonicalUrl ? `${siteUrl}${canonicalUrl}` : `${siteUrl}${cleanPathname}`,
     };
 
     useEffect(() => {

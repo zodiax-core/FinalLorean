@@ -45,22 +45,43 @@ export default function AdminDashboard() {
     }, []);
 
     const totalRevenue = orders
-        .filter(order => order.status === 'delivered')
+        .filter(order => order.status !== 'cancelled' && order.status !== 'payment_failed')
         .reduce((sum, order) => sum + (Number(order.total_amount) || 0), 0);
+    
+    const totalProfit = orders
+        .filter(order => order.status !== 'cancelled' && order.status !== 'payment_failed')
+        .reduce((sum, order) => sum + (Number(order.total_profit) || 0), 0);
+
     const totalOrders = orders.length;
     const lowStockAlerts = products.filter(p => (p.stock || 0) <= (p.min_stock_level || 5));
     const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+    const profitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
 
-    // Dummy chart data
-    const salesData = [
-        { name: "Mon", revenue: 4000 },
-        { name: "Tue", revenue: 3000 },
-        { name: "Wed", revenue: 2000 },
-        { name: "Thu", revenue: 2780 },
-        { name: "Fri", revenue: 1890 },
-        { name: "Sat", revenue: totalRevenue / 10 },
-        { name: "Sun", revenue: totalRevenue / 5 },
-    ];
+    // Dynamic chart data from actual orders
+    const salesData = (() => {
+        const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+        const now = new Date();
+        const last7Days = Array.from({ length: 7 }, (_, i) => {
+            const d = new Date();
+            d.setDate(now.getDate() - (6 - i));
+            return {
+                name: days[d.getDay()],
+                dateStr: d.toISOString().split('T')[0],
+                revenue: 0
+            };
+        });
+
+        orders.forEach(order => {
+            const orderDate = new Date(order.created_at).toISOString().split('T')[0];
+            const dayMatch = last7Days.find(d => d.dateStr === orderDate);
+            const isRevenue = order.status !== 'cancelled' && order.status !== 'payment_failed';
+            if (dayMatch && isRevenue) {
+                dayMatch.revenue += (Number(order.total_amount) || 0);
+            }
+        });
+
+        return last7Days;
+    })();
 
     if (loading) {
         return (
@@ -128,18 +149,18 @@ export default function AdminDashboard() {
                 </Card>
                 <Card className="glass border-border/10 shadow-sm overflow-hidden group">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Avg Order Value</CardTitle>
-                        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                            <Activity className="h-4 w-4 text-primary" />
+                        <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Est. Total Profit</CardTitle>
+                        <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                            <TrendingUp className="h-4 w-4 text-emerald-500" />
                         </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-3xl font-serif font-black">Rs. {Math.round(avgOrderValue)}</div>
+                        <div className="text-3xl font-serif font-black text-emerald-600">Rs. {totalProfit.toLocaleString()}</div>
                         <p className="text-[10px] text-muted-foreground flex items-center mt-2 font-bold uppercase tracking-widest">
                             <span className="text-emerald-500 flex items-center mr-1">
-                                Optimization <TrendingUp className="h-3 w-3 ml-1" />
+                                {profitMargin.toFixed(1)}% Margin <ArrowUpRight className="h-3 w-3" />
                             </span>
-                            Target: Rs. 40,000
+                            Net Profit
                         </p>
                     </CardContent>
                 </Card>

@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
     ChevronRight, ArrowLeft, ShieldCheck, CreditCard,
     Truck, Gift, BadgeCheck, Plus, Minus, Trash2,
-    Wallet, Banknote, ShoppingBag, Lock, Loader2, Sparkles, CheckCircle2
+    Wallet, Banknote, ShoppingBag, Lock, Loader2, Sparkles, CheckCircle2,
+    Check, ChevronsUpDown
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -15,9 +16,36 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import { ordersService, settingsService, discountsService, notificationService } from "@/services/supabase";
+import {
+    ordersService,
+    settingsService,
+    discountsService,
+    taxService,
+    shippingService
+} from "@/services/supabase";
 import { supabase } from "@/integrations/supabase/client";
 import { useCart } from "@/context/CartContext";
+import { emailService } from "@/services/email";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import { cn } from "@/lib/utils";
+import {
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+} from "@/components/ui/command";
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover";
 
 const Checkout = () => {
     const navigate = useNavigate();
@@ -34,34 +62,77 @@ const Checkout = () => {
     const [shippingRates, setShippingRates] = useState({ flat_rate: 15, threshold: 150 });
     const [appliedDiscount, setAppliedDiscount] = useState<any>(null);
     const [isApplyingPromo, setIsApplyingPromo] = useState(false);
+    const [taxData, setTaxData] = useState({ amount: 0, name: "Tax", breakdown: [] });
+    const [isCalculatingTax, setIsCalculatingTax] = useState(false);
+    const [isSuccess, setIsSuccess] = useState(false);
 
-    // Form states
     const [formData, setFormData] = useState({
+        email: "",
         firstName: "",
         lastName: "",
-        email: "",
         address: "",
         city: "",
         state: "",
         postalCode: "",
+        country: "PK", // Changed default to PK
         receiverName: "",
         receiverPhone: "",
         nearestFamousPlace: ""
     });
 
+    const [allRegionalRates, setAllRegionalRates] = useState<any[]>([]);
+    const [availableStates, setAvailableStates] = useState<string[]>([]);
+    const [availableCities, setAvailableCities] = useState<string[]>([]);
+    const [stateOpen, setStateOpen] = useState(false);
+    const [cityOpen, setCityOpen] = useState(false);
+    const [formErrors, setFormErrors] = useState<Record<string, boolean>>({});
+
     useEffect(() => {
         const setupCheckout = async () => {
+            setLoading(true);
             try {
                 const { data: { user } } = await supabase.auth.getUser();
                 if (user) {
-                    setFormData(prev => ({ ...prev, email: user.email || "" }));
+                    const { data: profile } = await supabase
+                        .from('profiles')
+                        .select('*')
+                        .eq('id', user.id)
+                        .single();
+
+                    if (profile) {
+                        setFormData(prev => ({
+                            ...prev,
+                            email: profile.email || user.email || "",
+                            firstName: profile.full_name?.split(" ")[0] || "",
+                            lastName: profile.full_name?.split(" ").slice(1).join(" ") || "",
+                            address: profile.address || "",
+                            city: profile.city || "",
+                            state: profile.state || "",
+                            postalCode: profile.postal_code || "",
+                            country: "PK", // Hardcoded to Pakistan
+                            receiverName: profile.receiver_name || profile.full_name || "",
+                            receiverPhone: profile.receiver_phone || ""
+                        }));
+                    } else {
+                        setFormData(prev => ({ ...prev, email: user.email || "", country: "PK" }));
+                    }
+                } else {
+                    setFormData(prev => ({ ...prev, country: "PK" }));
                 }
 
-                const rates = await settingsService.getShipping();
+                const [rates, regionalData] = await Promise.all([
+                    settingsService.getShipping(),
+                    shippingService.getAllRates()
+                ]);
+
                 setShippingRates({
                     flat_rate: Number(rates.flat_rate),
                     threshold: Number(rates.threshold)
                 });
+                setAllRegionalRates(regionalData);
+                const states = Array.from(new Set(regionalData.map(r => r.state)));
+                setAvailableStates(states);
+
             } catch (error) {
                 console.error("Auth error:", error);
             } finally {
@@ -71,8 +142,96 @@ const Checkout = () => {
         setupCheckout();
     }, []);
 
+    useEffect(() => {
+        if (formData.state) {
+            const cities = allRegionalRates
+                .filter(r => r.state === formData.state && r.city)
+                .map(r => r.city);
+            
+            // Add state-wide option if rate exists
+            const hasStateRate = allRegionalRates.some(r => r.state === formData.state && r.city === null);
+            if (hasStateRate) {
+                cities.push("Standard Delivery (State-wide)");
+            }
+            
+            setAvailableCities(cities);
+        } else {
+            setAvailableCities([]);
+        }
+    }, [formData.state, allRegionalRates]);
+
+    const [isCalculatingShipping, setIsCalculatingShipping] = useState(false);
+
+    useEffect(() => {
+        const updateShippingRate = async () => {
+            if (formData.country !== "PK") {
+                const rates = await settingsService.getShipping();
+                setShippingRates({
+                    flat_rate: Number(rates.flat_rate),
+                    threshold: Number(rates.threshold)
+                });
+                return;
+            }
+
+            setIsCalculatingShipping(true);
+            try {
+                const rate = await shippingService.getRateByLocation(formData.state, formData.city);
+                if (rate) {
+                    setShippingRates(prev => ({
+                        ...prev,
+                        flat_rate: Number(rate.charge),
+                        // If it's a regional rate, the global threshold shouldn't override it 
+                        // unless the admin specifically marked this regional rate as free.
+                        // We use a massive threshold to ensure the charge is applied if not marked free.
+                        threshold: rate.is_free ? 0 : 999999999 
+                    }));
+                } else {
+                    const globalSettings = await settingsService.getShipping();
+                    setShippingRates({
+                        flat_rate: Number(globalSettings.flat_rate),
+                        threshold: Number(globalSettings.threshold)
+                    });
+                }
+            } catch (error) {
+                console.error("Shipping fetch error:", error);
+            } finally {
+                setIsCalculatingShipping(false);
+            }
+        };
+
+        updateShippingRate();
+    }, [formData.city, formData.state, formData.country]);
+
     const shipping = useMemo(() => (subtotal > shippingRates.threshold ? 0 : shippingRates.flat_rate), [subtotal, shippingRates]);
-    const tax = useMemo(() => subtotal * 0.08, [subtotal]);
+
+    useEffect(() => {
+        const calculateTaxes = async () => {
+            if (subtotal <= 0) {
+                setTaxData({ amount: 0, name: "Tax", breakdown: [] });
+                return;
+            }
+
+            setIsCalculatingTax(true);
+            try {
+                const result = await taxService.calculateTax(subtotal, formData.country);
+                setTaxData({
+                    amount: result.taxAmount,
+                    name: result.taxName,
+                    breakdown: result.breakdown
+                });
+            } catch (error) {
+                console.error("Tax calculation error:", error);
+                // Fallback to 0 if tax calculation fails
+                setTaxData({ amount: 0, name: "Tax", breakdown: [] });
+            } finally {
+                setIsCalculatingTax(false);
+            }
+        };
+
+        calculateTaxes();
+    }, [subtotal, formData.country]);
+
+    const tax = taxData.amount;
 
     const discountAmount = useMemo(() => {
         if (!appliedDiscount) return 0;
@@ -85,6 +244,36 @@ const Checkout = () => {
 
     const giftWrapCost = useMemo(() => (includeGiftWrap ? 5 : 0), [includeGiftWrap]);
     const total = useMemo(() => subtotal + shipping + tax - discountAmount + giftWrapCost, [subtotal, shipping, tax, discountAmount, giftWrapCost]);
+
+    const validateStep1 = () => {
+        const required = ['firstName', 'lastName', 'email', 'address', 'city', 'state', 'country', 'receiverName', 'receiverPhone'];
+        const newErrors: Record<string, boolean> = {};
+        let isValid = true;
+
+        for (const field of required) {
+            if (!formData[field as keyof typeof formData]) {
+                newErrors[field] = true;
+                isValid = false;
+            }
+        }
+
+        if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+            newErrors['email'] = true;
+            isValid = false;
+        }
+
+        setFormErrors(newErrors);
+
+        if (!isValid) {
+            toast({
+                variant: "destructive",
+                title: "Incomplete Details",
+                description: "Please fulfill the highlighted fields to proceed."
+            });
+        }
+
+        return isValid;
+    };
 
     const handleApplyPromo = async () => {
         if (!promoCode.trim()) return;
@@ -150,9 +339,11 @@ const Checkout = () => {
                 subtotal_amount: subtotal,
                 shipping_amount: shipping,
                 tax_amount: tax,
+                tax_breakdown: taxData.breakdown,
                 discount_amount: discountAmount,
                 discount_code: appliedDiscount?.code || null,
                 total_amount: total,
+                country: formData.country,
                 status: 'pending', // All orders start as pending for manifest verification
                 payment_method: paymentMethod,
                 items: cartItems.map(item => ({
@@ -160,8 +351,10 @@ const Checkout = () => {
                     name: item.name,
                     price: item.price,
                     quantity: item.quantity,
-                    image: item.image
-                }))
+                    image: item.image,
+                    cost_price: item.cost_price || 0
+                })),
+                total_cost: cartItems.reduce((sum, item) => sum + ((item.cost_price || 0) * item.quantity), 0)
             };
 
             const newOrder = await ordersService.create(orderPayload);
@@ -174,35 +367,40 @@ const Checkout = () => {
                 }
             }
 
-            // Create Push Notification for Admin via Edge Function
+            // Database triggers on order creation will handle:
+            // 1. Stock updates
+            // 2. Creating a notification record
+            // 3. Triggering FCM push notification via handle_new_notification()
+
+
+            // Send Confirmation Email
             try {
-                // Trigger Edge Function for FCM
-                await supabase.functions.invoke('push-notifications', {
-                    body: {
-                        type: 'new_order',
-                        payload: {
-                            title: "New Order Alert",
-                            message: `Order #${newOrder?.id?.slice(0, 8)} - Rs. ${total.toFixed(0)}`,
-                            url: "/admin/orders"
-                        }
-                    }
-                });
-            } catch (notifyError) {
-                console.warn("Notification triggers completed with warnings:", notifyError);
+                await emailService.sendOrderConfirmation(newOrder);
+            } catch (emailError) {
+                console.error("Confirmation email failed:", emailError);
             }
 
+            setIsSuccess(true);
+            
+            // Navigate immediately to success page
+            navigate("/order-success", { 
+                state: { order: newOrder },
+                replace: true 
+            });
+
+            // Clean cart after initiating navigation
             clearCart();
 
             toast({
                 title: "Order Placed Successfully!",
                 description: "Your order is confirmed. A confirmation email will be sent shortly.",
             });
-
-            setTimeout(() => navigate("/order-success", { state: { order: newOrder } }), 1500);
         } catch (error: any) {
             console.error("Order error:", error);
             toast({ variant: "destructive", title: "Order Failed", description: error?.message || "An error occurred while placing your order. Please try again." });
         } finally {
+            // We don't setSubmitting(false) here if we've already navigated away
+            // but for safety in case of error:
             setSubmitting(false);
         }
     };
@@ -216,15 +414,15 @@ const Checkout = () => {
         );
     }
 
-    if (cartItems.length === 0 && !submitting) {
+    if (cartItems.length === 0 && !submitting && !isSuccess) {
         return (
             <div className="min-h-screen bg-background text-center py-40 px-4">
                 <Navbar />
-                <div className="max-w-md mx-auto glass p-12 rounded-[3rem] border-border/30">
+                <div className="max-w-md mx-auto glass p-10 rounded-[3rem] border-border/30">
                     <ShoppingBag className="w-16 h-16 mx-auto mb-8 text-muted-foreground/30" />
                     <h2 className="text-3xl font-serif mb-6">Your Cart is Empty</h2>
                     <p className="text-muted-foreground mb-10 font-light">You haven't added any items yet.</p>
-                    <Button onClick={() => navigate('/shop')} className="w-full h-14 rounded-full text-lg shadow-xl shadow-primary/20">Back to Shop</Button>
+                    <Button onClick={() => navigate('/shop')} className="w-full h-12 rounded-full text-lg shadow-xl shadow-primary/20">Back to Shop</Button>
                 </div>
                 <Footer />
             </div>
@@ -265,113 +463,222 @@ const Checkout = () => {
                                     exit={{ opacity: 0, x: 25 }}
                                     className="space-y-8"
                                 >
-                                    <div className="glass p-10 rounded-[3rem] border-border/20 shadow-xl">
-                                        <div className="flex items-center gap-4 mb-10">
-                                            <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
-                                                <Truck className="w-7 h-7 text-primary" />
+                                    <div className="glass p-8 rounded-[2.5rem] border-border/20 shadow-xl">
+                                        <div className="flex items-center gap-4 mb-8">
+                                            <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
+                                                <Truck className="w-6 h-6 text-primary" />
                                             </div>
-                                            <h2 className="text-3xl font-serif tracking-tight">Shipping <span className="text-primary italic">Intelligence</span></h2>
+                                            <h2 className="text-2xl font-serif tracking-tight">Shipping <span className="text-primary italic">Details</span></h2>
                                         </div>
 
-                                        <div className="grid grid-cols-2 gap-6 mb-6">
-                                            <div className="space-y-2">
-                                                <Label className="text-[10px] font-black uppercase tracking-widest ml-1">First Identity</Label>
+                                        <div className="grid grid-cols-2 gap-4 mb-4">
+                                            <div className="space-y-1.5">
+                                                <Label className="text-[9px] font-black uppercase tracking-widest ml-1">First Name</Label>
                                                 <Input
                                                     value={formData.firstName}
                                                     onChange={e => setFormData({ ...formData, firstName: e.target.value })}
-                                                    placeholder="Jane"
-                                                    className="rounded-2xl h-14 bg-muted/30 border-none px-6 focus-visible:bg-background transition-all"
+                                                    placeholder="First Name"
+                                                    className={cn(
+                                                        "rounded-xl h-11 bg-muted/30 border-none px-5 focus-visible:bg-background transition-all",
+                                                        formErrors.firstName && "border-b-2 border-destructive"
+                                                    )}
                                                 />
                                             </div>
-                                            <div className="space-y-2">
-                                                <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Last Identity</Label>
+                                            <div className="space-y-1.5">
+                                                <Label className="text-[9px] font-black uppercase tracking-widest ml-1">Last Name</Label>
                                                 <Input
                                                     value={formData.lastName}
                                                     onChange={e => setFormData({ ...formData, lastName: e.target.value })}
-                                                    placeholder="Doe"
-                                                    className="rounded-2xl h-14 bg-muted/30 border-none px-6 focus-visible:bg-background transition-all"
+                                                    placeholder="Last Name"
+                                                    className={cn(
+                                                        "rounded-xl h-11 bg-muted/30 border-none px-5 focus-visible:bg-background transition-all",
+                                                        formErrors.lastName && "border-b-2 border-destructive"
+                                                    )}
                                                 />
                                             </div>
                                         </div>
-                                        <div className="space-y-2 mb-6">
-                                            <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Communication Email</Label>
+                                        <div className="space-y-1.5 mb-4">
+                                            <Label className="text-[9px] font-black uppercase tracking-widest ml-1">Email Address</Label>
                                             <Input
                                                 value={formData.email}
                                                 onChange={e => setFormData({ ...formData, email: e.target.value })}
-                                                placeholder="jane@lorean.com"
-                                                className="rounded-2xl h-14 bg-muted/30 border-none px-6 focus-visible:bg-background transition-all"
+                                                placeholder="Email Address"
+                                                className={cn(
+                                                    "rounded-xl h-11 bg-muted/30 border-none px-5 focus-visible:bg-background transition-all",
+                                                    formErrors.email && "border-b-2 border-destructive"
+                                                )}
                                             />
                                         </div>
-                                        <div className="space-y-2 mb-6">
-                                            <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Physical Location</Label>
+                                        <div className="space-y-1.5 mb-4">
+                                            <Label className="text-[9px] font-black uppercase tracking-widest ml-1">Shipping Address</Label>
                                             <Input
                                                 value={formData.address}
                                                 onChange={e => setFormData({ ...formData, address: e.target.value })}
-                                                placeholder="123 Luxury Avenue"
-                                                className="rounded-2xl h-14 bg-muted/30 border-none px-6 focus-visible:bg-background transition-all"
+                                                placeholder="Shipping Address"
+                                                className={cn(
+                                                    "rounded-xl h-11 bg-muted/30 border-none px-5 focus-visible:bg-background transition-all",
+                                                    formErrors.address && "border-b-2 border-destructive"
+                                                )}
                                             />
                                         </div>
-                                        <div className="space-y-2 mb-6">
-                                            <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Nearest Famous Place (Landmark)</Label>
+                                        <div className="space-y-2">
+                                            <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Famous Nearest Place (Optional)</Label>
                                             <Input
                                                 value={formData.nearestFamousPlace}
                                                 onChange={e => setFormData({ ...formData, nearestFamousPlace: e.target.value })}
-                                                placeholder="Near Eiffel Tower"
-                                                className="rounded-2xl h-14 bg-muted/30 border-none px-6 focus-visible:bg-background transition-all"
+                                                placeholder="e.g. Near main gate, bridge etc. (Optional)"
+                                                className="rounded-xl h-11 bg-muted/30 border-none px-5 focus-visible:bg-background transition-all"
                                             />
                                         </div>
-                                        <div className="grid grid-cols-2 gap-6 mb-6">
-                                            <div className="space-y-2">
-                                                <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Receiver's Name</Label>
+                                        <div className="grid grid-cols-2 gap-4 mb-4">
+                                            <div className="space-y-1.5">
+                                                <Label className="text-[9px] font-black uppercase tracking-widest ml-1">Receiver's Name</Label>
                                                 <Input
                                                     value={formData.receiverName}
                                                     onChange={e => setFormData({ ...formData, receiverName: e.target.value })}
                                                     placeholder="Receiver Name"
-                                                    className="rounded-2xl h-14 bg-muted/30 border-none px-6 focus-visible:bg-background transition-all"
+                                                    className={cn(
+                                                        "rounded-xl h-11 bg-muted/30 border-none px-5 focus-visible:bg-background transition-all",
+                                                        formErrors.receiverName && "border-b-2 border-destructive"
+                                                    )}
                                                 />
                                             </div>
-                                            <div className="space-y-2">
-                                                <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Phone Number</Label>
+                                            <div className="space-y-1.5">
+                                                <Label className="text-[9px] font-black uppercase tracking-widest ml-1">Phone Number</Label>
                                                 <Input
                                                     value={formData.receiverPhone}
                                                     onChange={e => setFormData({ ...formData, receiverPhone: e.target.value })}
-                                                    placeholder="+1 234 567 890"
-                                                    className="rounded-2xl h-14 bg-muted/30 border-none px-6 focus-visible:bg-background transition-all"
+                                                    placeholder="03xx xxxxxxxx"
+                                                    className={cn(
+                                                        "rounded-xl h-11 bg-muted/30 border-none px-5 focus-visible:bg-background transition-all",
+                                                        formErrors.receiverPhone && "border-b-2 border-destructive"
+                                                    )}
                                                 />
                                             </div>
                                         </div>
-                                        <div className="grid grid-cols-3 gap-6">
-                                            <div className="space-y-2">
-                                                <Label className="text-[10px] font-black uppercase tracking-widest ml-1">City</Label>
-                                                <Input
-                                                    value={formData.city}
-                                                    onChange={e => setFormData({ ...formData, city: e.target.value })}
-                                                    placeholder="Paris"
-                                                    className="rounded-2xl h-14 bg-muted/30 border-none px-6 focus-visible:bg-background transition-all"
-                                                />
+
+                                        <div className="grid grid-cols-2 gap-4 mb-4">
+                                            <div className="space-y-1.5 font-sans">
+                                                <Label className="text-[9px] font-black uppercase tracking-widest ml-1 text-primary">State / Province</Label>
+                                                <Popover open={stateOpen} onOpenChange={setStateOpen} modal={true}>
+                                                    <PopoverTrigger asChild>
+                                                        <Button
+                                                            variant="outline"
+                                                            role="combobox"
+                                                            aria-expanded={stateOpen}
+                                                            className={cn(
+                                                                "w-full rounded-xl h-11 bg-muted/30 border-none px-5 justify-between font-normal hover:bg-muted/40 transition-all text-sm",
+                                                                formErrors.state && "border-b-2 border-destructive"
+                                                            )}
+                                                        >
+                                                            {formData.state || "Select State"}
+                                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                        </Button>
+                                                    </PopoverTrigger>
+                                                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0 rounded-2xl border-border/10 shadow-2xl glass" align="start">
+                                                        <Command className="bg-transparent">
+                                                            <CommandInput placeholder="Search state..." className="h-10 border-none focus:ring-0" />
+                                                            <CommandEmpty>No state found.</CommandEmpty>
+                                                            <CommandGroup 
+                                                                className="max-h-[300px] overflow-y-auto scrollbar-hide p-2"
+                                                                onWheel={(e) => e.stopPropagation()}
+                                                            >
+                                                                {availableStates.map((state) => (
+                                                                    <CommandItem
+                                                                        key={state}
+                                                                        value={state}
+                                                                        onSelect={(currentValue) => {
+                                                                            setFormData({ ...formData, state: state, city: "" });
+                                                                            setStateOpen(false);
+                                                                        }}
+                                                                        className="rounded-xl cursor-pointer p-3 aria-selected:bg-primary/10 aria-selected:text-primary"
+                                                                    >
+                                                                        <Check
+                                                                            className={cn(
+                                                                                "mr-2 h-4 w-4",
+                                                                                formData.state === state ? "opacity-100" : "opacity-0"
+                                                                            )}
+                                                                        />
+                                                                        {state}
+                                                                    </CommandItem>
+                                                                ))}
+                                                            </CommandGroup>
+                                                        </Command>
+                                                    </PopoverContent>
+                                                </Popover>
+                                            </div>
+
+                                            <div className="space-y-1.5 font-sans">
+                                                <Label className="text-[9px] font-black uppercase tracking-widest ml-1 opacity-50">Region</Label>
+                                                <div className="h-11 px-5 flex items-center bg-muted/10 rounded-xl text-xs font-bold text-muted-foreground/80 cursor-not-allowed">
+                                                    Pakistan
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-4 mb-4">
+                                            <div className="space-y-1.5 font-sans">
+                                                <Label className="text-[9px] font-black uppercase tracking-widest ml-1 text-primary">City</Label>
+                                                <Popover open={cityOpen} onOpenChange={setCityOpen} modal={true}>
+                                                    <PopoverTrigger asChild disabled={!formData.state}>
+                                                        <Button
+                                                            variant="outline"
+                                                            role="combobox"
+                                                            aria-expanded={cityOpen}
+                                                            className={cn(
+                                                                "w-full rounded-xl h-11 bg-muted/30 border-none px-5 justify-between font-normal hover:bg-muted/40 transition-all text-sm disabled:opacity-50",
+                                                                formErrors.city && "border-b-2 border-destructive"
+                                                            )}
+                                                        >
+                                                            {formData.city || (formData.state ? "Select City" : "Select state first")}
+                                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                        </Button>
+                                                    </PopoverTrigger>
+                                                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0 rounded-2xl border-border/10 shadow-2xl glass" align="start">
+                                                        <Command className="bg-transparent">
+                                                            <CommandInput placeholder="Search city..." className="h-10 border-none focus:ring-0" />
+                                                            <CommandEmpty>No city found.</CommandEmpty>
+                                                            <CommandGroup 
+                                                                className="max-h-[300px] overflow-y-auto scrollbar-hide p-2"
+                                                                onWheel={(e) => e.stopPropagation()}
+                                                            >
+                                                                {availableCities.map((city) => (
+                                                                    <CommandItem
+                                                                        key={city}
+                                                                        value={city}
+                                                                        onSelect={(currentValue) => {
+                                                                            setFormData({ ...formData, city: city });
+                                                                            setCityOpen(false);
+                                                                        }}
+                                                                        className="rounded-xl cursor-pointer p-3 aria-selected:bg-primary/10 aria-selected:text-primary"
+                                                                    >
+                                                                        <Check
+                                                                            className={cn(
+                                                                                "mr-2 h-4 w-4",
+                                                                                formData.city === city ? "opacity-100" : "opacity-0"
+                                                                            )}
+                                                                        />
+                                                                        {city}
+                                                                    </CommandItem>
+                                                                ))}
+                                                            </CommandGroup>
+                                                        </Command>
+                                                    </PopoverContent>
+                                                </Popover>
                                             </div>
                                             <div className="space-y-2">
-                                                <Label className="text-[10px] font-black uppercase tracking-widest ml-1">State</Label>
-                                                <Input
-                                                    value={formData.state}
-                                                    onChange={e => setFormData({ ...formData, state: e.target.value })}
-                                                    placeholder="ILE"
-                                                    className="rounded-2xl h-14 bg-muted/30 border-none px-6 focus-visible:bg-background transition-all"
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Postal</Label>
+                                                <Label className="text-[9px] font-black uppercase tracking-widest ml-1">Postal Code (Optional)</Label>
                                                 <Input
                                                     value={formData.postalCode}
                                                     onChange={e => setFormData({ ...formData, postalCode: e.target.value })}
-                                                    placeholder="75001"
-                                                    className="rounded-2xl h-14 bg-muted/30 border-none px-6 focus-visible:bg-background transition-all"
+                                                    placeholder="Postal Code (Optional)"
+                                                    className="rounded-xl h-11 bg-muted/30 border-none px-5 focus-visible:bg-background transition-all"
                                                 />
                                             </div>
                                         </div>
                                     </div>
-                                    <Button onClick={() => setStep(2)} className="h-16 w-full rounded-full text-lg font-black uppercase tracking-widest shadow-2xl shadow-primary/30 group">
-                                        Next Phase <ChevronRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                                    <Button onClick={() => validateStep1() && setStep(2)} className="h-14 w-full rounded-xl text-md font-black uppercase tracking-widest shadow-2xl shadow-primary/30 group">
+                                        Next Step <ChevronRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
                                     </Button>
                                 </motion.div>
                             )}
@@ -384,27 +691,27 @@ const Checkout = () => {
                                     exit={{ opacity: 0, x: 25 }}
                                     className="space-y-8"
                                 >
-                                    <div className="glass p-10 rounded-[3rem] border-border/20 shadow-xl">
-                                        <div className="flex items-center gap-4 mb-10">
-                                            <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
-                                                <Lock className="w-7 h-7 text-primary" />
+                                    <div className="glass p-8 rounded-[2.5rem] border-border/20 shadow-xl">
+                                        <div className="flex items-center gap-4 mb-8">
+                                            <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
+                                                <Lock className="w-6 h-6 text-primary" />
                                             </div>
-                                            <h2 className="text-3xl font-serif tracking-tight">Secure <span className="text-primary italic">Investment</span></h2>
+                                            <h2 className="text-2xl font-serif tracking-tight">Payment <span className="text-primary italic">Method</span></h2>
                                         </div>
 
-                                        <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="space-y-6">
-                                            <Label className={`flex items-center gap-6 p-8 rounded-[2rem] border-2 transition-all duration-500 cursor-pointer ${paymentMethod === 'cod' ? 'border-primary bg-primary/5' : 'border-border'}`}>
+                                        <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="space-y-4">
+                                            <Label className={`flex items-center gap-4 p-6 rounded-[1.5rem] border-2 transition-all duration-500 cursor-pointer ${paymentMethod === 'cod' ? 'border-primary bg-primary/5' : 'border-border'}`}>
                                                 <RadioGroupItem value="cod" />
-                                                <Banknote className="w-6 h-6 text-muted-foreground" />
-                                                <div className="flex-1 font-serif text-2xl">Cash on Delivery (COD)</div>
+                                                <Banknote className="w-5 h-5 text-muted-foreground" />
+                                                <div className="flex-1 font-serif text-xl">Cash on Delivery (COD)</div>
                                             </Label>
                                         </RadioGroup>
                                     </div>
                                     <div className="flex gap-4">
-                                        <Button variant="outline" onClick={() => setStep(1)} className="h-16 px-10 rounded-full border-2">
+                                        <Button variant="outline" onClick={() => setStep(1)} className="h-14 px-8 rounded-xl border-2">
                                             <ArrowLeft className="w-5 h-5 mr-3" /> Back
                                         </Button>
-                                        <Button onClick={() => setStep(3)} className="h-16 flex-1 rounded-full text-lg font-black uppercase tracking-widest shadow-2xl shadow-primary/30">
+                                        <Button onClick={() => setStep(3)} className="h-14 flex-1 rounded-xl text-md font-black uppercase tracking-widest shadow-2xl shadow-primary/30">
                                             Final Review
                                         </Button>
                                     </div>
@@ -419,15 +726,15 @@ const Checkout = () => {
                                     exit={{ opacity: 0, x: 25 }}
                                     className="space-y-8"
                                 >
-                                    <div className="glass p-10 rounded-[3rem] border-border/20 shadow-xl overflow-hidden relative">
+                                    <div className="glass p-8 rounded-[2.5rem] border-border/20 shadow-xl overflow-hidden relative">
                                         <div className="absolute top-0 right-0 p-8 opacity-5">
-                                            <ShoppingBag className="w-32 h-32 -rotate-12" />
+                                            <ShoppingBag className="w-24 h-24 -rotate-12" />
                                         </div>
-                                        <div className="flex items-center gap-4 mb-10 relative z-10">
-                                            <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
-                                                <Sparkles className="w-7 h-7 text-primary" />
+                                        <div className="flex items-center gap-4 mb-8 relative z-10">
+                                            <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
+                                                <Sparkles className="w-6 h-6 text-primary" />
                                             </div>
-                                            <h2 className="text-3xl font-serif tracking-tight">Final <span className="text-primary italic">Authentication</span></h2>
+                                            <h2 className="text-2xl font-serif tracking-tight">Order <span className="text-primary italic">Review</span></h2>
                                         </div>
 
                                         <div className="space-y-4 max-h-[400px] overflow-y-auto pr-4 custom-scrollbar">
@@ -452,13 +759,13 @@ const Checkout = () => {
                                     </div>
 
                                     <div className="flex gap-4">
-                                        <Button variant="outline" onClick={() => setStep(2)} className="h-16 px-10 rounded-full border-2">
+                                        <Button variant="outline" onClick={() => setStep(2)} className="h-14 px-8 rounded-xl border-2">
                                             <ArrowLeft className="w-5 h-5 mr-3" /> Back
                                         </Button>
                                         <Button
                                             disabled={submitting}
                                             onClick={handlePlaceOrder}
-                                            className="h-16 flex-1 rounded-full text-lg font-black uppercase tracking-widest shadow-2xl shadow-primary/30 bg-primary"
+                                            className="h-14 flex-1 rounded-xl text-md font-black uppercase tracking-widest shadow-2xl shadow-primary/30 bg-primary"
                                         >
                                             {submitting ? <Loader2 className="w-6 h-6 animate-spin mr-3" /> : <Lock className="w-5 h-5 mr-3" />}
                                             {submitting ? "Processing..." : `Complete - Rs. ${total.toFixed(0)}`}
@@ -472,53 +779,65 @@ const Checkout = () => {
                     {/* Right Column: Dynamic Summary */}
                     <div className="w-full lg:w-[450px]">
                         <div className="sticky top-32 space-y-8">
-                            <div className="glass p-10 rounded-[3rem] border-border/20 shadow-2xl relative overflow-hidden">
+                            <div className="glass p-8 rounded-[2.5rem] border-border/20 shadow-2xl relative overflow-hidden">
                                 <div className="absolute -top-10 -right-10 w-40 h-40 bg-primary/5 rounded-full blur-3xl" />
-                                <h3 className="text-2xl font-serif mb-10 tracking-tight">Order <span className="text-primary italic text-balance">Summary</span></h3>
+                                <h3 className="text-xl font-serif mb-8 tracking-tight">Order <span className="text-primary italic text-balance">Summary</span></h3>
 
-                                <div className="space-y-6 mb-10">
-                                    <div className="flex justify-between text-muted-foreground font-medium text-sm">
+                                <div className="space-y-4 mb-8">
+                                    <div className="flex justify-between text-muted-foreground font-medium text-xs">
                                         <span>Subtotal</span>
                                         <span className="text-foreground">Rs. {subtotal.toFixed(0)}</span>
                                     </div>
-                                    <div className="flex justify-between text-muted-foreground font-medium text-sm">
+                                    <div className="flex justify-between text-muted-foreground font-medium text-xs">
                                         <span>Shipping</span>
-                                        <span className={shipping === 0 ? "text-primary font-bold" : "text-foreground"}>{shipping === 0 ? "Complimentary" : `Rs. ${shipping.toFixed(0)}`}</span>
+                                        <span className={shipping === 0 ? "text-primary font-bold" : "text-foreground"}>
+                                            {isCalculatingShipping ? (
+                                                <Loader2 className="w-3 h-3 animate-spin border-none" />
+                                            ) : (
+                                                shipping === 0 ? "Free Shipping" : `Rs. ${shipping.toFixed(0)}`
+                                            )}
+                                        </span>
                                     </div>
-                                    <div className="flex justify-between text-muted-foreground font-medium text-sm">
-                                        <span>Tax (8%)</span>
-                                        <span className="text-foreground">Rs. {tax.toFixed(0)}</span>
+                                    <div className="flex justify-between text-muted-foreground font-medium text-xs">
+                                        <span>{taxData.name || "Tax"}</span>
+                                        <span className="text-foreground">
+                                            {isCalculatingTax ? (
+                                                <Loader2 className="w-3 h-3 animate-spin border-none" />
+                                            ) : (
+                                                `Rs. ${tax.toFixed(0)}`
+                                            )}
+                                        </span>
                                     </div>
                                     {isPromoApplied && appliedDiscount && (
-                                        <div className="flex justify-between text-green-600 font-black uppercase text-[10px] tracking-widest">
+                                        <div className="flex justify-between text-green-600 font-black uppercase text-[9px] tracking-widest">
                                             <span>Patron Discount ({appliedDiscount.discount_value}{appliedDiscount.discount_type === 'percentage' ? '%' : ' Rs.'})</span>
                                             <span>-Rs. {discountAmount.toFixed(0)}</span>
                                         </div>
                                     )}
                                     <Separator className="bg-border/30" />
-                                    <div className="flex justify-between items-end pt-4">
+                                    <div className="flex justify-between items-end pt-2">
                                         <div>
-                                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">Total</p>
-                                            <span className="text-xl font-serif italic">Order Total</span>
+                                            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-0.5">Total</p>
+                                            <span className="text-lg font-serif italic">Total to pay</span>
                                         </div>
-                                        <span className="text-4xl font-serif font-black text-primary">Rs. {total.toFixed(0)}</span>
+                                        <span className="text-3xl font-serif font-black text-primary">Rs. {total.toFixed(0)}</span>
                                     </div>
                                 </div>
 
-                                <div className="space-y-3">
-                                    <Label className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground ml-1">Promo Code</Label>
+                                <div className="space-y-2">
+                                    <Label className="text-[8px] font-black uppercase tracking-[0.3em] text-muted-foreground ml-1">Promo Code</Label>
                                     <div className="flex gap-2">
                                         <Input
                                             placeholder="LOREAN15"
                                             value={promoCode}
                                             onChange={(e) => setPromoCode(e.target.value)}
-                                            className="rounded-2xl h-14 bg-muted/30 border-none px-6 uppercase font-bold tracking-widest"
+                                            className="rounded-xl h-11 bg-muted/30 border-none px-5 uppercase font-bold tracking-widest text-xs"
                                         />
                                         <Button
                                             variant="outline"
                                             onClick={handleApplyPromo}
                                             disabled={isApplyingPromo || isPromoApplied}
-                                            className="rounded-2xl h-14 px-8 border-2 hover:bg-primary hover:text-white transition-all"
+                                            className="rounded-xl h-11 px-6 border-2 hover:bg-primary hover:text-white transition-all text-xs"
                                         >
                                             {isApplyingPromo ? <Loader2 className="w-4 h-4 animate-spin" /> : (isPromoApplied ? <CheckCircle2 className="w-4 h-4" /> : "Apply")}
                                         </Button>
@@ -530,11 +849,11 @@ const Checkout = () => {
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="glass p-6 rounded-[2rem] flex flex-col items-center gap-3 text-center group hover:bg-primary/5 transition-colors border-border/10">
                                     <ShieldCheck className="w-8 h-8 text-primary group-hover:scale-110 transition-transform" />
-                                    <span className="text-[8px] font-black uppercase tracking-widest leading-tight">SSL<br />Secured</span>
+                                    <span className="text-[8px] font-black uppercase tracking-widest leading-tight">Secure<br />Checkout</span>
                                 </div>
                                 <div className="glass p-6 rounded-[2rem] flex flex-col items-center gap-3 text-center group hover:bg-primary/5 transition-colors border-border/10">
                                     <BadgeCheck className="w-8 h-8 text-primary group-hover:scale-110 transition-transform" />
-                                    <span className="text-[8px] font-black uppercase tracking-widest leading-tight">Verified<br />Merchants</span>
+                                    <span className="text-[8px] font-black uppercase tracking-widest leading-tight">Trusted<br />Delivery</span>
                                 </div>
                             </div>
 

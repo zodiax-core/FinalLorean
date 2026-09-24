@@ -70,30 +70,70 @@ export const AdminLayout = () => {
         if (user) {
             fetchStats();
 
-            // Request FCM & Browser Notification permission
-            requestNotificationPermission(user.id).catch(err => {
-                console.error("FCM Setup Failed:", err);
-            });
+            // Prevent repeated registration loops in the same session
+            const SESSION_KEY = `fcm_registered_${user.id}`;
+            const alreadyRegistered = sessionStorage.getItem(SESSION_KEY);
 
-            const channel = notificationService.subscribeToNotifications(user.id, (payload: any) => {
-                fetchStats();
-
-                // Show in-app notification & Desktop notification
-                if (payload.new) {
-                    // In-app Sonner
-                    sonnerToast(payload.new.title, {
-                        description: payload.new.message,
-                        action: {
-                            label: "View",
-                            onClick: () => navigate("/admin/notifications")
-                        }
+            if (!alreadyRegistered) {
+                console.log("[FCM] Initiating registration ritual for domain:", window.location.hostname);
+                requestNotificationPermission(user.id)
+                    .then(() => {
+                        sessionStorage.setItem(SESSION_KEY, 'true');
+                    })
+                    .catch(err => {
+                        console.error("FCM Setup Failed:", err);
                     });
 
-                    // Desktop Browser Notification
-                    if (Notification.permission === 'granted') {
-                        new Notification(payload.new.title, {
-                            body: payload.new.message,
-                            icon: "/favicon.ico"
+                // Listen for FCM foreground messages
+                import("@/lib/firebase").then(({ messaging }) => {
+                    if (messaging) {
+                        import("firebase/messaging").then(({ onMessage }) => {
+                            onMessage(messaging, (payload) => {
+                                console.log("[FCM] Foreground message received:", payload);
+                                const notificationTitle = payload.notification?.title || "Lorean Alchemical Alert";
+                                const notificationBody = payload.notification?.body || "New event manifested.";
+
+                                // Show a visible toast in the app
+                                sonnerToast(notificationTitle, {
+                                    description: notificationBody,
+                                    action: {
+                                        label: "View",
+                                        onClick: () => navigate("/admin/notifications")
+                                    }
+                                });
+
+                                // Use ServiceWorkerRegistration for reliable cross-platform notifications
+                                if (Notification.permission === 'granted' && 'serviceWorker' in navigator) {
+                                    navigator.serviceWorker.ready.then(registration => {
+                                        registration.showNotification(notificationTitle, {
+                                            body: notificationBody,
+                                            icon: "/favicon.png",
+                                            badge: "/favicon.png",
+                                            tag: 'lorean-foreground',
+                                            renotify: true
+                                        } as any);
+                                    });
+                                }
+                            });
+                        });
+                    }
+                });
+            }
+
+            const channel = notificationService.subscribeToNotifications(undefined, (payload: any) => {
+                console.log("Admin Realm Real-time event:", payload);
+                fetchStats();
+
+                if (payload.eventType === 'INSERT' && payload.new) {
+                    const notify = payload.new;
+                    // Show toast if it's Global (user_id is null) or specifically for this Admin
+                    if (!notify.user_id || notify.user_id === user.id) {
+                        sonnerToast(notify.title || "New Divine Alert", {
+                            description: notify.message,
+                            action: {
+                                label: "View",
+                                onClick: () => navigate("/admin/notifications")
+                            }
                         });
                     }
                 }

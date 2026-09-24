@@ -37,6 +37,35 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, [cartItems]);
 
     const addToCart = (product: Product, quantity: number) => {
+        if (product.stock !== undefined && product.stock !== null && product.stock <= 0) {
+            toast({
+                title: "Out of Stock",
+                description: `${product.name} is currently out of stock.`,
+                variant: "destructive"
+            });
+            return;
+        }
+
+        const isComingSoon = product.tag?.toLowerCase() === "coming soon" || product.tag?.toLowerCase() === "comming soon";
+        if (isComingSoon) {
+            toast({
+                title: "Coming Soon",
+                description: `${product.name} is arriving soon and cannot be purchased yet.`,
+            });
+            return;
+        }
+
+        const existingItem = cartItems.find((item) => item.id === product.id);
+        const currentQtyInCart = existingItem ? existingItem.quantity : 0;
+        if (product.stock !== undefined && product.stock !== null && (currentQtyInCart + quantity) > product.stock) {
+            toast({
+                title: "Stock Limit Reached",
+                description: `Only ${product.stock} units available in stock (${currentQtyInCart} already in your bag).`,
+                variant: "destructive"
+            });
+            return;
+        }
+
         setCartItems((prev) => {
             const existing = prev.find((item) => item.id === product.id);
             if (existing) {
@@ -61,11 +90,22 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const updateQuantity = (id: number, delta: number) => {
         setCartItems((prev) =>
-            prev.map((item) =>
-                item.id === id
-                    ? { ...item, quantity: Math.max(1, item.quantity + delta) }
-                    : item
-            )
+            prev.map((item) => {
+                if (item.id === id) {
+                    const nextQty = item.quantity + delta;
+                    if (nextQty < 1) return item;
+                    if (delta > 0 && item.stock !== undefined && item.stock !== null && nextQty > item.stock) {
+                        toast({
+                            title: "Stock Limit",
+                            description: `Only ${item.stock} units available in stock.`,
+                            variant: "destructive"
+                        });
+                        return item;
+                    }
+                    return { ...item, quantity: nextQty };
+                }
+                return item;
+            })
         );
     };
 

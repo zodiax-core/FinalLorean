@@ -157,7 +157,7 @@ const Shop = () => {
                   <ShoppingBag className="w-6 h-6 text-primary animate-pulse" />
                 </div>
               </div>
-              <p className="text-muted-foreground font-serif text-xl italic animate-pulse">Unveiling our luxury collection...</p>
+              <p className="text-muted-foreground font-serif text-xl italic animate-pulse">Loading products...</p>
             </div>
           ) : (
             <div className={`grid gap-8 ${viewMode === "grid"
@@ -172,7 +172,7 @@ const Shop = () => {
                   transition={{ delay: index * 0.05, duration: 0.6 }}
                   className={`group ${viewMode === "list" ? "flex gap-8 items-center bg-card p-6 rounded-[2rem] border border-border/50 hover:shadow-xl transition-all" : ""}`}
                 >
-                  <Link to={`/product/${product.id}`} className={`block relative overflow-hidden rounded-[2.5rem] bg-card shadow-lg flex-shrink-0 border border-border/30 ${viewMode === "list" ? "w-64" : ""}`}>
+                  <Link to={`/product/${product.slug || product.id}`} className={`block relative overflow-hidden rounded-[2.5rem] bg-card shadow-lg flex-shrink-0 border border-border/30 ${viewMode === "list" ? "w-64" : ""}`}>
                     <div className={`relative overflow-hidden ${viewMode === "list" ? "aspect-square" : "aspect-[4/5]"}`}>
                       <motion.img
                         src={product.image}
@@ -181,11 +181,19 @@ const Shop = () => {
                         whileHover={{ scale: 1.1 }}
                         transition={{ duration: 0.8 }}
                       />
-                      {product.tag && (
-                        <div className="absolute top-6 left-6 px-4 py-1.5 rounded-full bg-primary/90 backdrop-blur-md text-primary-foreground text-[10px] font-bold uppercase tracking-widest z-10">
-                          {product.tag}
-                        </div>
-                      )}
+                      {/* Tag / Status Badge */}
+                      <div className="absolute top-6 left-6 flex flex-col gap-2 z-10">
+                        {product.stock !== undefined && product.stock !== null && product.stock <= 0 ? (
+                          <div className="px-4 py-1.5 rounded-full bg-rose-500/90 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-widest shadow-md">
+                            Out of Stock
+                          </div>
+                        ) : product.tag ? (
+                          <div className="px-4 py-1.5 rounded-full bg-primary/90 backdrop-blur-md text-primary-foreground text-[10px] font-bold uppercase tracking-widest shadow-md">
+                            {product.tag}
+                          </div>
+                        ) : null}
+                      </div>
+
                       <motion.div
                         initial={{ opacity: 0 }}
                         whileHover={{ opacity: 1 }}
@@ -207,17 +215,33 @@ const Shop = () => {
                           >
                             <Heart className={`w-5 h-5 ${isInWishlist(product.id) ? "fill-current" : ""}`} />
                           </motion.button>
-                          <motion.button
-                            whileHover={{ scale: 1.1 }}
-                            whileTap={{ scale: 0.95 }}
-                            className="w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-xl hover:shadow-primary/30 transition-all duration-300"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              addToCart(product, 1);
-                            }}
-                          >
-                            <ShoppingBag className="w-5 h-5" />
-                          </motion.button>
+                          {(() => {
+                            const isOutOfStock = product.stock !== undefined && product.stock !== null && product.stock <= 0;
+                            const isComingSoon = product.tag?.toLowerCase() === "coming soon" || product.tag?.toLowerCase() === "comming soon";
+                            const canAddToCart = !isOutOfStock && !isComingSoon;
+                            return (
+                              <motion.button
+                                whileHover={canAddToCart ? { scale: 1.1 } : {}}
+                                whileTap={canAddToCart ? { scale: 0.95 } : {}}
+                                disabled={!canAddToCart}
+                                title={isComingSoon ? "Coming Soon" : isOutOfStock ? "Out of Stock" : "Add to Cart"}
+                                className={`w-12 h-12 rounded-full flex items-center justify-center shadow-xl transition-all duration-300 ${
+                                  !canAddToCart
+                                    ? "bg-muted text-muted-foreground opacity-50 cursor-not-allowed"
+                                    : "bg-primary text-primary-foreground hover:shadow-primary/30"
+                                }`}
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  if (canAddToCart) {
+                                    addToCart(product, 1);
+                                  }
+                                }}
+                              >
+                                <ShoppingBag className="w-5 h-5" />
+                              </motion.button>
+                            );
+                          })()}
                         </div>
                       </motion.div>
                     </div>
@@ -229,7 +253,7 @@ const Shop = () => {
                       ))}
                       <span className="text-xs font-bold text-muted-foreground ml-1">({product.reviews})</span>
                     </div>
-                    <Link to={`/product/${product.id}`}>
+                    <Link to={`/product/${product.slug || product.id}`}>
                       <h3
                         className="text-xl font-medium mb-3 group-hover:text-primary transition-colors line-clamp-1"
                         style={{ fontFamily: "'Cormorant Garamond', serif" }}

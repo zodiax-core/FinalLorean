@@ -7,11 +7,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+import { useTheme } from "@/components/theme-provider";
 
 const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
+  const { theme } = useTheme();
+  const isDark = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches) || document.documentElement.classList.contains("dark");
+  const logoSrc = isDark ? "/logo-dark.png?v=2" : "/logo.png?v=2";
 
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -41,7 +45,7 @@ const Login = () => {
 
         toast({
           title: "Welcome back!",
-          description: "Establishment into ritual was successful.",
+          description: "Login successful.",
         });
 
         // If email is admin, navigate to admin dashboard, else where they came from
@@ -78,7 +82,7 @@ const Login = () => {
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Ritual Failed",
+        title: "Login Failed",
         description: error.message,
       });
     } finally {
@@ -105,7 +109,7 @@ const Login = () => {
               className="flex items-center gap-2"
               whileHover={{ scale: 1.05 }}
             >
-              <img src="/logo.png" alt="Lorean Logo" className="h-10 w-auto" />
+              <img src={logoSrc} alt="Lorean Logo" className="h-8 w-auto" />
               <h1 className="text-3xl font-serif uppercase tracking-tighter"></h1>
             </motion.div>
           </Link>
@@ -118,12 +122,12 @@ const Login = () => {
               animate={{ opacity: 1, y: 0 }}
               className="text-4xl font-serif mb-4 leading-tight"
             >
-              {isLogin ? "Welcome to the ritual" : "Begin your journey"}
+              {isLogin ? "Welcome Back" : "Create Account"}
             </motion.h2>
             <p className="text-muted-foreground font-light text-balance">
               {isLogin
-                ? "Sign in to witness the evolution of botanical luxury."
-                : "Join the Inner Circle and customize your aesthetic experience."}
+                ? "Sign in to manage your orders."
+                : "Create an account to join the Lorean community."}
             </p>
           </div>
 
@@ -138,7 +142,7 @@ const Login = () => {
                   transition={{ duration: 0.4 }}
                   className="space-y-2"
                 >
-                  <Label className="text-[10px] font-black uppercase tracking-[0.2em] ml-1">Universal Identity</Label>
+                  <Label className="text-[10px] font-black uppercase tracking-[0.2em] ml-1">Full Name</Label>
                   <div className="relative">
                     <User className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground/50" />
                     <Input
@@ -158,7 +162,7 @@ const Login = () => {
             </AnimatePresence>
 
             <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase tracking-[0.2em] ml-1">Ethereal Email</Label>
+              <Label className="text-[10px] font-black uppercase tracking-[0.2em] ml-1">Email Address</Label>
               <div className="relative">
                 <Mail className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground/50" />
                 <Input
@@ -176,7 +180,7 @@ const Login = () => {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase tracking-[0.2em] ml-1">Access Key</Label>
+              <Label className="text-[10px] font-black uppercase tracking-[0.2em] ml-1">Password</Label>
               <div className="relative">
                 <Lock className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground/50" />
                 <Input
@@ -213,7 +217,7 @@ const Login = () => {
                   transition={{ duration: 0.4 }}
                   className="space-y-2"
                 >
-                  <Label className="text-[10px] font-black uppercase tracking-[0.2em] ml-1">Re-authenticate Key</Label>
+                  <Label className="text-[10px] font-black uppercase tracking-[0.2em] ml-1">Confirm Password</Label>
                   <div className="relative">
                     <Lock className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground/50" />
                     <Input
@@ -241,7 +245,7 @@ const Login = () => {
                   type="button"
                   className="text-[10px] font-black uppercase tracking-widest text-primary hover:underline"
                 >
-                  Regenerate Key?
+                  Forgot Password?
                 </button>
               </div>
             )}
@@ -255,7 +259,7 @@ const Login = () => {
                 <Loader2 className="w-5 h-5 animate-spin" />
               ) : (
                 <>
-                  {isLogin ? "Commence Ritual" : "Finalize Legacy"}
+                  {isLogin ? "Login" : "Sign Up"}
                   <ArrowRight className="ml-3 w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </>
               )}
@@ -265,13 +269,13 @@ const Login = () => {
           {/* Toggle */}
           <div className="text-center mt-10">
             <p className="text-muted-foreground text-xs font-light">
-              {isLogin ? "Not a patron yet?" : "Already part of the ritual?"}{" "}
+              {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
               <button
                 type="button"
                 onClick={() => setIsLogin(!isLogin)}
                 className="text-primary font-black uppercase tracking-widest hover:underline ml-2"
               >
-                {isLogin ? "Claim Identity" : "Identify Self"}
+                {isLogin ? "Create Account" : "Sign In"}
               </button>
             </p>
           </div>
@@ -318,10 +322,10 @@ const Login = () => {
             <div className="space-y-4">
               <h3 className="text-4xl md:text-5xl font-serif italic text-white leading-tight">
                 Exclusivity is a <br />
-                <span className="text-primary font-bold not-italic">Ritual</span>
+                <span className="text-primary font-bold not-italic">Lorean</span>
               </h3>
               <p className="text-white/70 font-light text-lg tracking-wide">
-                Access the Inner Circle of Lorean, where botanical performance meets quantum luxury.
+                Access the world of Lorean, where botanical performance meets luxury.
               </p>
             </div>
 

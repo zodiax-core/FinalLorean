@@ -27,6 +27,17 @@ export interface Product {
     vendor_id?: string;
     vessel_volume?: string;
     fake_sold_count?: number;
+    video_proofs?: { url: string, username: string, redirection_link: string, icon_img?: string, thumbnail?: string, platform?: string }[];
+    tags?: string[];
+    slug?: string;
+    cost_price?: number;
+}
+
+export interface NewsletterSubscription {
+    id: string;
+    email: string;
+    subscribed_at: string;
+    status: 'active' | 'unsubscribed';
 }
 
 export interface Category {
@@ -117,6 +128,8 @@ export interface Order {
     receiver_phone?: string;
     receiver_name?: string;
     nearest_famous_place?: string;
+    total_cost?: number;
+    total_profit?: number;
 }
 
 export const productsService = {
@@ -138,7 +151,26 @@ export const productsService = {
             .maybeSingle();
 
         if (error) throw error;
-        return data;
+        return data as Product | null;
+    },
+
+    async getBySlug(slug: string) {
+        const { data, error } = await supabase
+            .from('products')
+            .select('*')
+            .eq('slug', slug)
+            .maybeSingle();
+
+        if (error) throw error;
+        return data as Product | null;
+    },
+
+    async getByIdOrSlug(idOrSlug: string | number) {
+        const isNumeric = !isNaN(Number(idOrSlug)) && /^\d+$/.test(String(idOrSlug));
+        if (isNumeric) {
+            return this.getById(Number(idOrSlug));
+        }
+        return this.getBySlug(String(idOrSlug));
     },
 
     async create(product: Partial<Product>) {
@@ -168,11 +200,29 @@ export const productsService = {
             .select();
 
         if (error) throw error;
-        // If data is empty, it means no row was deleted (likely RLS or wrong ID)
         if (!data || data.length === 0) {
             throw new Error("Product not found or permission denied.");
         }
         return true;
+    },
+
+    async incrementStats(productId: number, newRating: number) {
+        // Fetch current values
+        const product = await this.getById(productId);
+        if (!product) return;
+
+        const currentReviews = Number(product.reviews || 0);
+        const currentRating = Number(product.rating || 5.0);
+
+        // Calculate new weighted average
+        const totalWeight = currentReviews + 1;
+        const totalRatingPoints = (currentRating * currentReviews) + newRating;
+        const finalRating = Number((totalRatingPoints / totalWeight).toFixed(1));
+
+        return await this.update(productId, {
+            reviews: totalWeight,
+            rating: finalRating
+        });
     }
 };
 
@@ -723,6 +773,77 @@ export const settingsService = {
     }
 };
 
+export const shippingService = {
+    async getAllRates() {
+        const { data, error } = await supabase
+            .from('shipping_rates')
+            .select('*')
+            .order('state', { ascending: true })
+            .order('city', { ascending: true });
+
+        if (error) throw error;
+        return data;
+    },
+
+    async getRateByLocation(state?: string, city?: string) {
+        if (!state) return null;
+
+        const { data: cityRate } = await supabase
+            .from('shipping_rates')
+            .select('*')
+            .eq('state', state)
+            .eq('city', city || "")
+            .maybeSingle();
+
+        if (cityRate) return cityRate;
+
+        // Fallback to state-wide rate
+        const { data: stateRate } = await supabase
+            .from('shipping_rates')
+            .select('*')
+            .eq('state', state)
+            .is('city', null)
+            .maybeSingle();
+
+        return stateRate;
+    },
+
+    async createRate(rate: any) {
+        const { data, error } = await supabase
+            .from('shipping_rates')
+            .insert(rate)
+            .select()
+            .single();
+
+        if (error) throw error;
+        return data;
+    },
+
+    async updateRate(id: string, updates: any) {
+        const { data, error } = await supabase
+            .from('shipping_rates')
+            .update(updates)
+            .eq('id', id)
+            .select()
+            .single();
+
+        if (error) throw error;
+        return data;
+    },
+
+    async deleteRate(id: string) {
+        const { error } = await supabase
+            .from('shipping_rates')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+        return true;
+    }
+};
+
+
+
 export const taxService = {
     async getAll() {
         const { data, error } = await supabase
@@ -760,7 +881,7 @@ export const taxService = {
         const { data, error } = await supabase
             .from('tax_rules')
             .select('*')
-            .eq('country', country)
+            .or(`country.eq.${country},country.eq.GLOBAL`)
             .eq('is_active', true)
             .order('priority', { ascending: true });
 
@@ -1236,6 +1357,17 @@ export const profilesService = {
         return data;
     },
 
+    async getById(id: string) {
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', id)
+            .maybeSingle();
+
+        if (error) throw error;
+        return data;
+    },
+
     async update(id: string, updates: any) {
         const { data, error } = await supabase
             .from('profiles')
@@ -1249,13 +1381,18 @@ export const profilesService = {
     },
 
     async updateFcmToken(id: string, token: string) {
-        // Update without select to avoid 406/PGRST116 errors
+        // 1. Save to admin_push_tokens (multi-device: upsert = idempotent)
+        await supabase
+            .from('admin_push_tokens')
+            .upsert(
+                { user_id: id, fcm_token: token, last_seen_at: new Date().toISOString() },
+                { onConflict: 'user_id,fcm_token' }
+            );
+
+        // 2. Also update profiles.fcm_token (legacy / single-device fallback)
         const { error } = await supabase
             .from('profiles')
-            .update({
-                fcm_token: token,
-                updated_at: new Date().toISOString()
-            })
+            .update({ fcm_token: token, updated_at: new Date().toISOString() })
             .eq('id', id);
 
         if (error) throw error;
@@ -1338,7 +1475,8 @@ export const marketingService = {
         if (error) throw error;
         return data?.settings || {
             popup_product_id: null,
-            hero_bar: { enabled: false, text: "SALE SALE SALE", bg_color: "#000000", text_color: "#ffffff" }
+            hero_bar: { enabled: false, text: "SALE SALE SALE", bg_color: "#000000", text_color: "#ffffff" },
+            custom_social_links: []
         };
     },
 
@@ -1353,5 +1491,178 @@ export const marketingService = {
 
         if (error) throw error;
         return settings;
+    },
+
+    async subscribe(email: string) {
+        const { error } = await supabase
+            .from('newsletter_subscriptions')
+            .upsert({ email, subscribed_at: new Date().toISOString(), status: 'active' }, { onConflict: 'email' });
+
+        if (error) throw error;
+
+        // Sync with Resend Audience
+        try {
+            const { emailService } = await import('./email');
+            await emailService.addToAudience(email);
+        } catch (syncError) {
+            console.error("Failed to sync subscriber with Resend:", syncError);
+        }
+
+        return true;
+    },
+
+    async getSubscriptions() {
+        const { data, error } = await supabase
+            .from('newsletter_subscriptions')
+            .select('*')
+            .order('subscribed_at', { ascending: false });
+        if (error) throw error;
+        return data as NewsletterSubscription[];
+    },
+
+    async sendBroadcast(payload: any) {
+        try {
+            await supabase.functions.invoke('resend-ritual', {
+                body: {
+                    action: 'send_email',
+                    payload: payload
+                }
+            });
+        } catch (e) {
+            console.warn("Resend Ritual broadcast function error:", e);
+        }
+        return { success: true };
+    }
+};
+
+export const contactsService = {
+    async getAll() {
+        const { data, error } = await supabase
+            .from('contact_messages')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        return data;
+    },
+
+    async getById(id: string) {
+        const { data, error } = await supabase
+            .from('contact_messages')
+            .select('*')
+            .eq('id', id)
+            .single();
+
+        if (error) throw error;
+        return data;
+    },
+
+    async create(message: { name: string, email: string, subject: string, message: string }) {
+        const { error } = await supabase
+            .from('contact_messages')
+            .insert({ ...message, status: 'unread' });
+
+        if (error) throw error;
+        return true;
+    },
+
+    async updateStatus(id: string, status: 'read' | 'unread' | 'archived') {
+        const { error } = await supabase
+            .from('contact_messages')
+            .update({ status })
+            .eq('id', id);
+
+        if (error) throw error;
+        return true;
+    },
+
+    async delete(id: string) {
+        const { error } = await supabase
+            .from('contact_messages')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+        return true;
+    },
+
+    async deleteMultiple(ids: string[]) {
+        const { error } = await supabase
+            .from('contact_messages')
+            .delete()
+            .in('id', ids);
+
+        if (error) throw error;
+        return true;
+    }
+};
+
+export const storageService = {
+    async uploadVideo(file: File, path: string, onProgress?: (progress: number) => void): Promise<string> {
+        return new Promise(async (resolve, reject) => {
+            try {
+                // Get auth token for direct API call
+                const { data: { session } } = await supabase.auth.getSession();
+                const url = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/product-videos/${path}`;
+
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', url);
+                xhr.setRequestHeader('Authorization', `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY}`);
+                xhr.setRequestHeader('apikey', import.meta.env.VITE_SUPABASE_ANON_KEY);
+                xhr.setRequestHeader('Content-Type', file.type || 'video/mp4');
+
+                xhr.upload.onprogress = (event) => {
+                    if (event.lengthComputable && onProgress) {
+                        const percent = Math.round((event.loaded / event.total) * 100);
+                        onProgress(percent);
+                    }
+                };
+
+                xhr.onload = () => {
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        const { data: { publicUrl } } = supabase.storage
+                            .from('product-videos')
+                            .getPublicUrl(path);
+                        resolve(publicUrl);
+                    } else {
+                        reject(new Error(`Upload failed: ${xhr.responseText}`));
+                    }
+                };
+
+                xhr.onerror = () => reject(new Error('Network error during upload'));
+                xhr.send(file);
+            } catch (err) {
+                reject(err);
+            }
+        });
+    },
+
+    async uploadImage(file: File, path: string) {
+        // Sanitize path to ensure no illegal characters during upload
+        const cleanPath = path.split('/').map(part =>
+            part.toLowerCase().replace(/[^a-z0-9.]+/g, '-').replace(/(^-|-$)/g, '')
+        ).join('/');
+
+        const { data, error } = await supabase.storage
+            .from('product-images')
+            .upload(cleanPath, file, {
+                cacheControl: '3600',
+                upsert: true
+            });
+
+        if (error) throw error;
+
+        const { data: { publicUrl } } = supabase.storage
+            .from('product-images')
+            .getPublicUrl(data.path);
+
+        return publicUrl;
+    },
+
+    async deleteVideo(path: string) {
+        const { error } = await supabase.storage
+            .from('product-videos')
+            .remove([path]);
+        if (error) throw error;
     }
 };
