@@ -6,26 +6,23 @@ import { settingsService } from "@/services/supabase";
 const DEFAULT_TESTIMONIALS = [
   {
     id: "1",
-    name: "Emma Thompson",
-    role: "Hair Stylist",
-    image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&q=80",
-    content: "Lorean has completely transformed my hair care routine. My hair has never felt so strong and healthy!",
+    name: "Ayesha Khan",
+    role: "Verified Buyer · Lahore",
+    content: "Lórean's herbal oils have completely revived my hair. After just three weeks of consistent ritual oiling, the hair fall drastically reduced and my hair feels thicker and full of natural shine!",
     rating: 5,
   },
   {
     id: "2",
-    name: "Sofia Chen",
-    role: "Beauty Blogger",
-    image: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&q=80",
-    content: "The Rosemary & Amla Oil is absolutely divine. I've recommended it to all my followers for hair growth!",
+    name: "Fatima Zahra",
+    role: "Verified Buyer · Karachi",
+    content: "The Rosemary & Amla Oil is pure magic! It smells so soothing and herbal without feeling heavy or sticky. I have recommended it to all my friends and family.",
     rating: 5,
   },
   {
     id: "3",
-    name: "Olivia Martinez",
-    role: "Wellness Coach",
-    image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&q=80",
-    content: "Finally found oils that are both luxurious and truly natural. My scalp feels so nourished with Lorean!",
+    name: "Bilal Ahmed",
+    role: "Verified Buyer · Islamabad",
+    content: "Best scalp therapy oil I have ever used. It deeply calmed my dry scalp from the very first week and noticeably strengthened my hair roots. Truly premium authentic quality.",
     rating: 5,
   },
 ];
@@ -66,7 +63,7 @@ const TestimonialsSection = () => {
             Loved by <span className="text-primary italic">Thousands</span>
           </h2>
           <p className="text-muted-foreground max-w-md mx-auto">
-            See what our community has to say about their Lorean experience
+            See what our community has to say about their Lórean experience
           </p>
         </motion.div>
 
@@ -81,40 +78,33 @@ const TestimonialsSection = () => {
               whileHover={{ y: -5 }}
               className="group"
             >
-              <div className="bg-background rounded-3xl p-8 shadow-lg border border-border/50 h-full relative overflow-hidden">
+              <div className="bg-background rounded-3xl p-8 shadow-lg border border-border/50 h-full relative overflow-hidden flex flex-col justify-between">
                 <div className="absolute top-6 right-6 opacity-10">
                   <Quote className="w-12 h-12 text-primary" />
                 </div>
 
-                <div className="flex gap-1 mb-6">
-                  {[...Array(testimonial.rating)].map((_, i) => (
-                    <Star key={i} className="w-4 h-4 fill-primary text-primary" />
-                  ))}
+                <div>
+                  <div className="flex gap-1 mb-6">
+                    {[...Array(testimonial.rating)].map((_, i) => (
+                      <Star key={i} className="w-4 h-4 fill-primary text-primary" />
+                    ))}
+                  </div>
+
+                  <p className="text-foreground/80 leading-relaxed mb-6 italic">
+                    "{testimonial.content}"
+                  </p>
                 </div>
 
-                <p className="text-foreground/80 leading-relaxed mb-6 italic">
-                  "{testimonial.content}"
-                </p>
-
-                <div className="flex items-center gap-4">
-                  {testimonial.image ? (
-                    <motion.img
-                      src={testimonial.image}
-                      alt={testimonial.name}
-                      className="w-12 h-12 rounded-full object-cover ring-2 ring-primary/20 shrink-0"
-                      whileHover={{ scale: 1.1 }}
-                    />
-                  ) : (
-                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-black text-lg shrink-0">
-                      {testimonial.name.slice(0, 1)}
-                    </div>
-                  )}
+                <div className="flex items-center gap-4 pt-2">
+                  <div className="w-12 h-12 rounded-full bg-primary/10 border border-primary/25 flex items-center justify-center text-primary font-bold text-base shrink-0 shadow-inner">
+                    {testimonial.name ? testimonial.name.slice(0, 1) : "L"}
+                  </div>
                   <div>
-                    <p className="font-medium" style={{ fontFamily: "'Cormorant Garamond', serif" }}>
+                    <p className="font-medium text-lg leading-tight" style={{ fontFamily: "'Cormorant Garamond', serif" }}>
                       {testimonial.name}
                     </p>
                     {testimonial.role && (
-                      <p className="text-sm text-muted-foreground">{testimonial.role}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{testimonial.role}</p>
                     )}
                   </div>
                 </div>

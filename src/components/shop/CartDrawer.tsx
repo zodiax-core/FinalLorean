@@ -175,10 +175,21 @@ const CartDrawer = ({ isOpen, onClose }: CartDrawerProps) => {
                         </div>
 
                         <div className="flex items-center justify-between mt-2 md:mt-4">
-                          <div className="flex items-center gap-3 md:gap-4 bg-background px-2 md:px-3 py-1 md:py-1.5 rounded-full border border-border/50 scale-90 md:scale-100 origin-left">
-                            <button onClick={() => updateQuantity(item.id, -1)} className="hover:text-primary"><Minus className="w-2.5 h-2.5 md:w-3 md:h-3" /></button>
-                            <span className="text-[10px] md:text-xs font-bold w-3 md:w-4 text-center">{item.quantity}</span>
-                            <button onClick={() => updateQuantity(item.id, 1)} className="hover:text-primary"><Plus className="w-2.5 h-2.5 md:w-3 md:h-3" /></button>
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-3 md:gap-4 bg-background px-2 md:px-3 py-1 md:py-1.5 rounded-full border border-border/50 scale-90 md:scale-100 origin-left">
+                              <button onClick={() => updateQuantity(item.id, -1)} className="hover:text-primary"><Minus className="w-2.5 h-2.5 md:w-3 md:h-3" /></button>
+                              <span className="text-[10px] md:text-xs font-bold w-3 md:w-4 text-center">{item.quantity}</span>
+                              <button
+                                onClick={() => updateQuantity(item.id, 1)}
+                                disabled={item.stock !== undefined && item.stock !== null && item.quantity >= item.stock}
+                                className="hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed"
+                              >
+                                <Plus className="w-2.5 h-2.5 md:w-3 md:h-3" />
+                              </button>
+                            </div>
+                            {item.stock !== undefined && item.stock !== null && item.stock <= 0 && (
+                              <span className="text-[9px] font-black uppercase text-rose-500 tracking-wider">Out of stock</span>
+                            )}
                           </div>
                           <span className="font-serif font-bold text-sm md:text-lg">
                             Rs. {(item.price * item.quantity).toFixed(0)}

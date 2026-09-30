@@ -119,16 +119,28 @@ const WishlistDrawer = ({ isOpen, onClose }: WishlistDrawerProps) => {
 
                         <div className="flex items-center justify-between mt-2 sm:mt-4">
                           <span className="font-serif font-bold text-base sm:text-lg">
-                            ${(item.price || 0).toFixed(2)}
+                            Rs. {item.price || 0}
                           </span>
-                          <Button
-                            size="sm"
-                            onClick={() => handleAddToCart(item)}
-                            className="rounded-full h-9 sm:h-10 px-4 sm:px-6 bg-primary hover:bg-primary/90 text-[9px] sm:text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20"
-                          >
-                            <ShoppingBag className="w-3 h-3 mr-2" />
-                            Add
-                          </Button>
+                          {(() => {
+                            const isOutOfStock = item.stock !== undefined && item.stock !== null && item.stock <= 0;
+                            const isComingSoon = item.tag?.toLowerCase() === "coming soon" || item.tag?.toLowerCase() === "comming soon";
+                            const canAdd = !isOutOfStock && !isComingSoon;
+                            return (
+                              <Button
+                                size="sm"
+                                disabled={!canAdd}
+                                onClick={() => canAdd && handleAddToCart(item)}
+                                className={`rounded-full h-9 sm:h-10 px-4 sm:px-6 text-[9px] sm:text-[10px] font-black uppercase tracking-widest shadow-lg ${
+                                  !canAdd
+                                    ? "bg-muted text-muted-foreground opacity-50 cursor-not-allowed shadow-none"
+                                    : "bg-primary hover:bg-primary/90 text-primary-foreground shadow-primary/20"
+                                }`}
+                              >
+                                <ShoppingBag className="w-3 h-3 mr-2" />
+                                {isComingSoon ? "Soon" : isOutOfStock ? "Out of Stock" : "Add"}
+                              </Button>
+                            );
+                          })()}
                         </div>
                       </div>
                     </motion.div>

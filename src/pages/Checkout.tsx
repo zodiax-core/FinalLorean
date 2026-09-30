@@ -321,6 +321,16 @@ const Checkout = () => {
             return;
         }
 
+        const outOfStockItem = cartItems.find(item => item.stock !== undefined && item.stock !== null && item.stock <= 0);
+        if (outOfStockItem) {
+            toast({
+                title: "Out of Stock Item",
+                description: `"${outOfStockItem.name}" is currently out of stock. Please remove it from your bag to proceed.`,
+                variant: "destructive"
+            });
+            return;
+        }
+
         setSubmitting(true);
         try {
             const { data: { user } } = await supabase.auth.getUser();

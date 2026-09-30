@@ -115,6 +115,13 @@
     scroll-behavior: initial;
   }
 
+  /* Refined mobile scaling: makes all rem-based typography, padding, cards & elements slightly smaller and cleaner on phones without being too small */
+  @media (max-width: 640px) {
+    html {
+      font-size: 14.5px;
+    }
+  }
+
   body {
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));

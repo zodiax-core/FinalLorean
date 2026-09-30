@@ -16,8 +16,8 @@ const Index = () => {
       <div style={{ height: "calc(var(--hero-bar-height, 0px) + 5rem)" }} />
       <Navbar />
       <HeroSection />
-      <CategorySection />
       <FeaturedProducts />
+      <CategorySection />
       <ParallaxSection />
       <TestimonialsSection />
       <NewsletterSection />

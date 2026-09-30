@@ -26,7 +26,7 @@ import { useRef } from "react";
 import SEO from "@/components/SEO";
 
 const BADGES = [
-    "Best Seller", "New Arrival", "Limited Edition", "Staff Pick", "Customer Favorite", "Organic"
+    "Best Seller", "New Arrival", "Limited Edition", "Staff Pick", "Customer Favorite", "Organic", "Coming Soon"
 ];
 
 export default function ProductForm() {
